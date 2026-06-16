@@ -1,0 +1,152 @@
+# LTX-2 text/image-to-video on a3 — the last core inference service (Phase 5
+# closer). Docker ran this as TWO containers (ltx2-proxy host-net :8023 +
+# ltx2-comfy bridge :8188); here they are one pod sharing localhost, so the
+# proxy's LTX_COMFY_URL=http://localhost:8188 carries over unchanged and the
+# host networking is unwound. They talk HTTP-only (no shared volume in the
+# docker setup either).
+#
+# Images were local-only on a3, tagged + pushed 2026-06-12:
+#   ghcr.io/inference-club/ltx2-server:v0.1 (proxy, 338MB)
+#   ghcr.io/inference-club/ltx2-comfy:v0.2  (ComfyUI runtime, 13.5GB)
+# comfy v0.2 is a `docker commit` of the long-running container, NOT a build:
+# the container had a kornia fix pip-installed into its writable layer that
+# the v0.1 image lacked (ComfyUI-LTXVideo IMPORT FAILED → missing_node_type
+# LTXVImgToVideoConditionOnly). A reproducible Dockerfile is still owed.
+# Both PRIVATE — pulls reuse Secret ghcr-pull. Like trellis2, the proxy
+# image is runtime-env only: ltx_server source + workflows hostPath-mount
+# from ~/git/LTX-2/server. Comfy models hostPath from /mnt/d (NOT baked).
+#
+# Cutover is stop-then-start (comfy holds ~15.4G of the 24G 4090, two copies
+# never fit): docker stop ltx2-comfy ltx2-proxy BEFORE this pod schedules.
+# hostPort 8023 preserves the prod agent's hard-coded a3:8023 path.
+# PREREQ (done 2026-06-12): a3 k3s data-dir moved to /mnt/d/k3s-data so the
+# 13.4GB image lands on the 5.5T drive, not the 228G root.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ltx2
+  namespace: inference-club
+  labels:
+    app: ltx2
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # 1 GPU + hostPort: old pod must die before the new one starts
+  selector:
+    matchLabels:
+      app: ltx2
+  template:
+    metadata:
+      labels:
+        app: ltx2
+    spec:
+      nodeSelector:
+        inference-club.com/box: a3
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: proxy
+          image: ghcr.io/inference-club/ltx2-server:v0.1
+          # the docker copy set this as its run command (image CMD differs)
+          command: ["uvicorn", "ltx_server.app:app", "--host", "0.0.0.0", "--port", "8023"]
+          env:
+            - name: LTX_COMFY_URL
+              value: http://localhost:8188
+            - name: LTX_OUTPUT_DIR
+              value: /tmp/out
+            - name: LTX_MOCK
+              value: "0"
+            - name: LTX_BACKEND
+              value: comfyui
+          ports:
+            - name: http
+              containerPort: 8023
+              hostPort: 8023
+          volumeMounts:
+            - name: ltx-server-src
+              mountPath: /app/ltx_server
+            - name: ltx-workflows
+              mountPath: /app/workflows
+            - name: out
+              mountPath: /tmp/out
+          # /health reports comfy_reachable, so readiness here also covers
+          # the comfy sidecar being up
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+        - name: comfy
+          image: ghcr.io/inference-club/ltx2-comfy:v0.2
+          # image entrypoint (/opt/nvidia/nvidia_entrypoint.sh) stays; this
+          # was the docker copy's Cmd
+          args: ["python", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
+          ports:
+            - name: comfy
+              containerPort: 8188
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: comfy-models
+              mountPath: /opt/ComfyUI/models
+          startupProbe:
+            httpGet:
+              path: /system_stats
+              port: comfy
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /system_stats
+              port: comfy
+            periodSeconds: 15
+      volumes:
+        - name: ltx-server-src
+          hostPath:
+            path: /home/brian/git/LTX-2/server/ltx_server
+            type: Directory
+        - name: ltx-workflows
+          hostPath:
+            path: /home/brian/git/LTX-2/server/workflows
+            type: Directory
+        - name: comfy-models
+          hostPath:
+            path: /mnt/d/huggingface/comfy-models
+            type: Directory
+        - name: out
+          emptyDir: {}
+---
+# Discovery: type=video routes /v1/videos/generations here. The agent's
+# serveVideo posts the JSON verbatim to {base}/generate and streams the MP4
+# back (X-LTX-Params header carries resolved params) — the proxy serves
+# /generate from its base URL, so NO base-path annotation.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ltx2
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: video
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/models: |
+      - id: ltx-2
+        name: LTX-2
+        input_modalities: [text, image]
+        output_modalities: [video]
+spec:
+  selector:
+    app: ltx2
+  ports:
+    - name: http
+      port: 8023
+      targetPort: http

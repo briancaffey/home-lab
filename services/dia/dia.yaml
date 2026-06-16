@@ -1,0 +1,109 @@
+# Dia voice-cloning / text-to-dialogue (nari-labs/Dia-1.6B) — the voice-cloning
+# service behind inference.club's /v1/voice/generations (see
+# inference.club/docs/prd/09-voice-cloning.md). Image is built from the dia
+# service repo and pushed to ghcr.io/inference-club/dia (PRIVATE — pulls need
+# Secret ghcr-pull, same as acestep).
+#
+# NODE PLACEMENT: Dia needs an NVIDIA GPU with ~10 GB free VRAM and claims it
+# via `nvidia.com/gpu: 1`. a1's GPU (the 4090) is currently claimed by
+# magpie-tts, so Dia will NOT schedule onto a1 until magpie is scaled to 0
+# (`kubectl -n inference-club scale deploy/magpie-tts --replicas=0`). Pick
+# whichever of a1/a2/a3 has a free GPU and set `inference-club.com/box` below.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dia
+  namespace: inference-club
+  labels:
+    app: dia
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single GPU resource; old pod must release it before the new one starts
+  selector:
+    matchLabels:
+      app: dia
+  template:
+    metadata:
+      labels:
+        app: dia
+    spec:
+      nodeSelector:
+        inference-club.com/box: a1 # <-- set to the node with a free GPU (see header)
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: dia
+          image: ghcr.io/inference-club/dia:latest
+          env:
+            - name: HOST
+              value: 0.0.0.0
+            - name: PORT
+              value: "8491"
+            - name: DIA_MODEL
+              value: nari-labs/Dia-1.6B-0626
+            # Persist HF weights on the node so they survive pod restarts
+            # (first pull is several GB).
+            - name: HF_HOME
+              value: /cache
+          ports:
+            - name: http
+              containerPort: 8491
+              # Exposed on the node's LAN IP so the local-dev static-manifest
+              # agent (club-host-dev) can reach Dia at <node-ip>:8491, the same
+              # node-IP:hostPort pattern the other services use.
+              hostPort: 8491
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /cache
+          startupProbe:
+            # First run downloads the model, then loads it on startup — budget
+            # generously (≈30 min) before failing.
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 180
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: /home/brian/.cache/dia-huggingface
+            type: DirectoryOrCreate
+---
+# Discovery: type=tts + features=voice-cloning routes /v1/voice/generations
+# here (the agent indexes a voice-cloning tts service under a synthetic "voice"
+# type, so Dia is chosen over a plain Riva tts service). Dia serves a single
+# POST /generate at the BASE url — so no base-path annotation, like ACE-Step.
+apiVersion: v1
+kind: Service
+metadata:
+  name: dia
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: tts
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/features: voice-cloning,dialogue
+    inference-club.com/models: |
+      - id: dia-1.6b
+        name: Dia 1.6B (voice cloning)
+        input_modalities: [text, audio]
+        output_modalities: [audio]
+        features: [voice-cloning, dialogue]
+spec:
+  selector:
+    app: dia
+  ports:
+    - name: http
+      port: 8491
+      targetPort: http

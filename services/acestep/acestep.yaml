@@ -1,0 +1,136 @@
+# ACE-Step 1.5 text-to-music on spark — Phase 5's first service, and the
+# mixed-arch proof (spark is the only arm64 node). Image is locally built and
+# pushed to ghcr.io/inference-club/acestep (PRIVATE — pulls need Secret
+# ghcr-pull; create once:
+#   kubectl -n inference-club create secret docker-registry ghcr-pull \
+#     --docker-server=ghcr.io --docker-username=briancaffey \
+#     --docker-password=<PAT with read:packages>  ).
+#
+# Dual-run: unlike magpie (VRAM-bound 4090), the GB10's 128G unified memory
+# fits both copies, so the docker container (host :8015) keeps serving prod
+# while this one proves itself via cluster DNS. No hostPort until cutover.
+# Checkpoints + HF cache are shared with the docker copy via hostPath
+# (read-mostly; the HF path is docker's named-volume mountpoint — revisit
+# when the docker copy is retired).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acestep
+  namespace: inference-club
+  labels:
+    app: acestep
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single GPU resource on spark
+  selector:
+    matchLabels:
+      app: acestep
+  template:
+    metadata:
+      labels:
+        app: acestep
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: acestep
+          # r3 = local ACE-Step commit d4765b8: save via soundfile/ffmpeg CLI
+          # (torchaudio 2.10 broke torchaudio.save → silent MP3 export failure)
+          image: ghcr.io/inference-club/acestep:v1.5-spark-arm64-r3
+          env:
+            - name: ACESTEP_MODE
+              value: api
+            - name: ACESTEP_API_HOST
+              value: 0.0.0.0
+            - name: ACESTEP_API_PORT
+              value: "8001"
+            - name: ACESTEP_CONFIG_PATH
+              value: acestep-v15-turbo
+            - name: ACESTEP_LM_BACKEND
+              value: pt
+            - name: ACESTEP_LLM_BACKEND
+              value: pt
+            - name: ACESTEP_LM_MODEL_PATH
+              value: acestep-5Hz-lm-4B
+            - name: ACESTEP_INIT_LLM
+              value: "true"
+            - name: ACESTEP_INIT_SERVICE
+              value: "true"
+            - name: ACESTEP_USE_FLASH_ATTENTION
+              value: "false"
+            - name: ACESTEP_DOWNLOAD_SOURCE
+              value: huggingface
+            - name: TOKENIZERS_PARALLELISM
+              value: "false"
+          ports:
+            - name: http
+              containerPort: 8001
+              # Cutover 2026-06-12: prod's static agent routes music to
+              # spark:8015 — hostPort keeps that path alive, now served by
+              # this (fixed) pod instead of the retired docker copy.
+              hostPort: 8015
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: checkpoints
+              mountPath: /app/checkpoints
+            - name: output
+              mountPath: /app/output
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+          startupProbe: # DiT + 4B LM load; magpie taught us to budget generously
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 120
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: checkpoints
+          hostPath:
+            path: /home/brian/git/ACE-Step-1.5/checkpoints
+            type: Directory
+        - name: output
+          hostPath:
+            path: /home/brian/git/ACE-Step-1.5/output
+            type: Directory
+        - name: hf-cache
+          hostPath:
+            path: /var/lib/docker/volumes/ace-step-15_hf_cache/_data
+            type: Directory
+---
+# Discovery: type=music routes /v1/music/generations here. ACE-Step's API is
+# async (POST /release_task, poll /query_result, GET /v1/audio) served from
+# the BASE url — so no base-path annotation. Service port 8015 keeps the
+# familiar prod port; the pod listens on 8001.
+apiVersion: v1
+kind: Service
+metadata:
+  name: acestep
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: music
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/models: |
+      - id: acestep-v15-turbo
+        name: ACE-Step v1.5 Turbo
+        input_modalities: [text]
+        output_modalities: [audio]
+spec:
+  selector:
+    app: acestep
+  ports:
+    - name: http
+      port: 8015
+      targetPort: http

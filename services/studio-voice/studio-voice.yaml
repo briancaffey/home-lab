@@ -1,0 +1,205 @@
+# maxine-studio-voice (NVIDIA Maxine NIM) on a1 — speech ENHANCEMENT / audio
+# super-resolution: noisy/artifacted speech in → clean 48 kHz studio-quality
+# speech out (audio→audio). Migrated from the docker container that ran on a1
+# (`docker run ... nvcr.io/nim/nvidia/maxine-studio-voice`). Primary use: scrub
+# artifacts out of Dia-generated voice.
+#
+# Like magpie-tts this is a Riva/NIM image: NGC key in Secret ngc-api-key, nvcr.io
+# pulls use the ngc-registry docker secret (both already exist in this namespace —
+# see services/magpie-tts/magpie-tts.yaml header to (re)create).
+#
+# PROTOCOLS: inference is gRPC-ONLY on :8001 (NIM_INFERENCE_TYPE=grpc). The HTTP
+# server on :8000 serves management only (/v1/health, /v1/metadata, /v1/metrics) —
+# there is no HTTP inference route. hostPort 8000/8001 on a1 preserves the LAN
+# endpoints the docker copy used (192.168.5.253:8000/:8001).
+#
+# Shares a1's 4090 — stop any other resident model (magpie docker / etc.) if VRAM
+# is tight; Studio Voice 48k-hq needs a few GiB. Recreate strategy: 1 GPU + hostPort
+# means the old pod must exit before the new one binds.
+#
+# Deploy:  kubectl apply -f services/studio-voice/studio-voice.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: studio-voice
+  namespace: inference-club
+  labels:
+    app: studio-voice
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: studio-voice
+  template:
+    metadata:
+      labels:
+        app: studio-voice
+    spec:
+      nodeSelector:
+        inference-club.com/box: a1
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ngc-registry
+      containers:
+        - name: studio-voice
+          image: nvcr.io/nim/nvidia/maxine-studio-voice:latest
+          env:
+            - name: NGC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ngc-api-key
+                  key: api-key
+            - name: NIM_HTTP_API_PORT
+              value: "8000"
+            - name: NIM_GRPC_API_PORT
+              value: "8001"
+            # 48 kHz high-quality enhancement model (matches the docker copy).
+            - name: MODEL_TYPE
+              value: "48k-hq"
+            # Persist the NGC model download on the host cache (shared NIM cache
+            # dir, same convention as magpie-tts) so restarts skip the re-download.
+            - name: LOCAL_NIM_CACHE
+              value: /opt/nim/.cache
+            # GPU SHARING: a1's single 4090 is already claimed by dia via the
+            # device plugin (nvidia.com/gpu: 1, exclusive). Rather than fight for
+            # that slot, we access the GPU through the nvidia runtime directly —
+            # exactly how this ran as a docker container alongside other a1 GPU
+            # users, and how the dcgm-exporter daemonset works. No nvidia.com/gpu
+            # request, so the scheduler places us freely; both models share VRAM
+            # (dia ~9.4 GiB + Studio Voice ~few GiB << 24 GiB).
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "all"
+          ports:
+            - name: http
+              containerPort: 8000
+              hostPort: 8000
+            - name: grpc
+              containerPort: 8001
+              hostPort: 8001
+          # NB: no nvidia.com/gpu request — GPU access is via the nvidia runtime +
+          # NVIDIA_VISIBLE_DEVICES above (shared with dia). See the env comment.
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+          volumeMounts:
+            - name: nim-cache
+              mountPath: /opt/nim/.cache
+          startupProbe:
+            # Cold start = NGC model pull (first run, no host cache) — budget ~40 min
+            # so the kubelet doesn't kill it mid-download and loop forever.
+            httpGet:
+              path: /v1/health/ready
+              port: http
+            periodSeconds: 10
+            failureThreshold: 240
+          readinessProbe:
+            httpGet:
+              path: /v1/health/ready
+              port: http
+            periodSeconds: 15
+        # --- HTTP -> gRPC bridge sidecar -------------------------------------
+        # Studio Voice inference is gRPC-only, but the inference.club agent speaks
+        # HTTP. This sidecar exposes POST /audio/enhance (multipart in, wav out)
+        # and forwards to the NIM's MaxineStudioVoice/EnhanceAudio on localhost:8001
+        # — so native gRPC stays on :8001 AND the agent gets a clean HTTP endpoint
+        # ("all protocols"). Stock python image; code + server-extracted proto stubs
+        # come from the studio-voice-bridge ConfigMap, deps pip-installed at start
+        # (grpcio ships manylinux wheels, no compile). It self-warms the NIM so the
+        # first real request isn't slow.
+        - name: bridge
+          image: python:3.11-slim
+          command: ["sh", "-c"]
+          args:
+            - |
+              pip install --no-cache-dir --root-user-action=ignore \
+                'fastapi>=0.115,<1' 'uvicorn>=0.32,<1' 'python-multipart>=0.0.9' \
+                'grpcio>=1.67,<2' 'protobuf>=5,<6' >/tmp/pip.log 2>&1 || { cat /tmp/pip.log; exit 1; }
+              cd /app && exec uvicorn bridge:app --host 0.0.0.0 --port 8080
+          env:
+            - name: STUDIO_VOICE_GRPC
+              value: "127.0.0.1:8001"
+          ports:
+            - name: bridge
+              containerPort: 8080
+              hostPort: 8090
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          readinessProbe:
+            httpGet: { path: /health, port: bridge }
+            initialDelaySeconds: 25
+            periodSeconds: 15
+            failureThreshold: 30
+          volumeMounts:
+            - name: bridge-code
+              mountPath: /app
+      volumes:
+        - name: nim-cache
+          hostPath:
+            path: /mnt/d/nim
+            type: Directory
+        - name: bridge-code
+          configMap:
+            name: studio-voice-bridge
+---
+# Discovery: the agent advertises an `audio-enhance` service and routes the
+# backend's POST /audio/enhance here. This Service points at the HTTP BRIDGE
+# (port 8080), which transcodes to the NIM's gRPC — so the agent sees a normal
+# HTTP service. base-path /v1 matches the sibling audio views (agent joins it with
+# the backend's /audio/enhance -> /v1/audio/enhance, which the bridge serves).
+apiVersion: v1
+kind: Service
+metadata:
+  name: studio-voice
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: audio-enhance
+    inference-club.com/engine: riva
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: maxine-studio-voice
+        name: Maxine Studio Voice (speech enhancement)
+        input_modalities: [audio]
+        output_modalities: [audio]
+spec:
+  # NodePort so the HTTP bridge is reachable from an out-of-cluster agent on
+  # the LAN (node IP : nodePort, via kube-proxy). The sidecar container's
+  # hostPort 8090 never bound under k3s's portmap CNI, so we expose it here
+  # instead; the ClusterIP is still allocated for the in-cluster agent.
+  type: NodePort
+  selector:
+    app: studio-voice
+  ports:
+    - name: http
+      port: 8080
+      targetPort: bridge
+      nodePort: 30080
+---
+# Native protocol access (not agent-routed): the NIM's own gRPC inference on 8001
+# (nvidia.maxine.studiovoice.v1.MaxineStudioVoice/EnhanceAudio) and HTTP management
+# on 8000. Also reachable on the a1 LAN IP via hostPort 8000/8001. "All protocols":
+# HTTP via the bridge above, native gRPC here.
+apiVersion: v1
+kind: Service
+metadata:
+  name: studio-voice-grpc
+  namespace: inference-club
+  labels:
+    app: studio-voice
+spec:
+  selector:
+    app: studio-voice
+  ports:
+    - name: grpc
+      port: 8001
+      targetPort: grpc
+    - name: nim-http
+      port: 8000
+      targetPort: http

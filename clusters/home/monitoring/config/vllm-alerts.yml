@@ -1,0 +1,47 @@
+groups:
+  - name: vllm-alerts
+    rules:
+      - alert: VLLMTargetDown
+        expr: up{job="vllm"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "vLLM target {{ $labels.instance }} is down"
+          description: "Prometheus cannot scrape /metrics on {{ $labels.instance }} for 1m."
+
+      - alert: HighKVCacheUsage
+        expr: vllm:kv_cache_usage_perc > 0.90
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "KV cache utilization high (>90%) on {{ $labels.model_name }}"
+          description: "vllm:kv_cache_usage_perc is {{ $value | humanizePercentage }}."
+
+      - alert: RequestsBackingUp
+        expr: avg_over_time(vllm:num_requests_waiting[2m]) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "vLLM requests are backing up"
+          description: "Average waiting requests > 5 for 3m on {{ $labels.model_name }}."
+
+      - alert: SlowTTFTp90
+        expr: histogram_quantile(0.9, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[2m]))) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p90 time-to-first-token on {{ $labels.model_name }}"
+          description: "TTFT p90 > 2s for 5m ({{ $value }}s)."
+
+      - alert: Preemptions
+        expr: rate(vllm:num_preemptions_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "vLLM is preempting requests on {{ $labels.model_name }}"
+          description: "Sustained preemptions indicate KV-cache pressure ({{ $value }}/s)."

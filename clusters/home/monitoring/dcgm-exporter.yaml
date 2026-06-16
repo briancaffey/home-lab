@@ -1,0 +1,56 @@
+# NVIDIA DCGM exporter — per-GPU metrics (util, memory, temp, power, SM clocks)
+# into the existing Prometheus (Phase C, docs/04). The single biggest gap in the
+# current monitoring: today Prometheus only sees vLLM's app metrics, not the GPUs.
+#
+# DaemonSet on the amd64 4090 nodes. Uses the nvidia RuntimeClass + NVIDIA_VISIBLE_
+# DEVICES=all to read every GPU via NVML WITHOUT claiming an nvidia.com/gpu slot
+# (so it never blocks an inference pod). Exposes :9400/metrics on the node via
+# hostPort; Prometheus scrapes the node IPs (see config/prometheus.yml job `dcgm`).
+#
+# Scope: a1 + a3 for now. a2 is parked (NVML driver mismatch — reboot first), and
+# spark (arm64 GB10/Grace) needs an arm64-capable dcgm-exporter tag — add both to
+# the nodeAffinity list once verified.
+#
+# Deploy:  kubectl apply -f clusters/home/monitoring/dcgm-exporter.yaml
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dcgm-exporter
+  namespace: monitoring
+  labels: { app: dcgm-exporter }
+spec:
+  selector:
+    matchLabels: { app: dcgm-exporter }
+  template:
+    metadata:
+      labels: { app: dcgm-exporter }
+    spec:
+      runtimeClassName: nvidia
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: inference-club.com/box
+                    operator: In
+                    values: ["a1", "a3"]
+      containers:
+        - name: dcgm-exporter
+          image: nvcr.io/nvidia/k8s/dcgm-exporter:3.3.9-3.6.1-ubuntu22.04
+          env:
+            - { name: NVIDIA_VISIBLE_DEVICES, value: "all" }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "all" }
+            - { name: DCGM_EXPORTER_LISTEN, value: ":9400" }
+          ports:
+            - { name: metrics, containerPort: 9400, hostPort: 9400 }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            capabilities:
+              add: ["SYS_ADMIN"]
+          readinessProbe:
+            httpGet: { path: /health, port: metrics }
+            initialDelaySeconds: 10
+            periodSeconds: 15

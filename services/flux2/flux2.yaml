@@ -1,0 +1,101 @@
+# flux2-klein (FLUX.2-klein-4B GGUF Q4_K_M) on a2 — the first service that was
+# never a container: it ran as a bare `uv run flux2-klein-server` process from
+# ~/git/flux2-openai-server since May 19 and died with the 2026-06-12 driver
+# reboot. This Deployment IS the restoration — no docker copy exists, so there
+# is no dual-run or cutover step.
+#
+# Image is built ON a2 from that repo (Dockerfile added 2026-06-12) and pushed
+# to ghcr.io/inference-club/flux2-klein (PRIVATE — pulls reuse Secret
+# ghcr-pull, see services/acestep for the create-once command). Both model
+# repos (unsloth GGUF + black-forest-labs base) are already in brian's HF
+# cache, hostPath-mounted so the pod starts warm with zero downloads.
+#
+# hostPort 8000 preserves the prod agent's hard-coded a2:8000 path from its
+# agent.yaml `flux-images` entry; the in-cluster agent discovers the Service
+# by labels. a2's first GPU pod — it takes the real nvidia.com/gpu claim
+# (see the GPU-sharing note in services/acestep if a second service lands).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flux2-klein
+  namespace: inference-club
+  labels:
+    app: flux2-klein
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # 1 GPU + hostPort: old pod must die before the new one starts
+  selector:
+    matchLabels:
+      app: flux2-klein
+  template:
+    metadata:
+      labels:
+        app: flux2-klein
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: flux2-klein
+          image: ghcr.io/inference-club/flux2-klein:v0.1
+          ports:
+            - name: http
+              containerPort: 8000
+              hostPort: 8000
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            # warm HF cache shared with the old bare-process setup; covers
+            # both the GGUF transformer and the base pipeline weights
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+          startupProbe:
+            # uvicorn lifespan blocks serving until the pipeline is on the
+            # GPU, so /health answering at all means loaded. Warm-cache load
+            # is a couple of minutes; budget 10 in case the cache is cold.
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: /home/brian/.cache/huggingface
+            type: Directory
+---
+# Discovery: type=image routes /v1/images/generations|edits here. The server
+# is OpenAI-shaped under /v1 (plus a native /v1/generate), so base-path /v1:
+# the agent trims the inbound /v1 and joins this, landing on the same path.
+apiVersion: v1
+kind: Service
+metadata:
+  name: flux2-klein
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: image
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: flux-2-klein
+        name: FLUX.2 Klein 4B
+        input_modalities: [text, image]
+        output_modalities: [image]
+spec:
+  selector:
+    app: flux2-klein
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

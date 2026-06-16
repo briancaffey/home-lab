@@ -1,0 +1,277 @@
+# firecrawl — URL → markdown, served as the `scrape` modality (inference.club
+# PRD 12). Firecrawl is a "high-level inference service": it crawls a page and
+# uses an LLM under the hood for clean extraction (json/extract features), so we
+# point it at the in-cluster vLLM (nemotron-omni) by default.
+#
+# All images are OFFICIAL + public + multi-arch (amd64/arm64), so there's
+# nothing to build and no pull secret:
+#   ghcr.io/firecrawl/firecrawl         api + workers (harness --start-docker)
+#   ghcr.io/firecrawl/playwright-service headless-chromium fetcher
+#   ghcr.io/firecrawl/nuq-postgres       postgres + pg_cron + nuq queue schema
+#   redis:alpine                         queue / rate-limit store
+#   rabbitmq:3-management                nuq message bus
+#
+# Whole stack pinned to a3 (co-located; CPU-only — no GPU, no runtimeClassName).
+# All cross-talk is in-cluster DNS. The api's OPENAI_BASE_URL targets the cluster
+# vLLM so the scrape's reasoning runs locally; flip it to inference.club (base
+# URL + key) to use that instead — backend config, the agent never sees it.
+#
+# Discovery: the api Service is labeled inference-club.com/type: scrape, so the
+# agent advertises a `scrape` service and (with the agent's scrape handler) maps
+# {"url":...} → Firecrawl POST /v1/scrape → markdown.
+#
+# Deploy:  kubectl apply -f services/firecrawl/firecrawl.yaml
+---
+# --- Redis -------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firecrawl-redis
+  namespace: inference-club
+  labels: { app: firecrawl-redis }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: firecrawl-redis }
+  template:
+    metadata:
+      labels: { app: firecrawl-redis }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: redis
+          image: redis:alpine
+          command: ["redis-server", "--bind", "0.0.0.0", "--save", "", "--appendonly", "no"]
+          ports: [{ name: redis, containerPort: 6379 }]
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          readinessProbe:
+            tcpSocket: { port: redis }
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: firecrawl-redis
+  namespace: inference-club
+spec:
+  selector: { app: firecrawl-redis }
+  ports: [{ name: redis, port: 6379, targetPort: redis }]
+---
+# --- RabbitMQ (nuq message bus) ----------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firecrawl-rabbitmq
+  namespace: inference-club
+  labels: { app: firecrawl-rabbitmq }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: firecrawl-rabbitmq }
+  template:
+    metadata:
+      labels: { app: firecrawl-rabbitmq }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3-management
+          ports:
+            - { name: amqp, containerPort: 5672 }
+            - { name: mgmt, containerPort: 15672 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          readinessProbe:
+            exec: { command: ["rabbitmq-diagnostics", "-q", "check_running"] }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: firecrawl-rabbitmq
+  namespace: inference-club
+spec:
+  selector: { app: firecrawl-rabbitmq }
+  ports: [{ name: amqp, port: 5672, targetPort: amqp }]
+---
+# --- nuq-postgres (queue store) ----------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firecrawl-nuq-postgres
+  namespace: inference-club
+  labels: { app: firecrawl-nuq-postgres }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: firecrawl-nuq-postgres }
+  template:
+    metadata:
+      labels: { app: firecrawl-nuq-postgres }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: postgres
+          image: ghcr.io/firecrawl/nuq-postgres:latest
+          env:
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_PASSWORD, value: postgres }
+            - { name: POSTGRES_DB, value: postgres }
+            # initdb needs a writable data dir under the mounted volume
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports: [{ name: pg, containerPort: 5432 }]
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres"] }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: firecrawl-nuq-postgres
+  namespace: inference-club
+spec:
+  selector: { app: firecrawl-nuq-postgres }
+  ports: [{ name: pg, port: 5432, targetPort: pg }]
+---
+# --- Playwright fetcher ------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firecrawl-playwright
+  namespace: inference-club
+  labels: { app: firecrawl-playwright }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: firecrawl-playwright }
+  template:
+    metadata:
+      labels: { app: firecrawl-playwright }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: playwright
+          image: ghcr.io/firecrawl/playwright-service:latest
+          env:
+            - { name: PORT, value: "3000" }
+          ports: [{ name: http, containerPort: 3000 }]
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits: { memory: 2Gi }
+          readinessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 12
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: firecrawl-playwright
+  namespace: inference-club
+spec:
+  selector: { app: firecrawl-playwright }
+  ports: [{ name: http, port: 3000, targetPort: http }]
+---
+# --- API + workers (firecrawl harness) ---------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firecrawl-api
+  namespace: inference-club
+  labels: { app: firecrawl-api }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: firecrawl-api }
+  template:
+    metadata:
+      labels: { app: firecrawl-api }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: api
+          image: ghcr.io/firecrawl/firecrawl:latest
+          command: ["node", "dist/src/harness.js", "--start-docker"]
+          env:
+            - { name: HOST, value: "0.0.0.0" }
+            - { name: PORT, value: "3002" }
+            - { name: INTERNAL_PORT, value: "3002" }
+            - { name: EXTRACT_WORKER_PORT, value: "3004" }
+            - { name: WORKER_PORT, value: "3005" }
+            - { name: ENV, value: "local" }
+            - { name: USE_DB_AUTHENTICATION, value: "false" }
+            - { name: NUM_WORKERS_PER_QUEUE, value: "8" }
+            - { name: BULL_AUTH_KEY, value: "CHANGEME" }
+            - { name: REDIS_URL, value: redis://firecrawl-redis.inference-club.svc.cluster.local:6379 }
+            - { name: REDIS_RATE_LIMIT_URL, value: redis://firecrawl-redis.inference-club.svc.cluster.local:6379 }
+            - { name: NUQ_RABBITMQ_URL, value: amqp://firecrawl-rabbitmq.inference-club.svc.cluster.local:5672 }
+            - { name: PLAYWRIGHT_MICROSERVICE_URL, value: http://firecrawl-playwright.inference-club.svc.cluster.local:3000/scrape }
+            - { name: POSTGRES_HOST, value: firecrawl-nuq-postgres.inference-club.svc.cluster.local }
+            - { name: POSTGRES_PORT, value: "5432" }
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_PASSWORD, value: postgres }
+            - { name: POSTGRES_DB, value: postgres }
+            # LLM under the hood → the in-cluster vLLM (OpenAI-compatible).
+            - { name: OPENAI_BASE_URL, value: http://nemotron-omni.inference-club.svc.cluster.local:8000/v1 }
+            - { name: OPENAI_API_KEY, value: "vllm-local" }  # vLLM ignores auth
+            - { name: MODEL_NAME, value: "nemotron-3-nano-omni" }
+          # hostPort exposes the scrape API on the node's LAN IP
+          # (a3 = 192.168.5.173:3002) so an out-of-cluster agent (e.g. the
+          # local dev agent) can reach it, matching how flux/dia/ltx/vllm are
+          # reachable. The in-cluster agent still uses the ClusterIP Service.
+          ports: [{ name: http, containerPort: 3002, hostPort: 3002 }]
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { memory: 4Gi }
+          # TCP, not httpGet: firecrawl's api routes vary by version; a listening
+          # socket on 3002 means the harness is up and accepting scrape requests.
+          startupProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 5
+            failureThreshold: 36   # up to 3 min for first boot + nuq migrations
+          readinessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 15
+---
+# Discovery: type=scrape → the agent advertises a `scrape` service here. Firecrawl
+# is under /v1 (POST /v1/scrape), so base-path /v1: the agent trims the inbound
+# /v1 and joins this, landing on /v1/scrape.
+apiVersion: v1
+kind: Service
+metadata:
+  name: firecrawl
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: scrape
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: firecrawl
+        name: Firecrawl (URL → markdown)
+        input_modalities: [text]
+        output_modalities: [text]
+spec:
+  selector: { app: firecrawl-api }
+  ports: [{ name: http, port: 3002, targetPort: http }]

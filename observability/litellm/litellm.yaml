@@ -1,0 +1,103 @@
+# LiteLLM proxy — the keystone gateway (Phase B, docs/04). One OpenAI-compatible
+# endpoint in front of every in-cluster LLM, with per-key budgets, fallback routing,
+# and full tracing exported to Phoenix via OTLP. Point Claude, the inference.club
+# apps, and the agent at this single URL. Official multi-arch image, no pull secret.
+#
+# Stateless: master key only (Secret litellm-secret). For virtual keys + the admin
+# UI, add DATABASE_URL=postgresql://...@postgres.platform.svc.cluster.local:5432/litellm
+# (create the `litellm` database first). Config is inlined as a ConfigMap so the
+# whole service is one `kubectl apply -f`; edit it and `rollout restart` to reload.
+#
+# API : litellm.observability.svc.cluster.local:4000   (NodePort 30400)
+# UI  : http://<a3-ip>:30400/ui   (login with the master key)
+#
+# Secret (create once):
+#   kubectl -n observability create secret generic litellm-secret \
+#     --from-literal=master-key=sk-<MASTER_KEY>
+#
+# Deploy:  kubectl apply -f observability/litellm/litellm.yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config
+  namespace: observability
+data:
+  config.yaml: |
+    model_list:
+      # In-cluster vLLM (nemotron-omni). vLLM ignores auth, so api_key is a stub.
+      - model_name: nemotron-omni
+        litellm_params:
+          model: openai/nemotron-3-nano-omni
+          api_base: http://nemotron-omni.inference-club.svc.cluster.local:8000/v1
+          api_key: "vllm-local"
+      # LM Studio host process (external endpoint registered in inference-club ns).
+      # Wildcard passthrough so whichever model LM Studio has loaded just works.
+      - model_name: lmstudio/*
+        litellm_params:
+          model: openai/*
+          api_base: http://lmstudio.inference-club.svc.cluster.local:1234/v1
+          api_key: "lm-studio"
+      # Add image/embeddings/etc. here as OpenAI-compatible endpoints come online,
+      # e.g. text-embeddings-inference (TEI) for RAG (Phase E).
+
+    litellm_settings:
+      # Export every request as an OTLP trace to Phoenix.
+      callbacks: ["otel"]
+      drop_params: true
+
+    general_settings:
+      master_key: os.environ/LITELLM_MASTER_KEY
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm
+  namespace: observability
+  labels: { app: litellm }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: litellm }
+  template:
+    metadata:
+      labels: { app: litellm }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: litellm
+          image: ghcr.io/berriai/litellm:main-latest
+          args: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
+          env:
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef: { name: litellm-secret, key: master-key }
+            # OTLP → Phoenix (same namespace).
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://phoenix.observability.svc.cluster.local:4317" }
+            - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
+          ports: [{ name: http, containerPort: 4000 }]
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          readinessProbe:
+            httpGet: { path: /health/liveliness, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          volumeMounts:
+            - { name: config, mountPath: /etc/litellm }
+      volumes:
+        - name: config
+          configMap: { name: litellm-config }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm
+  namespace: observability
+  labels: { app: litellm }
+spec:
+  type: NodePort
+  selector: { app: litellm }
+  ports:
+    - { name: http, port: 4000, targetPort: http, nodePort: 30400 }

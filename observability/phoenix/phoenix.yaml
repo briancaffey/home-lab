@@ -1,0 +1,81 @@
+# Arize Phoenix — self-hosted LLM observability (Phase B, docs/04). Receives OTLP
+# traces (from LiteLLM, apps, the agent) and provides trace exploration, prompt
+# analytics, and evals. Official multi-arch image, no pull secret.
+#
+# Runs with its built-in storage on a 10Gi local-path PVC pinned to a3. To back it
+# with the shared Postgres instead, drop the PVC and set:
+#   PHOENIX_SQL_DATABASE_URL=postgresql://postgres:<pw>@postgres.platform.svc.cluster.local:5432/phoenix
+# (create the `phoenix` database first — see platform/postgres header).
+#
+# UI       : phoenix.observability.svc.cluster.local:6006   (NodePort 30606)
+# OTLP gRPC: phoenix.observability.svc.cluster.local:4317
+# OTLP HTTP: phoenix.observability.svc.cluster.local:6006/v1/traces
+#
+# Deploy:  kubectl apply -f observability/phoenix/phoenix.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: phoenix-data
+  namespace: observability
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phoenix
+  namespace: observability
+  labels: { app: phoenix }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: phoenix }
+  template:
+    metadata:
+      labels: { app: phoenix }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      # k8s injects PHOENIX_PORT=tcp://ip:6006 (Docker-link style) from the
+      # same-named Service; Phoenix reads $PHOENIX_PORT as an int and crashes in
+      # get_env_port(). Disable the legacy injection (we use cluster DNS).
+      enableServiceLinks: false
+      containers:
+        - name: phoenix
+          image: arizephoenix/phoenix:latest
+          env:
+            # SQLite under the working dir by default; persisted on the PVC.
+            - { name: PHOENIX_WORKING_DIR, value: /mnt/data }
+          ports:
+            - { name: http, containerPort: 6006 }
+            - { name: otlp-grpc, containerPort: 4317 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 2Gi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          volumeMounts:
+            - { name: data, mountPath: /mnt/data }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: phoenix-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phoenix
+  namespace: observability
+  labels: { app: phoenix }
+spec:
+  type: NodePort
+  selector: { app: phoenix }
+  ports:
+    - { name: http, port: 6006, targetPort: http, nodePort: 30606 }
+    - { name: otlp-grpc, port: 4317, targetPort: otlp-grpc }

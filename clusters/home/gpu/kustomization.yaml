@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - runtimeclass.yaml
+  # NVIDIA device plugin (upstream, pinned). Patched to use the nvidia
+  # RuntimeClass so it can see the GPU under k3s containerd.
+  - https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.4/deployments/static/nvidia-device-plugin.yml
+patches:
+  - target:
+      kind: DaemonSet
+      name: nvidia-device-plugin-daemonset
+    patch: |-
+      - op: add
+        path: /spec/template/spec/runtimeClassName
+        value: nvidia

@@ -1,0 +1,38 @@
+# In-cluster agent → PRODUCTION inference.club (Phase 6 cutover).
+#
+# Registers as the REAL prod provider `club-host` (id 1) and joins the
+# inference.club tailnet via tsnet, replacing the legacy docker `club-host`
+# agent. The backend mints an ephemeral, tagged Tailscale auth key on register
+# and reaches the agent at club-host-1:443 over the tailnet.
+#
+# CUTOVER ORDER MATTERS: stop the legacy docker `club-host` agent FIRST so its
+# ephemeral tailnet device (club-host-1) is removed, otherwise this pod joins as
+# club-host-1-1 and the backend can't reach it.
+#
+# install (key passed at the CLI, never committed):
+#   helm upgrade --install agent \
+#     ~/git/inference-club-agent/charts/inference-club-agent \
+#     -n inference-club -f clusters/home/agent/values-prod.yaml \
+#     --set apiKey.value=$INFERENCE_CLUB_PROD_KEY
+clubUrl: https://api.inference.club
+agentName: club-host
+discovery:
+  mode: kubernetes
+  interval: 30s
+# Tailnet mode (NOT direct): tsnet brings up club-host-1 inside the tailnet.
+direct:
+  enabled: false
+listenPort: 443
+service:
+  # Unused in tailnet mode (ingress is via tsnet, not the pod IP) — keep it a
+  # plain ClusterIP rather than grabbing LAN IPs with a LoadBalancer.
+  type: ClusterIP
+  port: 443
+# emptyDir (not a PVC) on purpose: the agent re-registers idempotently on every
+# boot (backend re-mints the key and returns club-host-1), so it needs no
+# persistent identity — and a local-path PVC would pin the pod to one node,
+# blocking reschedule if that node dies. The Recreate strategy (chart default)
+# fully stops the old pod first, so its ephemeral tailnet device is cleanly
+# removed before the new pod claims club-host-1 — no restart collision.
+persistence:
+  enabled: false

@@ -1,0 +1,69 @@
+# Qdrant — dedicated vector DB for RAG and MCP long-term memory (Phase A, docs/04).
+# pgvector covers light cases; Qdrant is for scale + rich payload filtering and is
+# the backend the memory/knowledge-graph MCP servers expect. Official multi-arch
+# image, no pull secret. 20Gi local-path PVC pinned to a3.
+#
+# REST + UI : qdrant.platform.svc.cluster.local:6333   (NodePort 30633; UI at /dashboard)
+# gRPC      : qdrant.platform.svc.cluster.local:6334
+#
+# Deploy:  kubectl apply -f platform/qdrant/qdrant.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdrant-data
+  namespace: platform
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qdrant
+  namespace: platform
+  labels: { app: qdrant }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: qdrant }
+  template:
+    metadata:
+      labels: { app: qdrant }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: qdrant
+          image: qdrant/qdrant:latest
+          ports:
+            - { name: http, containerPort: 6333 }
+            - { name: grpc, containerPort: 6334 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 2Gi }
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            - { name: data, mountPath: /qdrant/storage }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: qdrant-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdrant
+  namespace: platform
+  labels: { app: qdrant }
+spec:
+  type: NodePort
+  selector: { app: qdrant }
+  ports:
+    - { name: http, port: 6333, targetPort: http, nodePort: 30633 }
+    - { name: grpc, port: 6334, targetPort: grpc }

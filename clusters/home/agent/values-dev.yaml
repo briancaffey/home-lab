@@ -1,0 +1,18 @@
+# Experimental agent → LOCAL DEV inference.club (compose backend on the Mac).
+# install:
+#   helm install agent ~/git/inference-club-agent/charts/inference-club-agent \
+#     -n inference-club -f clusters/home/agent/values-dev.yaml \
+#     --set apiKey.value=$INFERENCE_CLUB_DEV_KEY
+clubUrl: http://192.168.6.12:8101
+agentName: club-host-k8s
+discovery:
+  mode: kubernetes
+  interval: 30s
+direct:
+  enabled: true
+  # klipper ServiceLB binds the agent port on every node; advertise a3.
+  advertiseHost: 192.168.5.173
+listenPort: 8090
+service:
+  type: LoadBalancer
+  port: 8090

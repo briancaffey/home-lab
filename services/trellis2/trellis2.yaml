@@ -1,0 +1,135 @@
+# TRELLIS.2 text/image-to-3D on spark (arm64) — Phase 5 service #3, and the
+# k8s rebuild that doubles as the debugging exercise for the spark perf
+# mystery. Image ghcr.io/inference-club/trellis2 (private; Secret ghcr-pull).
+#
+# NOTE the docker setup bind-mounts the ENTIRE TRELLIS.2 source tree + api
+# from ~/git/Trellis2-DGX-Spark-Docker — the image is just the runtime env.
+# The pod mirrors those hostPaths exactly (spark-pinned anyway). HF_TOKEN
+# lives in Secret hf-token (create once:
+#   kubectl -n inference-club create secret generic hf-token \
+#     --from-literal=token=<HF token>  ).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trellis2
+  namespace: inference-club
+  labels:
+    app: trellis2
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: trellis2
+  template:
+    metadata:
+      labels:
+        app: trellis2
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: trellis2
+          image: ghcr.io/inference-club/trellis2:spark-arm64
+          env:
+            - name: APP_SCRIPT
+              value: api
+            - name: API_HOST
+              value: 0.0.0.0
+            - name: API_PORT
+              value: "8000"
+            - name: ATTN_BACKEND
+              value: flash-attn
+            - name: HF_HOME
+              value: /workspace/cache/huggingface
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+            - name: UID
+              value: "1000"
+            - name: GID
+              value: "1000"
+            # GPU sharing on spark (acestep holds the 1 advertised
+            # nvidia.com/gpu): docker --gpus all semantics via env + runtime.
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: compute,utility
+          ports:
+            - name: http
+              containerPort: 8000
+              # Cutover 2026-06-12: prod's static agent routes mesh to
+              # spark:8000 — served by this pod now that the docker copy
+              # (container AND image) is removed.
+              hostPort: 8000
+          volumeMounts:
+            - name: trellis-src
+              mountPath: /workspace/TRELLIS.2
+            - name: trellis-api
+              mountPath: /workspace/TRELLIS.2/api
+            - name: hf-cache
+              mountPath: /workspace/cache/huggingface
+            - name: torch-cache
+              mountPath: /workspace/cache/torch
+            - name: triton-cache
+              mountPath: /workspace/cache/triton
+          startupProbe: # pipeline load is heavy; budget generously (magpie's lesson)
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 180
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: trellis-src
+          hostPath:
+            path: /home/brian/git/Trellis2-DGX-Spark-Docker/TRELLIS.2
+            type: Directory
+        - name: trellis-api
+          hostPath:
+            path: /home/brian/git/Trellis2-DGX-Spark-Docker/api
+            type: Directory
+        - name: hf-cache
+          hostPath:
+            path: /home/brian/git/Trellis2-DGX-Spark-Docker/hf_cache
+            type: Directory
+        - name: torch-cache
+          hostPath:
+            path: /home/brian/git/Trellis2-DGX-Spark-Docker/torch_cache
+            type: Directory
+        - name: triton-cache
+          hostPath:
+            path: /home/brian/git/Trellis2-DGX-Spark-Docker/triton_cache
+            type: Directory
+---
+# Discovery: type=mesh routes 3D generations here; the API is served from the
+# base URL (POST /generate, GET /health) — no base-path annotation.
+apiVersion: v1
+kind: Service
+metadata:
+  name: trellis2
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: mesh
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/models: |
+      - id: trellis-2
+spec:
+  selector:
+    app: trellis2
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

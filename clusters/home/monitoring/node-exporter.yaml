@@ -1,0 +1,50 @@
+# node-exporter — host metrics (CPU, RAM, disk, filesystem, network) for every box
+# (Phase C, docs/04). DaemonSet across ALL nodes; the image is multi-arch so it
+# runs on spark (arm64) too. Uses host namespaces + root mount to report real host
+# stats, and a broad toleration so it lands on every node including the control
+# plane. Exposes :9100/metrics via hostPort; Prometheus scrapes the node IPs
+# (see config/prometheus.yml job `node`).
+#
+# Deploy:  kubectl apply -f clusters/home/monitoring/node-exporter.yaml
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  labels: { app: node-exporter }
+spec:
+  selector:
+    matchLabels: { app: node-exporter }
+  template:
+    metadata:
+      labels: { app: node-exporter }
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: node-exporter
+          image: prom/node-exporter:v1.8.2
+          args:
+            - "--path.rootfs=/host"
+            - "--path.procfs=/host/proc"
+            - "--path.sysfs=/host/sys"
+            - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)"
+          ports:
+            - { name: metrics, containerPort: 9100, hostPort: 9100 }
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+          volumeMounts:
+            - { name: proc, mountPath: /host/proc, readOnly: true }
+            - { name: sys, mountPath: /host/sys, readOnly: true }
+            - { name: root, mountPath: /host, readOnly: true, mountPropagation: HostToContainer }
+      volumes:
+        - { name: proc, hostPath: { path: /proc } }
+        - { name: sys, hostPath: { path: /sys } }
+        - { name: root, hostPath: { path: / } }

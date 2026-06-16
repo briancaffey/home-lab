@@ -1,0 +1,112 @@
+# Nemotron 3.5 streaming ASR — Phase 5 service #2. Runs on spark (arm64), sharing
+# the GB10's unified memory with nemotron-omni (the 0.6b ASR model only needs
+# ~2-3 GiB, and spark already had it cached from the original docker copy).
+# Image: ghcr.io/inference-club/nemotron-asr:latest-spark-arm64 (built on spark,
+# private; pulls via Secret ghcr-pull, same as acestep).
+# NB: an amd64 build also exists in the in-cluster registry on a3
+# (192.168.5.173:30500/inference-club/nemotron-asr:latest-amd64, see
+# clusters/home/registry/) for running on the amd64 boxes — but a1's USB-WiFi
+# corrupts multi-GB layer pulls, so this lives on spark for now.
+# Reached via the cluster-DNS Service (:8105) — discovery routes stt here. The 0.6b
+# model warm-loads from spark's HF cache.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nemotron-asr
+  namespace: inference-club
+  labels:
+    app: nemotron-asr
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single GPU resource on spark; hostPort 8105 wants exclusivity
+  selector:
+    matchLabels:
+      app: nemotron-asr
+  template:
+    metadata:
+      labels:
+        app: nemotron-asr
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: nemotron-asr
+          image: ghcr.io/inference-club/nemotron-asr:latest-spark-arm64
+          env:
+            - name: NEMOTRON_ASR_EAGER_LOAD
+              value: "true"
+            - name: NEMOTRON_ASR_MODEL
+              value: nvidia/nemotron-3.5-asr-streaming-0.6b
+            - name: NEMOTRON_ASR_DEFAULT_LANGUAGE
+              value: auto
+            - name: HF_HOME
+              value: /root/.cache/huggingface
+            # GPU sharing: spark advertises 1 nvidia.com/gpu and nemotron-omni
+            # holds it. Under docker every service shared the GB10 (--gpus all),
+            # so mirror that: no resource claim; the nvidia RuntimeClass injects
+            # the GPU from this env, and the 0.6b model shares the GB10's unified
+            # memory alongside nemotron-omni. Replace with device-plugin
+            # time-slicing if/when exclusivity accounting matters.
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: compute,utility
+          ports:
+            - name: http
+              containerPort: 8000
+              # hostPort preserves the LAN endpoint (spark:8105 / 192.168.6.19)
+              # that prod's static agent used for the original docker copy;
+              # in-cluster stt is also discovery-routed to the Service below.
+              hostPort: 8105
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+          startupProbe: # eager-loads the 0.6b model from spark's warm HF cache
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            failureThreshold: 120
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: /home/brian/.cache/huggingface
+            # Shared with spark's HF cache (model already present → warm load).
+            type: Directory
+---
+# Discovery: type=stt routes /v1/audio/transcriptions here; `timestamps`
+# advertises verbose_json word/segment timings (same as the agent.yaml entry
+# this replaces). OpenAI-compatible FastAPI server → base-path /v1.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nemotron-asr
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: stt
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/features: timestamps
+    inference-club.com/models: |
+      - id: nvidia/nemotron-3.5-asr-streaming-0.6b
+        hf: nvidia/nemotron-3.5-asr-streaming-0.6b
+        input_modalities: [audio]
+        output_modalities: [text]
+spec:
+  selector:
+    app: nemotron-asr
+  ports:
+    - name: http
+      port: 8105
+      targetPort: http

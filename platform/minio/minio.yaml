@@ -1,0 +1,82 @@
+# MinIO — S3-compatible object store for the cluster (Phase A, docs/04). The
+# in-cluster equivalent of the GCS buckets inference.club uses in prod: artifacts,
+# datasets, model outputs, MCP file storage, and (later) Loki/Tempo chunk storage.
+# Official multi-arch image, no pull secret. 50Gi local-path PVC pinned to a3.
+#
+# S3 API  : minio.platform.svc.cluster.local:9000   (NodePort 30900)
+# Console : minio.platform.svc.cluster.local:9001   (NodePort 30901, web UI)
+#
+# Secret (create once):
+#   kubectl -n platform create secret generic platform-minio \
+#     --from-literal=root-user=minio \
+#     --from-literal=root-password=<MINIO_PASSWORD>   # min 8 chars
+#
+# Deploy:  kubectl apply -f platform/minio/minio.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: platform
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: platform
+  labels: { app: minio }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: minio }
+  template:
+    metadata:
+      labels: { app: minio }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args: ["server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef: { name: platform-minio, key: root-user }
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: platform-minio, key: root-password }
+          ports:
+            - { name: s3, containerPort: 9000 }
+            - { name: console, containerPort: 9001 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 2Gi }
+          readinessProbe:
+            httpGet: { path: /minio/health/ready, port: s3 }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: minio-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: platform
+  labels: { app: minio }
+spec:
+  type: NodePort
+  selector: { app: minio }
+  ports:
+    - { name: s3, port: 9000, targetPort: s3, nodePort: 30900 }
+    - { name: console, port: 9001, targetPort: console, nodePort: 30901 }

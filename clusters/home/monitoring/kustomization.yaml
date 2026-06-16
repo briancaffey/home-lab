@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  - prometheus.yaml
+  - grafana.yaml
+  - dcgm-exporter.yaml
+  - node-exporter.yaml
+
+generatorOptions:
+  # Stable ConfigMap/Secret names (no hash suffix) so the Deployment volume
+  # references stay fixed. After editing config, `kubectl rollout restart` the
+  # affected deployment to pick it up.
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - config/prometheus.yml
+  - name: prometheus-rules
+    files:
+      - config/vllm-alerts.yml
+  - name: grafana-datasources
+    files:
+      - config/grafana-datasources.yml
+  - name: grafana-dashboards-provider
+    files:
+      - config/grafana-dashboards-provider.yml
+  - name: grafana-dashboards
+    files:
+      - dashboards/vllm.json
+
+secretGenerator:
+  - name: grafana-admin
+    literals:
+      # Initial admin login — CHANGE THIS in the Grafana UI after first login
+      # (Profile → Change Password) and store the new one in 1Password.
+      - admin-user=admin
+      - admin-password=changeme

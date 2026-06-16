@@ -1,0 +1,119 @@
+# magpie-tts-multilingual (NVIDIA Riva NIM) on a1 — Phase 4, the first real
+# workload migrated from docker. The NGC key lives in Secret ngc-api-key,
+# and nvcr.io pulls need the same key as a registry credential (create once:
+#   kubectl -n inference-club create secret generic ngc-api-key \
+#     --from-literal=api-key=<NGC_API_KEY>
+#   kubectl -n inference-club create secret docker-registry ngc-registry \
+#     --docker-server=nvcr.io --docker-username='$oauthtoken' \
+#     --docker-password=<NGC_API_KEY>  ).
+#
+# Cutover note: a1's 4090 cannot hold two magpie copies (~13.7 GiB each with
+# maxine's 3.2 GiB also resident), so the docker container must be stopped
+# BEFORE this pod can load the model. hostPort 9000/50051 on a1 preserves the
+# prod agent's hard-coded http://192.168.5.253:9000/v1 path across the swap;
+# the in-cluster agent discovers the Service by labels and uses cluster DNS.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magpie-tts
+  namespace: inference-club
+  labels:
+    app: magpie-tts
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # 1 GPU + hostPort: old pod must die before the new one starts
+  selector:
+    matchLabels:
+      app: magpie-tts
+  template:
+    metadata:
+      labels:
+        app: magpie-tts
+    spec:
+      nodeSelector:
+        inference-club.com/box: a1
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ngc-registry
+      containers:
+        - name: magpie-tts
+          # same image + tag the docker copy runs, sharing its /mnt/d/nim cache
+          image: nvcr.io/nim/nvidia/magpie-tts-multilingual:latest
+          env:
+            - name: NGC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ngc-api-key
+                  key: api-key
+            - name: NIM_HTTP_API_PORT
+              value: "9000"
+            - name: NIM_GRPC_API_PORT
+              value: "50051"
+            - name: NIM_TAGS_SELECTOR
+              value: "name=magpie-tts-multilingual,batch_size=8"
+          ports:
+            - name: http
+              containerPort: 9000
+              hostPort: 9000
+            - name: grpc
+              containerPort: 50051
+              hostPort: 50051
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: nim-cache
+              mountPath: /opt/nim/.cache
+            # riva-deploy builds TRT engines into /data (NOT the nim cache);
+            # an emptyDir keeps finished engines across container restarts so
+            # a mid-build kill resumes instead of starting from zero.
+            - name: model-repo
+              mountPath: /data
+          startupProbe:
+            # A cold start (rmir download + TRT engine build, e.g. after the
+            # nim cache is wiped) rebuilds engines into the ephemeral /data
+            # and needs well over the warm-cache few minutes — budget 40 min
+            # or the kubelet kills the pod mid-build and it loops forever.
+            httpGet:
+              path: /v1/health/ready
+              port: http
+            periodSeconds: 10
+            failureThreshold: 240
+          readinessProbe:
+            httpGet:
+              path: /v1/health/ready
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: nim-cache
+          hostPath:
+            path: /mnt/d/nim
+            type: Directory
+        - name: model-repo
+          emptyDir: {}
+---
+# Discovery: the in-cluster agent finds this Service by labels and reports
+# url http://magpie-tts.inference-club.svc.cluster.local:9000/v1, plus the
+# exact image/command/pod status from the backing pod (see 02-k8s-discovery.md).
+apiVersion: v1
+kind: Service
+metadata:
+  name: magpie-tts
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: tts
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: magpie-tts-multilingual
+        input_modalities: [text]
+        output_modalities: [audio]
+spec:
+  selector:
+    app: magpie-tts
+  ports:
+    - name: http
+      port: 9000

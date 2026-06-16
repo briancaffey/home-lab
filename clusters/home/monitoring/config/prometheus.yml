@@ -1,0 +1,52 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+  external_labels:
+    cluster: home
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # vLLM engine(s). Add more targets here as instances come online.
+  # The endpoint is the host IP:port of the vLLM OpenAI server; metrics
+  # are unauthenticated at /metrics.
+  - job_name: vllm
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "192.168.6.19:8000"   # spark (DGX Spark / GB10)
+        labels:
+          node: spark
+
+  # NVIDIA DCGM exporter — per-GPU metrics (DaemonSet, hostPort 9400).
+  # a2 is parked (NVML mismatch) and spark needs an arm64 tag — add when ready.
+  - job_name: dcgm
+    static_configs:
+      - targets: ["192.168.5.253:9400"]   # a1
+        labels: { node: a1 }
+      - targets: ["192.168.5.173:9400"]   # a3
+        labels: { node: a3 }
+
+  # node-exporter — host metrics (DaemonSet, hostPort 9100, all nodes).
+  - job_name: node
+    static_configs:
+      - targets: ["192.168.5.253:9100"]   # a1
+        labels: { node: a1 }
+      - targets: ["192.168.5.96:9100"]    # a2
+        labels: { node: a2 }
+      - targets: ["192.168.5.173:9100"]   # a3
+        labels: { node: a3 }
+      - targets: ["192.168.6.19:9100"]    # spark
+        labels: { node: spark }
+
+  # LiteLLM gateway metrics (observability ns; in-cluster scrape via cluster DNS).
+  - job_name: litellm
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["litellm.observability.svc.cluster.local:4000"]
+
+  # Prometheus scraping itself.
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

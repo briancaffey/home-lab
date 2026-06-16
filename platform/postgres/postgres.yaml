@@ -1,0 +1,83 @@
+# Postgres + pgvector — shared relational + vector store for the cluster (Phase A,
+# docs/04). One DB serves anything that needs SQL or embeddings: RAG, MCP memory,
+# LiteLLM virtual keys (later), n8n, etc. Distinct from firecrawl's own bundled
+# postgres (left alone). Image is official + multi-arch; no pull secret.
+#
+# Pinned to a3 so the 20Gi local-path PVC re-attaches to the same node's disk.
+# Reachable in-cluster at postgres.platform.svc.cluster.local:5432, and on the a3
+# LAN IP via hostPort 5432 for external psql / GUI clients.
+#
+# Secret (create once):
+#   kubectl -n platform create secret generic platform-postgres \
+#     --from-literal=password=<PG_PASSWORD>
+#
+# Create per-app DBs/roles after first boot, e.g.:
+#   kubectl -n platform exec deploy/postgres -- \
+#     psql -U postgres -c "CREATE DATABASE phoenix;"
+#
+# Deploy:  kubectl apply -f platform/postgres/postgres.yaml
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: platform
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: platform
+  labels: { app: postgres }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg17
+          env:
+            - { name: POSTGRES_USER, value: postgres }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: platform-postgres, key: password }
+            - { name: POSTGRES_DB, value: postgres }
+            # initdb needs a writable subdir under the mounted volume
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports:
+            - { name: pg, containerPort: 5432, hostPort: 5432 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 2Gi }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres"] }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: postgres-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: platform
+  labels: { app: postgres }
+spec:
+  selector: { app: postgres }
+  ports: [{ name: pg, port: 5432, targetPort: pg }]
