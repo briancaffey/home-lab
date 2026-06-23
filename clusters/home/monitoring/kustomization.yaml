@@ -7,6 +7,7 @@ resources:
   - prometheus.yaml
   - grafana.yaml
   - dcgm-exporter.yaml
+  - vram-reporter.yaml
   - node-exporter.yaml
 
 generatorOptions:

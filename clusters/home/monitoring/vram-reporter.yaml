@@ -1,0 +1,105 @@
+# vram-reporter — per-process GPU memory with pod attribution (the breakdown
+# dcgm-exporter can't give). One pod per GPU node runs `nvidia-smi
+# --query-compute-apps` and joins each pid to its owning pod via the process
+# cgroup (hostPID) + the node's pod list, then serves the result as JSON on
+# :9401/vram (hostPort). The inference-club agent scrapes every node's :9401 and
+# adds the pod→managed-service step (see inference-club-agent
+# internal/discovery/vram.go).
+#
+# Image is built from inference-club-agent/Dockerfile.vram-reporter and pushed
+# to GHCR by that repo's build-and-push workflow.
+#
+# Scope: a1 + a3 (amd64 4090s) AND spark (GB10 unified memory). Unlike
+# dcgm-exporter (which can't read the Spark's unified framebuffer), the reporter
+# uses nvidia-smi --query-compute-apps, which works on GB10 — so the Spark's
+# per-service VRAM is visible here even though dcgm shows nothing for it.
+#
+# Deploy:  kubectl apply -f clusters/home/monitoring/vram-reporter.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vram-reporter
+  namespace: monitoring
+# The reporter image lives in the private GHCR org package. Copy the existing
+# pull secret into this namespace once:
+#   kubectl get secret ghcr-pull -n inference-club -o yaml \
+#     | grep -vE 'resourceVersion:|uid:|creationTimestamp:|namespace:' \
+#     | kubectl apply -n monitoring -f -
+# (or make ghcr.io/inference-club/inference-club-agent-vram-reporter public).
+imagePullSecrets:
+  - name: ghcr-pull
+---
+# Pods are read cluster-wide: the reporter resolves any pod scheduled on its
+# node, regardless of namespace. Read-only, pods only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vram-reporter
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vram-reporter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vram-reporter
+subjects:
+  - kind: ServiceAccount
+    name: vram-reporter
+    namespace: monitoring
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vram-reporter
+  namespace: monitoring
+  labels: { app: vram-reporter }
+spec:
+  selector:
+    matchLabels: { app: vram-reporter }
+  template:
+    metadata:
+      labels: { app: vram-reporter }
+    spec:
+      serviceAccountName: vram-reporter
+      # hostPID so the container sees host PIDs and can read each GPU process's
+      # /proc/<pid>/cgroup to find the pod it belongs to.
+      hostPID: true
+      runtimeClassName: nvidia
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: inference-club.com/box
+                    operator: In
+                    values: ["a1", "a2", "a3", "spark"]
+      containers:
+        - name: vram-reporter
+          image: ghcr.io/inference-club/inference-club-agent-vram-reporter:latest
+          env:
+            # NVML/nvidia-smi via the NVIDIA runtime, no GPU slot claimed.
+            - { name: NVIDIA_VISIBLE_DEVICES, value: "all" }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "utility" }
+            - { name: PORT, value: "9401" }
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef: { fieldPath: spec.nodeName }
+          ports:
+            - { name: vram, containerPort: 9401, hostPort: 9401 }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            # root to read other pods' /proc/<pid>/cgroup under hostPID.
+            runAsUser: 0
+          readinessProbe:
+            httpGet: { path: /healthz, port: vram }
+            initialDelaySeconds: 10
+            periodSeconds: 15
