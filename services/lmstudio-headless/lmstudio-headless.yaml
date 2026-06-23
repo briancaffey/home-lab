@@ -1,0 +1,192 @@
+# Headless LM Studio on the spark, INSIDE the cluster (replaces the old
+# selector-less `lmstudio` Service that pointed at the LM Studio desktop app on
+# the host, now retired).
+#
+# Serves Qwen3.6-27B (a multimodal, reasoning, tool-capable GGUF) via lms's
+# OpenAI-compatible server. The lms binary, CUDA llama.cpp engines, llmster
+# backend, and the already-downloaded 17.5 GB GGUF are all reused from the host's
+# ~/.lmstudio (bind-mounted) — nothing is re-downloaded.
+#
+# NO custom image / registry / sudo required: it runs on the STOCK public
+# nvidia/cuda runtime image (k3s pulls it from Docker Hub) and supplies the only
+# extra lib the CUDA llama.cpp engine needs — libgomp.so.1 — by bind-mounting it
+# from the host (the base image already carries libcudart/libcublas; the driver
+# libcuda is injected by runtimeClassName: nvidia). The entrypoint comes from the
+# ConfigMap below. (A baked-image alternative lives in Dockerfile/entrypoint.sh
+# for when a registry is wired — see README.)
+#
+# GPU sharing: this pod does NOT request the device-plugin's single
+# nvidia.com/gpu — it claims the GB10 via runtimeClassName: nvidia +
+# NVIDIA_VISIBLE_DEVICES=all so it co-exists with acestep (which DOES hold
+# nvidia.com/gpu: 1) on the GB10's 128 GiB unified memory.
+#
+# The server's Bearer token (LM Studio requires one) lives in Secret
+# lmstudio-key (key `api-key`); clients/agent authenticate with it via the
+# Service's inference-club.com/api-key-secret annotation.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lmstudio-headless-entrypoint
+  namespace: inference-club
+data:
+  # Keep in sync with ./entrypoint.sh (the canonical copy, also baked by the Dockerfile).
+  entrypoint.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export HOME="${LMS_HOME:-/home/brian}"
+    export PATH="$HOME/.lmstudio/bin:$PATH"
+    PORT="${LMS_PORT:-1234}"
+    BIND="${LMS_BIND:-0.0.0.0}"
+    MODEL="${LMS_MODEL:-qwen/qwen3.6-27b}"
+    CTX="${LMS_CONTEXT_LENGTH:-8192}"
+    GPU="${LMS_GPU:-max}"
+    IDENT="${LMS_IDENTIFIER:-$MODEL}"
+    echo "[lms] starting server on ${BIND}:${PORT}"
+    lms server start --bind "$BIND" --port "$PORT"
+    echo "[lms] loading ${MODEL} (ctx=${CTX} gpu=${GPU} id=${IDENT})"
+    # shellcheck disable=SC2086
+    lms load "$MODEL" --context-length "$CTX" --gpu "$GPU" --identifier "$IDENT" -y ${LMS_EXTRA_LOAD_ARGS:-}
+    lms ps
+    echo "[lms] ready; holding foreground on tcp://127.0.0.1:${PORT}"
+    while bash -c "exec 3<>/dev/tcp/127.0.0.1/${PORT}" 2>/dev/null; do
+      sleep 15
+    done
+    echo "[lms] server port closed; exiting for restart" >&2
+    exit 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lmstudio-headless
+  namespace: inference-club
+  labels:
+    app: lmstudio-headless
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # one llmster owns ~/.lmstudio at a time
+  selector:
+    matchLabels:
+      app: lmstudio-headless
+  template:
+    metadata:
+      labels:
+        app: lmstudio-headless
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      # uid/gid 1000 == host `brian`, so files written under the bind-mounted
+      # ~/.lmstudio keep the right ownership.
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+        - name: lmstudio-headless
+          image: nvidia/cuda:13.0.0-runtime-ubuntu24.04
+          imagePullPolicy: IfNotPresent
+          command: ["bash", "/etc/lms/entrypoint.sh"]
+          env:
+            # GPU via the nvidia runtime WITHOUT holding nvidia.com/gpu, so we
+            # share the GB10 with acestep.
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: all
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: all
+            # libgomp is bind-mounted here; cuda libs resolve via the base image's
+            # ldconfig, but list the path too for safety.
+            - name: LD_LIBRARY_PATH
+              value: /opt/lmslib:/usr/local/cuda/lib64
+            - name: LMS_MODEL
+              value: qwen/qwen3.6-27b
+            # Context window is set at model-load time — bump this (and the
+            # Service's context_length annotation) to resize. GB10 unified memory
+            # has plenty of headroom for larger windows.
+            - name: LMS_CONTEXT_LENGTH
+              value: "8192"
+            - name: LMS_GPU
+              value: max
+            - name: LMS_PORT
+              value: "1234"
+          ports:
+            - name: http
+              containerPort: 1234
+              # Exposed on the spark's LAN IP (192.168.6.19:1234) too, so the
+              # laptop dev agent (static agent.yaml, AGENT_DIRECT mode) can reach
+              # it — same hostPort convention acestep (8015) uses. Free now that
+              # the desktop LM Studio is stopped. In-cluster traffic still uses
+              # the ClusterIP Service below.
+              hostPort: 1234
+          # The port opens at server start; the model preloads within seconds. TCP
+          # probes are auth-free (the stock image has no curl to send a Bearer token).
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60 # ~10 min budget: first load reads 17.5 GB off disk
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 15
+          volumeMounts:
+            # Writable HOME so the lms binary can write ~/.lmstudio-home-pointer
+            # (it lives one level ABOVE .lmstudio).
+            - name: home
+              mountPath: /home/brian
+            # The real host LM Studio dir: lms binary + engines + llmster + the
+            # downloaded GGUF models. Mounted at the SAME path the host uses
+            # because llmster hardcodes absolute /home/brian/.lmstudio/... paths.
+            - name: lmstudio
+              mountPath: /home/brian/.lmstudio
+            # The one lib the CUDA engine needs that the stock image lacks.
+            - name: libgomp
+              mountPath: /opt/lmslib/libgomp.so.1
+            - name: entrypoint
+              mountPath: /etc/lms
+      volumes:
+        - name: home
+          emptyDir: {}
+        - name: lmstudio
+          hostPath:
+            path: /home/brian/.lmstudio
+            type: Directory
+        - name: libgomp
+          hostPath:
+            path: /usr/lib/aarch64-linux-gnu/libgomp.so.1.0.0
+            type: File
+        - name: entrypoint
+          configMap:
+            name: lmstudio-headless-entrypoint
+---
+# type=llm + engine=lmstudio: the agent (kubernetes discovery) auto-registers
+# this on prod inference.club and routes /v1 chat/completions here. base-path /v1
+# (OpenAI-compatible); api-key-secret supplies the Bearer token the upstream
+# server requires.
+apiVersion: v1
+kind: Service
+metadata:
+  name: lmstudio-headless
+  namespace: inference-club
+  labels:
+    app: lmstudio-headless
+    inference-club.com/managed: "true"
+    inference-club.com/type: llm
+    inference-club.com/engine: lmstudio
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/api-key-secret: lmstudio-key
+    inference-club.com/models: |
+      - id: qwen/qwen3.6-27b
+        name: Qwen3.6 27B
+        input_modalities: [text, image]
+        output_modalities: [text]
+        features: [reasoning, tools]
+        context_length: 8192
+        quantization: Q4_K_M
+spec:
+  selector:
+    app: lmstudio-headless
+  ports:
+    - name: http
+      port: 1234
+      targetPort: http

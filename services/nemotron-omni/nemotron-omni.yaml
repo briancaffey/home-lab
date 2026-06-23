@@ -36,6 +36,9 @@ metadata:
   labels:
     app: nemotron-omni
 spec:
+  # Running alongside lmstudio-headless (Qwen3.6-27B) and acestep on the single
+  # GB10 GPU. The GPU is SHARED via runtimeClassName: nvidia (unified memory) —
+  # see the resources note below — so this does NOT claim the device-plugin slot.
   replicas: 1
   strategy:
     type: Recreate # single GPU on spark; old pod must release it before the new one starts
@@ -60,6 +63,19 @@ spec:
               value: latency
             - name: HF_HOME
               value: /root/.cache/huggingface
+            # Tunables for the vllm serve command below. Edit these and re-apply
+            # to change concurrency / context length / memory budget.
+            - name: MAX_NUM_SEQS # max concurrent/parallel requests
+              value: "8"
+            - name: MAX_MODEL_LEN # max context length (prompt + output)
+              value: "64000"
+            - name: GPU_MEM_UTIL
+              # Fraction of the 121.69 GiB UNIFIED GB10 memory vLLM may claim.
+              # Lowered from 0.75 (~91 GiB, when nemotron owned the GPU) to ~0.40
+              # (~48 GiB) so it coexists with lmstudio-headless + acestep, which
+              # already hold ~44 GiB. ~15 GiB weights leaves ample fp8 KV cache
+              # for 8 seqs x 64k (the model is mostly Mamba, so KV is small).
+              value: "0.40"
           command: ["bash", "-c"]
           # Verbatim port of the docker `-c` script: install audio extras + the
           # cuda runtime wheel, fix LD_LIBRARY_PATH, then `vllm serve`. Backslash
@@ -72,10 +88,10 @@ spec:
                 --served-model-name nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4 nemotron-3-nano-omni \
                 --tensor-parallel-size 1 \
                 --port 8000 --host 0.0.0.0 \
-                --max-model-len 10000 \
-                --max-num-seqs 128 \
+                --max-model-len "$MAX_MODEL_LEN" \
+                --max-num-seqs "$MAX_NUM_SEQS" \
                 --max-num-batched-tokens 32768 \
-                --gpu-memory-utilization 0.75 \
+                --gpu-memory-utilization "$GPU_MEM_UTIL" \
                 --quantization fp4 \
                 --moe-backend marlin \
                 --kv-cache-dtype fp8 \
@@ -93,9 +109,12 @@ spec:
             - name: http
               containerPort: 8000
               hostPort: 8000
-          resources:
-            limits:
-              nvidia.com/gpu: 1
+          # NOTE: no `nvidia.com/gpu` device-plugin claim. The spark advertises
+          # exactly 1 GPU slot and acestep holds it; claiming it here would leave
+          # this pod Pending. Instead we share the physical GB10 GPU via
+          # runtimeClassName: nvidia (unified memory) — the same pattern as
+          # lmstudio-headless. GPU_MEM_UTIL above bounds our share of memory.
+          resources: {}
           volumeMounts:
             - name: hf-cache
               mountPath: /root/.cache/huggingface
@@ -145,7 +164,7 @@ metadata:
         input_modalities: [text, image, audio, video]
         output_modalities: [text]
         features: [reasoning, tools]
-        context_length: 10000
+        context_length: 64000
         quantization: fp4
 spec:
   selector:

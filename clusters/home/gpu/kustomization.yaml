@@ -5,7 +5,17 @@ resources:
   # NVIDIA device plugin (upstream, pinned). Patched to use the nvidia
   # RuntimeClass so it can see the GPU under k3s containerd.
   - https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.4/deployments/static/nvidia-device-plugin.yml
+  # Node Feature Discovery (master + worker + CRDs). GPU-feature-discovery
+  # writes feature files that nfd-worker reads and nfd-master turns into node
+  # labels — the mechanism that surfaces nvidia.com/gpu.product + .memory.
+  - https://github.com/kubernetes-sigs/node-feature-discovery/deployment/overlays/default?ref=v0.16.6
+  # GPU-feature-discovery (vendored from device-plugin v0.17.4 with local edits:
+  # kube-system ns, nvidia RuntimeClass, corrected pci-0300_10de affinity).
+  - gpu-feature-discovery.yaml
+  # GB10/DGX-Spark unified-memory label (GFD can't read it via NVML yet).
+  - gb10-memory-rule.yaml
 patches:
+  # Device plugin needs the nvidia RuntimeClass to see the GPU under k3s.
   - target:
       kind: DaemonSet
       name: nvidia-device-plugin-daemonset
@@ -13,3 +23,14 @@ patches:
       - op: add
         path: /spec/template/spec/runtimeClassName
         value: nvidia
+  # nfd-master rejects label namespaces outside feature.node.kubernetes.io by
+  # default; allow nvidia.com/* through so GFD's GPU labels are published.
+  - target:
+      kind: ConfigMap
+      name: nfd-master-conf
+      namespace: node-feature-discovery
+    patch: |-
+      - op: replace
+        path: /data/nfd-master.conf
+        value: |
+          extraLabelNs: ["nvidia.com"]

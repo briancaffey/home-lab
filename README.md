@@ -1,4 +1,4 @@
-# home-cluster
+# home-lab
 
 Brian's home inference fleet, migrating from hand-run docker containers to
 k3s. Four Ubuntu boxes on one LAN, registered to inference.club via the

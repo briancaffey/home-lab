@@ -141,3 +141,27 @@ discovery.namespace, service.type (LoadBalancer|NodePort), direct mode bool,
 tailscale.enabled (Phase 6). Templates: Deployment, SA/Role/RoleBinding/
 ClusterRole(Binding), Service, optional agent.yaml ConfigMap (static mode only,
 for non-k8s users — chart serves both modes).
+
+## GPU discovery (AS BUILT, 2026-06-21)
+
+The "node GPU labels" the table above relies on are now real. `clusters/home/gpu`
+deploys, alongside the device plugin:
+
+- **Node Feature Discovery** v0.16.6 (upstream overlay) — master + worker + CRDs.
+- **GPU-feature-discovery** v0.17.4 (`gpu-feature-discovery.yaml`, vendored from
+  the device-plugin repo) with three k3s edits: `kube-system` ns, the `nvidia`
+  RuntimeClass (NVML access), and a `pci-0300_10de` nodeAffinity (NFD v0.16's
+  label spelling, not the upstream `pci-10de`).
+- A `nfd-master-conf` patch adding `extraLabelNs: ["nvidia.com"]` so GFD's labels
+  aren't filtered out.
+- `gb10-memory-rule.yaml` — a `NodeFeatureRule` setting `nvidia.com/gpu.memory`
+  for the GB10 DGX Spark (GFD can't read its unified memory via NVML yet).
+
+Result, read directly by `inference-club-agent`'s `hostFromNode`:
+
+| node | nvidia.com/gpu.product | nvidia.com/gpu.memory |
+|---|---|---|
+| a1 / a2 / a3 | NVIDIA-GeForce-RTX-4090 | 24564 MiB (24 GB) |
+| spark | NVIDIA-GB10 | 124610 MiB (≈122 GB unified, via the rule) |
+
+`kubectl apply -k clusters/home/gpu` is idempotent and reproduces all of it.

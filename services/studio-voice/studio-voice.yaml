@@ -160,7 +160,10 @@ metadata:
   labels:
     inference-club.com/managed: "true"
     inference-club.com/type: audio-enhance
-    inference-club.com/engine: riva
+    # The agent's engine enum is [llamacpp lmstudio ollama other sglang tgi vllm];
+    # "riva" is rejected and invalidates the ENTIRE discovery payload (blocking
+    # every service from registering), so this Riva NIM registers as `other`.
+    inference-club.com/engine: other
   annotations:
     inference-club.com/base-path: /v1
     inference-club.com/models: |

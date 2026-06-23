@@ -1,0 +1,29 @@
+# GB10 (DGX Spark) unified-memory label.
+#
+# GPU-feature-discovery v0.17.4 cannot read VRAM for the GB10 — its NVML query
+# returns "memory info: Not Supported" because the Spark has no dedicated VRAM:
+# the GPU shares the box's 128 GB LPDDR5X unified memory pool. So GFD sets
+# `nvidia.com/gpu.product=NVIDIA-GB10` but leaves `nvidia.com/gpu.memory` unset.
+#
+# This NodeFeatureRule fills that gap natively, the NFD way: any node carrying
+# the GB10 GPU (PCI vendor 10de / class 0300 / device 2e12) gets the unified
+# pool reported as its GPU memory (124610 MiB ≈ 121.7 GB, the node's actual RAM
+# capacity). inference-club-agent reads `nvidia.com/gpu.memory` like any other
+# node, so the Spark's memory shows up with zero agent changes.
+#
+# Remove this once a GFD release reads GB10 memory directly.
+apiVersion: nfd.k8s-sigs.io/v1alpha1
+kind: NodeFeatureRule
+metadata:
+  name: gb10-unified-memory
+spec:
+  rules:
+    - name: gb10-unified-memory
+      labels:
+        nvidia.com/gpu.memory: "124610"
+      matchFeatures:
+        - feature: pci.device
+          matchExpressions:
+            vendor: { op: In, value: ["10de"] }
+            class: { op: In, value: ["0300"] }
+            device: { op: In, value: ["2e12"] }

@@ -36,6 +36,29 @@ spec:
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ngc-registry
+      # The /data hostPath (/mnt/d/magpie-data) is created by the kubelet as
+      # root:root 0755, but the NIM's riva-deploy runs as a non-root user and
+      # must mkdir /data/models inside it. Open the dir up before the NIM starts.
+      # (The old emptyDir was world-writable, so this wasn't needed there.)
+      initContainers:
+        # Start from a CLEAN /data each boot. riva-deploy regenerates the Triton
+        # model repo incrementally (it "skips copy" for files that already exist),
+        # so a persisted-but-partial /data from a previous/interrupted build
+        # produces an INCOMPLETE repo — Triton then dies with "File does not
+        # exist: .../<voice>.pt … failed to load all models". Wiping guarantees a
+        # full, consistent regenerate. (We keep /data on /mnt/d only for disk
+        # space + to avoid the root-disk eviction; the NIM rebuilds engines every
+        # start regardless, so there's nothing to preserve.) Also fixes perms:
+        # the kubelet creates the hostPath root:root 0755 but the NIM runs
+        # non-root and must mkdir under /data.
+        - name: fix-perms
+          image: busybox:1.36
+          command: ["sh", "-c", "rm -rf /data/* /data/.[!.]* 2>/dev/null; mkdir -p /data && chmod 0777 /data"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: model-repo
+              mountPath: /data
       containers:
         - name: magpie-tts
           # same image + tag the docker copy runs, sharing its /mnt/d/nim cache
@@ -65,9 +88,13 @@ spec:
           volumeMounts:
             - name: nim-cache
               mountPath: /opt/nim/.cache
-            # riva-deploy builds TRT engines into /data (NOT the nim cache);
-            # an emptyDir keeps finished engines across container restarts so
-            # a mid-build kill resumes instead of starting from zero.
+            # riva-deploy regenerates the Triton repo + TRT engines into /data on
+            # EVERY start (~17 min; this NIM does not reuse a prebuilt repo). /data
+            # MUST live on the big /mnt/d disk, NOT the node root disk: a1's root
+            # (/dev/sda2) runs ~94% full and the multi-GiB build on a root-backed
+            # emptyDir evicted the pod for ephemeral-storage pressure. The dir is
+            # wiped clean each boot by the fix-perms initContainer — it's just
+            # build scratch (a persisted partial repo makes Triton fail to load).
             - name: model-repo
               mountPath: /data
           startupProbe:
@@ -85,13 +112,29 @@ spec:
               path: /v1/health/ready
               port: http
             periodSeconds: 15
+          livenessProbe:
+            # The TRT-LLM executor thread can DIE on certain inputs (e.g. text in
+            # a script not in the model dictionary — Chinese chars get dropped,
+            # leaving an input too short for the attention window → fatal
+            # assertion in forwardAsync). The HTTP server then wedges (health
+            # times out) but the container keeps "running" with no restart. A
+            # liveness probe restarts it automatically. Gated by startupProbe, so
+            # it never fires during the long first-load/engine build.
+            httpGet:
+              path: /v1/health/ready
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
       volumes:
         - name: nim-cache
           hostPath:
             path: /mnt/d/nim
             type: Directory
         - name: model-repo
-          emptyDir: {}
+          hostPath:
+            path: /mnt/d/magpie-data
+            type: DirectoryOrCreate
 ---
 # Discovery: the in-cluster agent finds this Service by labels and reports
 # url http://magpie-tts.inference-club.svc.cluster.local:9000/v1, plus the

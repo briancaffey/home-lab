@@ -1,0 +1,80 @@
+# Local-dev agent — the SAME Kubernetes discovery path as the prod agent
+# (`agent-inference-club-agent`), but registered to a developer's LOCAL
+# inference.club backend (docker compose on their Mac) instead of prod. This
+# replaces the old Mac-side docker agent + static `agent.yaml`: local dev now
+# discovers cluster services exactly like prod (labeled Services in this
+# namespace), so there's a single source of truth.
+#
+# How it differs from prod: AGENT_DIRECT (plain HTTP, no tailnet) — it advertises
+# a LAN address (this node's IP + hostPort) that the Mac backend reaches, and the
+# Mac backend runs with INFERENCE_DIRECT_AGENTS=True to trust it. Reuses the prod
+# agent's ServiceAccount (read svcs/pods/endpointslices/nodes/metrics).
+#
+# Two env values are developer-specific — change them for your machine:
+#   INFERENCE_CLUB_URL    -> http://<your-Mac-LAN-IP>:8101  (reserve the IP in DHCP)
+#   AGENT_ADVERTISE_HOST  -> the LAN IP of the node this is pinned to (a3 here)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-dev
+  namespace: inference-club
+  labels:
+    app: agent-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-dev
+  template:
+    metadata:
+      labels:
+        app: agent-dev
+    spec:
+      # Reuse the prod agent's RBAC (Role: services/pods/endpointslices in this
+      # ns; ClusterRole: nodes + metrics).
+      serviceAccountName: agent-inference-club-agent
+      # Pinned so AGENT_ADVERTISE_HOST below matches a known, stable node IP and
+      # the hostPort lands there.
+      nodeSelector:
+        kubernetes.io/hostname: a3
+      containers:
+        - name: agent
+          image: ghcr.io/inference-club/inference-club-agent:sha-5cb6774e8b9fd7382c0450545aac375392f6168c
+          env:
+            # Discovery: identical to prod — build the manifest from labeled
+            # Services in this namespace and poll.
+            - name: AGENT_DISCOVERY
+              value: kubernetes
+            - name: AGENT_DISCOVERY_NAMESPACE
+              value: inference-club
+            - name: AGENT_DISCOVERY_INTERVAL
+              value: 30s
+            # Serving: direct (no tailnet) so the Mac backend can reach it on the LAN.
+            - name: AGENT_DIRECT
+              value: "1"
+            - name: AGENT_NAME
+              value: club-host
+            - name: AGENT_ADVERTISE_HOST
+              value: "192.168.5.173" # a3 LAN IP — the Mac backend proxies /v1 here
+            - name: AGENT_LISTEN_PORT
+              value: "8091"
+            # The developer's LOCAL backend (Mac LAN IP, compose port 8101).
+            - name: INFERENCE_CLUB_URL
+              value: "http://192.168.6.12:8101"
+            - name: INFERENCE_CLUB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: club-host-dev-key
+                  key: api-key
+            - name: AGENT_STATE_DIR
+              value: /var/lib/club-host
+          ports:
+            - name: http
+              containerPort: 8091
+              hostPort: 8091
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/club-host
+      volumes:
+        - name: state
+          emptyDir: {}
