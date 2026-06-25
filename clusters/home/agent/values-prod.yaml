@@ -28,11 +28,18 @@ service:
   # plain ClusterIP rather than grabbing LAN IPs with a LoadBalancer.
   type: ClusterIP
   port: 443
-# emptyDir (not a PVC) on purpose: the agent re-registers idempotently on every
-# boot (backend re-mints the key and returns club-host-1), so it needs no
-# persistent identity — and a local-path PVC would pin the pod to one node,
-# blocking reschedule if that node dies. The Recreate strategy (chart default)
-# fully stops the old pod first, so its ephemeral tailnet device is cleanly
-# removed before the new pod claims club-host-1 — no restart collision.
+# emptyDir (not a PVC) on purpose: a local-path PVC would pin the pod to one
+# node, blocking reschedule if that node dies. The trade-off is that each boot
+# joins the tailnet as a BRAND-NEW device — and because these devices are NOT
+# ephemeral (Ephemeral:false in tsnet + a non-ephemeral static authkey), the
+# previous club-host-1 device lingers and squats the name, so Tailscale
+# uniquifies the new node to club-host-1-1 (then -2, ...). That used to break
+# the backend, which dialed the canonical hostname club-host-1.
+#
+# That's now safe: the agent reports its real tailnet IP on every heartbeat and
+# the backend dials that IP (routes straight over WireGuard, no MagicDNS), so a
+# renamed node is reached regardless. The lingering club-host-1* devices are
+# harmless but accumulate in the Tailscale admin console — prune them
+# occasionally, or wire up the OAuth ephemeral-key path so they self-reap.
 persistence:
   enabled: false
