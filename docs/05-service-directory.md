@@ -76,6 +76,7 @@ run `mkcert -install` once per client to trust the CA).
 | Jellyfin | Media server (a2, NVENC) | https://jellyfin.lan/ |
 | Audiobookshelf | Audiobooks & podcasts (a3) | https://abs.lan/ |
 | Vaultwarden | Passwords & secrets (Bitwarden-compatible, a3) | https://vault.lan/ |
+| Harbor | Private container registry + UI (a2) | https://harbor.lan/ · `docker/crane … harbor.lan/<project>/<repo>` |
 
 ---
 

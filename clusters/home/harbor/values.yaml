@@ -37,6 +37,10 @@ expose:
       gethomepage.dev/group: "Infra"
       gethomepage.dev/icon: "harbor.png"
       gethomepage.dev/href: "https://harbor.lan/"
+      # Harbor's ingress is named harbor-ingress; without this, Homepage's status
+      # check defaults to app.kubernetes.io/name=harbor-ingress (no such pods) and
+      # shows "not found". Point it at all Harbor pods instead.
+      gethomepage.dev/pod-selector: "app.kubernetes.io/instance=harbor"
 
 # --- image blob store on a2's E drive; small stores stay on root local-path ---
 persistence:
