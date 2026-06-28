@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: invokeai
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/invokeai
+# Migrated from `docker run ... -v /home/brian/d/InvokeAI:/invokeai
+# ghcr.io/invoke-ai/invokeai` on a2. Mounts the existing 313G data in place
+# (hostPath, node-pinned to a2). Requires out-of-band secret invokeai-tls
+# (scripts/lan-certs.sh). Optional invokeai-secrets (hf-token) for new downloads.
+
+resources:
+  - namespace.yaml
+  - invokeai.yaml
+  - ingress.yaml

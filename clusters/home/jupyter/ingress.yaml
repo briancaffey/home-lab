@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jupyter
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "JupyterLab"
+    gethomepage.dev/description: "GPU notebooks (a2)"
+    gethomepage.dev/group: "AI"
+    gethomepage.dev/icon: "jupyter.png"
+    gethomepage.dev/href: "https://jupyter.lan/"
+    # pods are labeled app=jupyter (not app.kubernetes.io/name)
+    gethomepage.dev/pod-selector: "app=jupyter"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["jupyter.lan"]
+      secretName: jupyter-tls
+  rules:
+    - host: jupyter.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jupyter
+                port:
+                  number: 80

@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Build/apply with the standalone kustomize binary:
+#   kustomize build --enable-helm clusters/home/homepage | kubectl apply -f -
+# Requires the TLS secret `home-tls` — see scripts/lan-certs.sh.
+
+resources:
+  - namespace.yaml
+
+helmCharts:
+  - name: homepage
+    repo: https://jameswynn.github.io/helm-charts
+    version: 2.1.0
+    releaseName: homepage
+    namespace: homepage
+    valuesFile: values.yaml

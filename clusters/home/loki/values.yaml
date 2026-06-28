@@ -1,0 +1,17 @@
+# Loki single-binary + Promtail collector. Grafana/Prometheus subcharts are
+# disabled — we use the existing ones in the monitoring namespace.
+loki:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+    # uses the default `local-path` StorageClass
+
+promtail:
+  enabled: true
+
+grafana:
+  enabled: false
+
+prometheus:
+  enabled: false

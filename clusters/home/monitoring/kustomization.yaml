@@ -6,6 +6,7 @@ resources:
   - namespace.yaml
   - prometheus.yaml
   - grafana.yaml
+  - grafana-ingress.yaml
   - dcgm-exporter.yaml
   - vram-reporter.yaml
   - node-exporter.yaml
@@ -32,6 +33,7 @@ configMapGenerator:
   - name: grafana-dashboards
     files:
       - dashboards/vllm.json
+      - dashboards/nvidia-dcgm.json
 
 secretGenerator:
   - name: grafana-admin

@@ -1,0 +1,38 @@
+# Headlamp — Kubernetes dashboard at https://headlamp.lan/, no login.
+# UNSAFE no-auth (home LAN only): every visitor authenticates as the pod's
+# service account, which is bound cluster-admin. See PRD/notes before exposing
+# beyond the LAN.
+config:
+  inCluster: true
+  # Authenticate every user as the pod SA (no login screen). LAN-only.
+  unsafeUseServiceAccountToken: true
+
+clusterRoleBinding:
+  # Full read/write. Set to `view` for read-only.
+  clusterRoleName: cluster-admin
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    # Registers this service on Homepage (gethomepage.dev) auto-discovery.
+    # NOTE: enabled must be an ANNOTATION (not a label), despite the chart's
+    # example showing it as a label.
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Headlamp"
+    gethomepage.dev/description: "Kubernetes dashboard"
+    gethomepage.dev/group: "Cluster"
+    gethomepage.dev/icon: "headlamp.png"
+    gethomepage.dev/href: "https://headlamp.lan/"
+  hosts:
+    - host: headlamp.lan
+      paths:
+        - path: /
+          type: Prefix
+  tls:
+    - secretName: headlamp-tls
+      hosts:
+        - headlamp.lan

@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Loki + Promtail (log aggregation). Lands in the existing `monitoring`
+# namespace (created by clusters/home/monitoring) alongside Prometheus/Grafana.
+# Build/apply with the standalone kustomize binary:
+#   kustomize build --enable-helm clusters/home/loki | kubectl apply -f -
+# The Loki datasource is wired into Grafana via
+# clusters/home/monitoring/config/grafana-datasources.yml.
+
+helmCharts:
+  - name: loki-stack
+    repo: https://grafana.github.io/helm-charts
+    version: 2.10.3
+    releaseName: loki
+    namespace: monitoring
+    valuesFile: values.yaml
