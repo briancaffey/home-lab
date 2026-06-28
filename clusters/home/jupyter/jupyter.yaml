@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jupyter-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 20Gi
+  # default storageClass (local-path) — node-local; pinned to a2 with the pod
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jupyter
+spec:
+  replicas: 1
+  # RWO volume + single GPU: never run two pods at once.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jupyter
+  template:
+    metadata:
+      labels:
+        app: jupyter
+    spec:
+      # Disable k8s Docker-link service env vars: a Service named `jupyter`
+      # injects JUPYTER_PORT=tcp://... which collides with jupyter_server's
+      # JUPYTER_PORT (expects an int) and crashes it.
+      enableServiceLinks: false
+      # Pin to a2 and SHARE its 4090 with flux2-klein (no exclusive
+      # device-plugin claim — same shared pattern as nemotron-omni on spark).
+      nodeSelector:
+        inference-club.com/box: a2
+      runtimeClassName: nvidia
+      securityContext:
+        # jupyter image runs as uid 1000 (jovyan), gid 100 (users);
+        # fsGroup makes the local-path PVC group-writable for it.
+        fsGroup: 100
+      containers:
+        - name: jupyter
+          image: quay.io/jupyter/pytorch-notebook:cuda12-latest
+          ports:
+            - name: http
+              containerPort: 8888
+          env:
+            - name: JUPYTER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jupyter-auth
+                  key: token
+            # behind Traefik TLS: trust X-Forwarded-* and allow proxied access
+            - name: NOTEBOOK_ARGS
+              value: "--ServerApp.trust_xheaders=True --ServerApp.allow_remote_access=True"
+            # Shared-GPU access (no device-plugin claim): expose all GPUs on the
+            # node. Jupyter and flux2-klein share the 4090's 24GB VRAM.
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /login
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 30
+          volumeMounts:
+            - name: data
+              mountPath: /home/jovyan/work
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: jupyter-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyter
+spec:
+  selector:
+    app: jupyter
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

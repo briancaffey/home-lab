@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: jupyter
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/jupyter
+# Requires out-of-band secrets (not in git):
+#   - jupyter-tls   (scripts/lan-certs.sh)
+#   - jupyter-auth  (token; `kubectl -n jupyter create secret generic jupyter-auth
+#                    --from-literal=token="$(openssl rand -hex 24)"`)
+
+resources:
+  - namespace.yaml
+  - jupyter.yaml
+  - ingress.yaml

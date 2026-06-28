@@ -37,6 +37,16 @@ kustomize build --enable-helm clusters/home/headlamp   | kubectl apply -f -
 kustomize build --enable-helm clusters/home/homepage   | kubectl apply -f -
 kustomize build --enable-helm clusters/home/loki       | kubectl apply -f -
 kustomize build --enable-helm clusters/home/open-webui | kubectl apply -f -
+
+# raw-manifest apps (no Helm)
+kubectl apply -k clusters/home/jupyter
+```
+
+JupyterLab (pinned to a2, SHARES a2's 4090 with flux2-klein) needs a token secret:
+
+```sh
+kubectl -n jupyter create secret generic jupyter-auth \
+  --from-literal=token="$(openssl rand -hex 24)"
 ```
 
 Open WebUI also needs the `openwebui-litellm` secret (its OpenAI key = the
@@ -53,6 +63,7 @@ kubectl -n open-webui create secret generic openwebui-litellm \
 | Headlamp  | https://headlamp.lan/  | k8s dashboard, no-login (LAN only)      |
 | Grafana   | https://grafana.lan/   | + Loki logs datasource, NVIDIA DCGM dash|
 | Open WebUI| https://openwebui.lan/ | chat UI -> LiteLLM gateway (local LLMs) |
+| JupyterLab| https://jupyter.lan/   | GPU notebooks on a2 (shared 4090), token auth|
 
 > **One-time transition note:** these three apps were first installed
 > imperatively with `helm install`. Applying the kustomize render above adopts
