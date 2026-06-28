@@ -33,16 +33,26 @@ bash scripts/lan-certs.sh
 kubectl apply -k clusters/home
 
 # Helm-based apps (standalone kustomize binary; kubectl's embedded one is too old)
-kustomize build --enable-helm clusters/home/headlamp | kubectl apply -f -
-kustomize build --enable-helm clusters/home/homepage | kubectl apply -f -
-kustomize build --enable-helm clusters/home/loki     | kubectl apply -f -
+kustomize build --enable-helm clusters/home/headlamp   | kubectl apply -f -
+kustomize build --enable-helm clusters/home/homepage   | kubectl apply -f -
+kustomize build --enable-helm clusters/home/loki       | kubectl apply -f -
+kustomize build --enable-helm clusters/home/open-webui | kubectl apply -f -
 ```
 
-| service  | URL                   | notes                                  |
-|----------|-----------------------|----------------------------------------|
-| Homepage | https://home.lan/     | auto-discovers labeled ingresses       |
-| Headlamp | https://headlamp.lan/ | k8s dashboard, no-login (LAN only)     |
-| Grafana  | https://grafana.lan/  | + Loki logs datasource, NVIDIA DCGM dash|
+Open WebUI also needs the `openwebui-litellm` secret (its OpenAI key = the
+LiteLLM master key), created out-of-band:
+
+```sh
+kubectl -n open-webui create secret generic openwebui-litellm \
+  --from-literal=api-key="$(kubectl -n observability get secret litellm-secret -o jsonpath='{.data.master-key}' | base64 -d)"
+```
+
+| service   | URL                    | notes                                   |
+|-----------|------------------------|-----------------------------------------|
+| Homepage  | https://home.lan/      | auto-discovers labeled ingresses        |
+| Headlamp  | https://headlamp.lan/  | k8s dashboard, no-login (LAN only)      |
+| Grafana   | https://grafana.lan/   | + Loki logs datasource, NVIDIA DCGM dash|
+| Open WebUI| https://openwebui.lan/ | chat UI -> LiteLLM gateway (local LLMs) |
 
 > **One-time transition note:** these three apps were first installed
 > imperatively with `helm install`. Applying the kustomize render above adopts

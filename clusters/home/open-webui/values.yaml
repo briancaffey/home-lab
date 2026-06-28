@@ -1,0 +1,40 @@
+# Open WebUI — ChatGPT-style UI at https://openwebui.lan/, pointed at the
+# in-cluster LiteLLM gateway (observability ns) for local models.
+
+# We use an OpenAI-compatible backend, not Ollama — disable the Ollama subchart.
+ollama:
+  enabled: false
+pipelines:
+  enabled: false
+tika:
+  enabled: false
+# Single replica; skip the redis-backed websocket manager subchart.
+websocket:
+  enabled: false
+
+persistence:
+  enabled: true
+  size: 5Gi
+  # default storageClass (local-path)
+
+# Point at the in-cluster LiteLLM gateway via the chart's native OpenAI config.
+enableOpenaiApi: true
+openaiBaseApiUrl: "http://litellm.observability.svc.cluster.local:4000/v1"
+# API key (litellm master key) from the out-of-band secret — never in git.
+openaiApiKeyExistingSecret: "openwebui-litellm"
+openaiApiKeyExistingSecretKey: "api-key"
+
+ingress:
+  enabled: true
+  class: traefik
+  host: openwebui.lan
+  tls: true
+  existingSecret: openwebui-tls
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Open WebUI"
+    gethomepage.dev/description: "Chat with local LLMs"
+    gethomepage.dev/group: "AI"
+    gethomepage.dev/icon: "open-webui.png"
+    gethomepage.dev/href: "https://openwebui.lan/"
+    gethomepage.dev/pod-selector: "app.kubernetes.io/name=open-webui"

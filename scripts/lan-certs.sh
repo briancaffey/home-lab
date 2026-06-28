@@ -9,13 +9,14 @@
 # whenever you add a new <name>.lan host (add it to HOSTS below).
 set -euo pipefail
 
-HOSTS=(headlamp.lan home.lan grafana.lan "*.lan")
+HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan "*.lan")
 
 # secret-name : namespace
 SECRETS=(
   "headlamp-tls:headlamp"
   "home-tls:homepage"
   "grafana-tls:monitoring"
+  "openwebui-tls:open-webui"
 )
 
 command -v mkcert >/dev/null || { echo "mkcert not found (brew install mkcert nss)"; exit 1; }
