@@ -1,0 +1,38 @@
+# Static local storage for Harbor's image blobs on a2's E drive (ext4, ~5.4 TB),
+# kept OFF the default local-path SC (which would land on a2's root SSD).
+#
+# - StorageClass `e-local-a2`: no-provisioner, so only statically-defined PVs use
+#   it; WaitForFirstConsumer makes the consuming pod schedule onto the PV's node.
+# - PV `harbor-registry-e`: a `local` volume backed by the pre-created directory
+#   /home/brian/e/k3s/volumes/harbor-registry on a2, pinned there via nodeAffinity.
+#
+# NOTE: a `local` PV's capacity (500Gi) is advisory only — the real limit is the
+# E filesystem (5.4 TB free). reclaimPolicy Retain protects the data on delete.
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: e-local-a2
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: harbor-registry-e
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: e-local-a2
+  local:
+    path: /home/brian/e/k3s/volumes/harbor-registry
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: ["a2"]

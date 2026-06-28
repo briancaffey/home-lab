@@ -1,0 +1,59 @@
+# Harbor — private container registry at https://harbor.lan/, replacing the
+# built-in registry:2. Image blobs live on a2's E drive (static local PV, see
+# storage.yaml); the small stores (db/redis/jobservice/trivy) use default
+# local-path on a2's root SSD. Every Harbor pod is pinned to a2 — the chart has
+# NO global nodeSelector, so each component is pinned individually below.
+#
+# Determinism under `kustomize build --enable-helm` (no Helm release state):
+#   - secretKey (data-at-rest encryption) and the admin password are pinned to
+#     out-of-band Secrets so they never change across re-applies (see README).
+#   - The chart's internal trust tokens (core/registry/jobservice) regenerate per
+#     render; on re-apply they rotate and bounce the pods — harmless, no data is
+#     encrypted with them. To freeze those too, pin core.secret/xsrfKey/etc.
+
+externalURL: https://harbor.lan
+
+# Admin password + data-encryption key from secrets created out-of-band (README).
+existingSecretAdminPassword: harbor-admin
+existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+existingSecretSecretKey: harbor-secret-key            # data key `secretKey` (16 chars)
+
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-tls                           # the *.lan mkcert wildcard
+  ingress:
+    className: traefik
+    hosts:
+      core: harbor.lan
+    annotations:
+      # Homepage auto-discovery (same convention as the other services)
+      gethomepage.dev/enabled: "true"
+      gethomepage.dev/name: "Harbor"
+      gethomepage.dev/description: "Private container registry"
+      gethomepage.dev/group: "Infra"
+      gethomepage.dev/icon: "harbor.png"
+      gethomepage.dev/href: "https://harbor.lan/"
+
+# --- image blob store on a2's E drive; small stores stay on root local-path ---
+persistence:
+  enabled: true
+  resourcePolicy: keep                                 # don't delete PVCs on uninstall
+  persistentVolumeClaim:
+    registry:
+      storageClass: e-local-a2                          # <-- blobs go to the E drive
+      size: 500Gi
+
+# --- pin every component to a2 (where the E-drive PV lives) ---
+nginx:      { nodeSelector: { kubernetes.io/hostname: a2 } }
+portal:     { nodeSelector: { kubernetes.io/hostname: a2 } }
+core:       { nodeSelector: { kubernetes.io/hostname: a2 } }
+jobservice: { nodeSelector: { kubernetes.io/hostname: a2 } }
+registry:   { nodeSelector: { kubernetes.io/hostname: a2 } }
+trivy:      { nodeSelector: { kubernetes.io/hostname: a2 } }
+exporter:   { nodeSelector: { kubernetes.io/hostname: a2 } }
+database:   { internal: { nodeSelector: { kubernetes.io/hostname: a2 } } }
+redis:      { internal: { nodeSelector: { kubernetes.io/hostname: a2 } } }

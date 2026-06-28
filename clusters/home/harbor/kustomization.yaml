@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Harbor private registry. Helm-via-kustomize, same flow as open-webui/loki:
+#   kustomize build --enable-helm clusters/home/harbor | kubectl apply -f -
+# The cluster-scoped StorageClass + PV (storage.yaml) apply alongside the chart.
+#
+# Create these out-of-band secrets FIRST (never in git), in the harbor namespace:
+#
+#   kubectl create namespace harbor
+#
+#   # 1. Admin password — ALSO store this in Vaultwarden ("Harbor admin")
+#   kubectl -n harbor create secret generic harbor-admin \
+#     --from-literal=HARBOR_ADMIN_PASSWORD='<strong-password>'
+#
+#   # 2. Data-at-rest encryption key — EXACTLY 16 chars, never change it
+#   #    (losing/rotating it makes stored robot tokens & creds unrecoverable)
+#   kubectl -n harbor create secret generic harbor-secret-key \
+#     --from-literal=secretKey="$(openssl rand -hex 8)"
+#
+#   # 3. TLS (the *.lan wildcard) — harbor.lan is already wired into lan-certs.sh
+#   bash scripts/lan-certs.sh        # creates harbor-tls in the harbor namespace
+#
+# Then make nodes trust harbor.lan's cert so pods can pull:
+#   scripts/trust-harbor-ca.sh   (run on each node; see README)
+#
+# Client access: add `192.168.5.173 harbor.lan` to /etc/hosts (Traefik routes it
+# to a2 regardless of which node IP you point at).
+
+resources:
+  - namespace.yaml
+  - storage.yaml
+
+helmCharts:
+  - name: harbor
+    repo: https://helm.goharbor.io
+    version: 1.19.1
+    releaseName: harbor
+    namespace: harbor
+    valuesFile: values.yaml
