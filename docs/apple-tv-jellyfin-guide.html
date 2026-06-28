@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{--ink:#1c2333;--mut:#5b6577;--bg:#fff;--line:#e7ebf2;--soft:#f5f7fb;
+        --blue:#00a4dc;--purple:#9b5cc6;--grad:linear-gradient(120deg,#00a4dc,#9b5cc6)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:15px;line-height:1.6}
+  code,.mono{font-family:'IBM Plex Mono',monospace}
+  .page{width:210mm;min-height:296mm;padding:20mm 18mm;background:var(--bg);page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:36px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+  h2{font-size:23px;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+  h2 .n{display:inline-flex;width:34px;height:34px;border-radius:50%;background:var(--grad);color:#fff;
+        align-items:center;justify-content:center;font-size:17px;flex:none}
+  h3{font-size:16px;font-weight:700;margin:14px 0 4px}
+  p{margin:0 0 9px} .mut{color:var(--mut)} .small{font-size:13px}
+  .lead{font-size:17px;color:#3a4154}
+  .pill{display:inline-block;background:var(--grad);color:#fff;font-weight:800;border-radius:9px;padding:5px 13px;font-size:15px}
+  .card{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:#fff;margin:10px 0}
+  .soft{background:var(--soft)}
+  .addr{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;color:var(--ink);
+        background:var(--soft);border:2px dashed var(--blue);border-radius:12px;padding:14px 18px;
+        text-align:center;margin:8px 0;letter-spacing:.5px}
+  ol{margin:6px 0 6px 4px;counter-reset:step;list-style:none}
+  ol li{position:relative;padding:7px 0 7px 40px;border-bottom:1px dashed var(--line)}
+  ol li:last-child{border-bottom:0}
+  ol li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:6px;
+    width:26px;height:26px;border-radius:50%;background:var(--soft);border:2px solid var(--purple);
+    color:var(--purple);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .tag{display:inline-block;background:#eef6ff;color:#0277bd;border-radius:7px;padding:1px 8px;font-size:12px;font-weight:700;margin:1px}
+  .tip{border-left:4px solid var(--blue);background:#f0f9ff;border-radius:0 10px 10px 0;padding:11px 14px;margin:10px 0;font-size:14px}
+  .rec{border:2px solid var(--purple);border-radius:14px;padding:4px 10px;font-size:12px;font-weight:800;color:var(--purple);display:inline-block}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:4px}
+  td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  td:first-child{font-weight:700;width:34%}
+  .foot{position:absolute;bottom:11mm;left:18mm;right:18mm;border-top:1px solid var(--line);
+        padding-top:6px;font-size:11px;color:#aab;display:flex;justify-content:space-between}
+  .big-emoji{font-size:40px}
+</style></head><body>
+
+<!-- COVER -->
+<div class="page">
+  <span class="pill">your home media</span>
+  <h1 style="margin-top:22px">Watch your videos on<br>the <span style="background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">Apple TV</span> 📺</h1>
+  <p class="lead" style="margin-top:14px;max-width:140mm">
+    A no-jargon guide to playing the videos from your home server (Jellyfin) on your Apple TV —
+    using the easiest app, or the VLC you already have. Read it when you're tired; it's meant to just work.
+  </p>
+
+  <div class="card soft" style="margin-top:26px">
+    <h3 style="margin-top:0">The 30-second mental model</h3>
+    <p class="small" style="margin-bottom:6px">Two pieces talk to each other over your home Wi-Fi:</p>
+    <table>
+      <tr><td>🗄️ The <b>server</b> (Jellyfin)</td><td>Your own private Netflix. It runs on your home cluster and holds all your videos. You don't touch it — it just sits there serving.</td></tr>
+      <tr><td>📱 The <b>app</b> (on Apple TV)</td><td>The "player." It connects to the server, shows your library, and plays a video on the big screen.</td></tr>
+    </table>
+    <p class="small mut" style="margin:8px 0 0">That's it. The app needs to know <b>one address</b> to find the server — that's the only setup.</p>
+  </div>
+
+  <div class="card" style="border-color:var(--blue)">
+    <h3 style="margin-top:0">⭐ The one thing to know — your server address</h3>
+    <div class="addr">https://jellyfin.lan</div>
+    <p class="small mut" style="margin-bottom:0">Backup, if that doesn't work: <span class="mono">https://192.168.5.173</span>.
+    Your Apple TV must be on the <b>same Wi-Fi</b> as the server. That's the whole secret.</p>
+  </div>
+  <div class="foot"><span>Home media · Apple TV + Jellyfin</span><span>made for later-tired-you 💜</span></div>
+</div>
+
+<!-- WAY 1: SWIFTFIN -->
+<div class="page">
+  <h2><span class="n">A</span> The easy way: the <span style="color:var(--purple)">Swiftfin</span> app <span class="rec">RECOMMENDED</span></h2>
+  <p class="mut">Swiftfin is a <b>free</b> app made specifically for Jellyfin on Apple TV. It's the nicest experience —
+  posters, "continue watching," the works. This is the path to try first.</p>
+
+  <div class="card">
+    <ol>
+      <li>On the Apple TV, open the <b>App Store</b> and search <b>Swiftfin</b>. Install it (it's free).</li>
+      <li>Open Swiftfin. It'll ask to <b>add a server</b> — choose <b>Add Server / Connect Manually</b>.</li>
+      <li>Type your address exactly: <span class="mono">https://jellyfin.lan</span> &nbsp;(or the backup <span class="mono">https://192.168.5.173</span>).</li>
+      <li>If it warns about a <b>certificate</b> (because it's your own private server, not a public website) — choose <b>Trust / Continue</b>. That's expected and safe on your own network.</li>
+      <li><b>Log in</b> with your Jellyfin username and password.</li>
+      <li>Open the <b>Hacker News FM</b> library → pick a video → press play. 🎉</li>
+    </ol>
+  </div>
+  <div class="tip">💡 <b>Infuse</b> is another popular Apple TV app that also works with Jellyfin — a fine alternative if you ever want to try one. But Swiftfin is free and purpose-built, so start there.</div>
+
+  <h3>Why an "app" and not just a website?</h3>
+  <p class="small mut">Apple TV doesn't really do web browsers. So instead of visiting <span class="mono">jellyfin.lan</span> in a browser
+  (which is how you'd see it on a laptop), you use an <b>app</b> that knows how to talk to Jellyfin. Same server, same videos —
+  just a TV-friendly remote-controlled front door.</p>
+  <div class="foot"><span>Home media · Apple TV + Jellyfin</span><span>Way A — Swiftfin</span></div>
+</div>
+
+<!-- WAY 2: VLC -->
+<div class="page">
+  <h2><span class="n">B</span> The "I already have VLC" way</h2>
+  <p class="mut">You've got <b>VLC</b> on your Apple TV and like it — great. VLC isn't a Jellyfin app, but it can still
+  <b>find your server over the network</b> using something called <b>DLNA</b> (think: a way for media gadgets on the same
+  Wi-Fi to discover and share with each other). One small one-time switch in Jellyfin, then VLC can browse it.</p>
+
+  <div class="card soft">
+    <h3 style="margin-top:0">One-time: turn on DLNA in Jellyfin (from a laptop)</h3>
+    <ol>
+      <li>On a computer, go to <span class="mono">https://jellyfin.lan</span> and sign in.</li>
+      <li>Go to <b>Dashboard → Plugins</b> (or <b>Playback</b> on older versions) and enable/install <b>DLNA</b>. Save.</li>
+    </ol>
+    <p class="small mut" style="margin-bottom:0">(If you can't find DLNA, don't sweat it — just use Swiftfin from Way A. DLNA is the only reason VLC needs this step.)</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">On the Apple TV, in VLC</h3>
+    <ol>
+      <li>Open <b>VLC</b>.</li>
+      <li>Go to the <b>Network</b> tab → <b>Local Network</b>.</li>
+      <li>Your <b>Jellyfin</b> server should appear in the list (that's DLNA working). Open it.</li>
+      <li>Browse into your videos and press play.</li>
+    </ol>
+  </div>
+  <div class="tip">💡 Honest note: VLC will play the files, but it won't show the nice posters, descriptions, or "resume where you left off."
+  For your AI videos with their cover art and metadata, <b>Swiftfin (Way A) looks much better</b>. Keep VLC as a handy backup.</div>
+  <div class="foot"><span>Home media · Apple TV + Jellyfin</span><span>Way B — VLC</span></div>
+</div>
+
+<!-- TROUBLESHOOT + GLOSSARY -->
+<div class="page">
+  <h2><span class="n">?</span> If it won't connect (quick fixes)</h2>
+  <div class="card">
+    <table>
+      <tr><td>Server not found</td><td>Make sure the Apple TV is on the <b>same Wi-Fi</b> as the cluster. This is the #1 cause.</td></tr>
+      <tr><td>"jellyfin.lan" doesn't work</td><td>Type the backup address instead: <span class="mono">https://192.168.5.173</span>. (The <span class="mono">.lan</span> name only works if your TV uses your home network's name service.)</td></tr>
+      <tr><td>Certificate / "not secure" warning</td><td>Expected — it's your own private server, not a public site. Choose <b>Trust / Continue</b>.</td></tr>
+      <tr><td>Wrong password</td><td>Use your <b>Jellyfin</b> account (the one you log into at jellyfin.lan), not your Apple ID.</td></tr>
+      <tr><td>New videos missing</td><td>They appear automatically, but you can force it: on a laptop at jellyfin.lan → Dashboard → Scan All Libraries.</td></tr>
+    </table>
+  </div>
+
+  <h2 style="margin-top:18px"><span class="n">📖</span> Tiny glossary</h2>
+  <div class="card soft">
+    <table>
+      <tr><td>Media server</td><td>The computer program that stores your videos and serves them on demand. Yours is <b>Jellyfin</b>.</td></tr>
+      <tr><td>Client / app</td><td>The thing you watch <i>with</i> — Swiftfin or VLC on the Apple TV.</td></tr>
+      <tr><td>Library</td><td>A collection inside Jellyfin. Yours is <b>"Hacker News FM."</b></td></tr>
+      <tr><td>IP address</td><td>A device's number on your network, like a house address. Your server's is <span class="mono">192.168.5.173</span>.</td></tr>
+      <tr><td>LAN / Wi-Fi</td><td>Your home network. Everything here only works when devices share it.</td></tr>
+      <tr><td>DLNA</td><td>An older "discover media on the network" standard. It's how VLC finds Jellyfin.</td></tr>
+    </table>
+  </div>
+
+  <div class="tip" style="margin-top:16px">🛠️ <b>Want it even simpler?</b> If the address or certificate ever feels fiddly on the Apple TV,
+  I can set up a plain, number-only address (no certificate prompt) for the server — just ask.</div>
+
+  <p style="text-align:center;margin-top:24px" class="mut small">You've got this. Same Wi-Fi → install Swiftfin → type the address → log in → play. 💜</p>
+  <div class="foot"><span>Home media · Apple TV + Jellyfin</span><span>Troubleshooting &amp; glossary</span></div>
+</div>
+
+</body></html>
