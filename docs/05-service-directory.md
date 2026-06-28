@@ -75,6 +75,7 @@ run `mkcert -install` once per client to trust the CA).
 | InvokeAI | Image generation (a2) | https://invokeai.lan/ |
 | Jellyfin | Media server (a2, NVENC) | https://jellyfin.lan/ |
 | Audiobookshelf | Audiobooks & podcasts (a3) | https://abs.lan/ |
+| Vaultwarden | Passwords & secrets (Bitwarden-compatible, a3) | https://vault.lan/ |
 
 ---
 

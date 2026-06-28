@@ -29,6 +29,7 @@ ingress + mkcert TLS) and auto-listed on the Homepage dashboard.
 | InvokeAI       | `invokeai.lan`    | image generation (a2)                         |
 | Jellyfin       | `jellyfin.lan`    | media server (a2, NVENC transcoding)          |
 | Audiobookshelf | `abs.lan`         | audiobooks & podcasts (a3)                    |
+| Vaultwarden    | `vault.lan`       | passwords & secrets (Bitwarden-compatible, a3) |
 
 ## How LAN access works
 
@@ -53,7 +54,7 @@ clusters/home/ cluster-scoped config + per-service bases:
                namespaces, gpu (runtime + device plugin), monitoring
                (Prometheus/Grafana/Loki/DCGM), registry, agent, and one dir per
                LAN web service (homepage, headlamp, open-webui, jupyter, invokeai,
-               jellyfin, audiobookshelf, loki). README.md there has apply steps.
+               jellyfin, audiobookshelf, vaultwarden, loki). README.md there has apply steps.
 services/      one kustomize base per GPU inference service (vLLM, etc.)
 mcp/           MCP backends for Claude (searxng, excalidraw, browserless)
 observability/ litellm gateway, phoenix
