@@ -1,0 +1,130 @@
+# Vaultwarden — self-hosted, Bitwarden-compatible password/secret manager at
+# https://vault.lan/. This is the cluster's vault for passwords, credentials,
+# API keys, secure notes, TOTP seeds, etc. — accessed via the Bitwarden apps,
+# browser extensions, and CLI (`bw`), all pointed at https://vault.lan.
+#
+# Single Rust container with an embedded SQLite DB under /data (no external DB).
+# Pinned to a3: it's a tiny CPU-only utility, so keeping it off the GPU boxes
+# (a1/a2/spark) leaves their headroom for model work. Storage is one local-path
+# PVC so it re-attaches to a3's disk.
+#
+# SECURITY (this app holds every other secret, so treat it accordingly):
+#   - DOMAIN must match the HTTPS URL exactly — WebAuthn/passkeys, attachments,
+#     and the admin panel all depend on it.
+#   - The /admin panel is gated by ADMIN_TOKEN, supplied OUT OF BAND via the
+#     `vaultwarden-admin` secret (NEVER in git). Until that secret exists the
+#     env is optional, so /admin stays disabled and the pod still starts. Create
+#     it to enable admin (see kustomization.yaml).
+#   - SIGNUPS_ALLOWED is "true" only for first-run account creation. After you
+#     register your account at https://vault.lan, flip it to "false" below
+#     (or set false and invite users from /admin) and re-apply. Leaving open
+#     signups on a credential store is the one thing not to forget.
+#   - BACKUPS: the whole vault is the SQLite DB + a few files under /data. The
+#     cluster has no backup system yet — at minimum, periodically copy
+#     /var/lib/rancher/k3s/storage/<pvc-id>-vaultwarden-data/db.sqlite3 off a3,
+#     or use Vaultwarden's /admin backup. Tracked as cluster debt.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vaultwarden-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden
+spec:
+  replicas: 1
+  # One writer only — never run two pods against the same SQLite /data volume.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
+    spec:
+      nodeSelector:
+        inference-club.com/box: a3
+      # Vaultwarden runs fine rootless; fsGroup makes the local-path PVC writable
+      # for the non-root user. Defence in depth for a credential store.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: vaultwarden
+          # Alpine variant = latest stable. Pin to :1.x.y-alpine for
+          # reproducibility once verified (matches the audiobookshelf approach).
+          image: vaultwarden/server:alpine
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            # Exact public HTTPS origin — required for passkeys/WebAuthn,
+            # attachments, and the admin panel.
+            - name: DOMAIN
+              value: "https://vault.lan"
+            # First-run only: lets you create your account. Set to "false" and
+            # re-apply once registered. See the header note.
+            - name: SIGNUPS_ALLOWED
+              value: "true"
+            # No SMTP on the LAN, so don't gate signup on email verification.
+            - name: SIGNUPS_VERIFY
+              value: "false"
+            # Admin panel token (Argon2 hash), supplied out of band. optional:true
+            # means the pod starts even before the secret exists (admin stays off).
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vaultwarden-admin
+                  key: token
+                  optional: true
+            - name: TZ
+              value: "Etc/UTC"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /alive
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: vaultwarden-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultwarden
+spec:
+  selector:
+    app: vaultwarden
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

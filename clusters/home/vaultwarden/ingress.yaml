@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vaultwarden
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Vaultwarden"
+    gethomepage.dev/description: "Passwords & secrets (a3)"
+    gethomepage.dev/group: "Security"
+    gethomepage.dev/icon: "vaultwarden.png"
+    gethomepage.dev/href: "https://vault.lan/"
+    gethomepage.dev/pod-selector: "app=vaultwarden"
+spec:
+  ingressClassName: traefik
+  # WebSocket live-sync (/notifications/hub) is served on the same HTTP port in
+  # current Vaultwarden, so a single backend covers both REST and WS. Traefik
+  # upgrades the connection automatically — no extra annotation needed.
+  tls:
+    - hosts: ["vault.lan"]
+      secretName: vaultwarden-tls
+  rules:
+    - host: vault.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vaultwarden
+                port:
+                  number: 80

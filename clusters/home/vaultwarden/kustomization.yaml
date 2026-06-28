@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: vaultwarden
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/vaultwarden
+#
+# Single-container, Bitwarden-compatible password/secret manager (embedded
+# SQLite, no external DB), pinned to a3 with one local-path PVC at /data.
+#
+# Requires the out-of-band TLS secret vaultwarden-tls (vault.lan + vault-tls are
+# already wired into scripts/lan-certs.sh):
+#   bash scripts/lan-certs.sh        # (re)issues the *.lan cert + creates vaultwarden-tls
+#
+# To enable the /admin panel, create the admin-token secret OUT OF BAND (never
+# in git). Generate an Argon2 hash with the official one-liner and store it:
+#   ADMIN_PASS="$(openssl rand -base64 36)"
+#   HASH="$(docker run --rm vaultwarden/server /vaultwarden hash --preset owasp <<<"$ADMIN_PASS")"
+#   kubectl -n vaultwarden create secret generic vaultwarden-admin --from-literal=token="$HASH"
+#   # save $ADMIN_PASS in a password manager — it's what you type at /admin
+#   kubectl -n vaultwarden rollout restart deploy/vaultwarden
+#
+# First run: open https://vault.lan, create your account, then set
+# SIGNUPS_ALLOWED=false in vaultwarden.yaml and re-apply.
+#
+# Client access: add `192.168.5.173 vault.lan` to /etc/hosts (or the Mac dnsmasq
+# *.lan wildcard already covers it).
+
+resources:
+  - namespace.yaml
+  - vaultwarden.yaml
+  - ingress.yaml
