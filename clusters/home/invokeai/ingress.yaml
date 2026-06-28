@@ -7,7 +7,7 @@ metadata:
     gethomepage.dev/name: "InvokeAI"
     gethomepage.dev/description: "Image generation (a2)"
     gethomepage.dev/group: "AI"
-    gethomepage.dev/icon: "invokeai.png"
+    gethomepage.dev/icon: "invoke-ai.svg"
     gethomepage.dev/href: "https://invokeai.lan/"
     gethomepage.dev/pod-selector: "app=invokeai"
 spec:
