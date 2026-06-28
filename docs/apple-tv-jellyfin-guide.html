@@ -61,9 +61,10 @@
 
   <div class="card" style="border-color:var(--blue)">
     <h3 style="margin-top:0">⭐ The one thing to know — your server address</h3>
-    <div class="addr">https://jellyfin.lan</div>
-    <p class="small mut" style="margin-bottom:0">Backup, if that doesn't work: <span class="mono">https://192.168.5.173</span>.
-    Your Apple TV must be on the <b>same Wi-Fi</b> as the server. That's the whole secret.</p>
+    <div class="addr">http://192.168.5.173:30096</div>
+    <p class="small mut" style="margin-bottom:0">Type it exactly, including <span class="mono">:30096</span> at the end —
+    and <b>http</b>, not https. No certificate prompt, it just connects. Your Apple TV only needs the
+    <b>same Wi-Fi</b>. (Another address that works: <span class="mono">192.168.5.96:30096</span>.)</p>
   </div>
   <div class="foot"><span>Home media · Apple TV + Jellyfin</span><span>made for later-tired-you 💜</span></div>
 </div>
@@ -78,8 +79,8 @@
     <ol>
       <li>On the Apple TV, open the <b>App Store</b> and search <b>Swiftfin</b>. Install it (it's free).</li>
       <li>Open Swiftfin. It'll ask to <b>add a server</b> — choose <b>Add Server / Connect Manually</b>.</li>
-      <li>Type your address exactly: <span class="mono">https://jellyfin.lan</span> &nbsp;(or the backup <span class="mono">https://192.168.5.173</span>).</li>
-      <li>If it warns about a <b>certificate</b> (because it's your own private server, not a public website) — choose <b>Trust / Continue</b>. That's expected and safe on your own network.</li>
+      <li>Type your address exactly: <span class="mono">http://192.168.5.173:30096</span> &nbsp;(include the <span class="mono">:30096</span>, and use <b>http</b>).</li>
+      <li>No certificate warning to deal with — it's a plain, direct connection on your own network.</li>
       <li><b>Log in</b> with your Jellyfin username and password.</li>
       <li>Open the <b>Hacker News FM</b> library → pick a video → press play. 🎉</li>
     </ol>
@@ -129,8 +130,8 @@
   <div class="card">
     <table>
       <tr><td>Server not found</td><td>Make sure the Apple TV is on the <b>same Wi-Fi</b> as the cluster. This is the #1 cause.</td></tr>
-      <tr><td>"jellyfin.lan" doesn't work</td><td>Type the backup address instead: <span class="mono">https://192.168.5.173</span>. (The <span class="mono">.lan</span> name only works if your TV uses your home network's name service.)</td></tr>
-      <tr><td>Certificate / "not secure" warning</td><td>Expected — it's your own private server, not a public site. Choose <b>Trust / Continue</b>.</td></tr>
+      <tr><td>Server not found</td><td>Type <span class="mono">http://192.168.5.173:30096</span> exactly — the <span class="mono">:30096</span> matters. Try the other node IP <span class="mono">192.168.5.96:30096</span>.</td></tr>
+      <tr><td>It demands "https"</td><td>Use <b>http</b> for this address, not https — it's a direct LAN connection, no certificate involved. (Note: <span class="mono">jellyfin.lan</span> only resolves on the Mac, so don't use that name on the Apple TV.)</td></tr>
       <tr><td>Wrong password</td><td>Use your <b>Jellyfin</b> account (the one you log into at jellyfin.lan), not your Apple ID.</td></tr>
       <tr><td>New videos missing</td><td>They appear automatically, but you can force it: on a laptop at jellyfin.lan → Dashboard → Scan All Libraries.</td></tr>
     </table>
@@ -148,10 +149,10 @@
     </table>
   </div>
 
-  <div class="tip" style="margin-top:16px">🛠️ <b>Want it even simpler?</b> If the address or certificate ever feels fiddly on the Apple TV,
-  I can set up a plain, number-only address (no certificate prompt) for the server — just ask.</div>
+  <div class="tip" style="margin-top:16px">✅ <b>Your server has a plain, number-only address:</b> <span class="mono">http://192.168.5.173:30096</span>
+  — no name, no certificate, no fuss. That's the one to type on the Apple TV.</div>
 
-  <p style="text-align:center;margin-top:24px" class="mut small">You've got this. Same Wi-Fi → install Swiftfin → type the address → log in → play. 💜</p>
+  <p style="text-align:center;margin-top:24px" class="mut small">You've got this. Same Wi-Fi → install Swiftfin → type <span class="mono">http://192.168.5.173:30096</span> → log in → play. 💜</p>
   <div class="foot"><span>Home media · Apple TV + Jellyfin</span><span>Troubleshooting &amp; glossary</span></div>
 </div>
 
