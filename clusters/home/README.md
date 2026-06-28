@@ -40,6 +40,7 @@ kustomize build --enable-helm clusters/home/open-webui | kubectl apply -f -
 
 # raw-manifest apps (no Helm)
 kubectl apply -k clusters/home/jupyter
+kubectl apply -k clusters/home/invokeai
 ```
 
 JupyterLab (pinned to a2, SHARES a2's 4090 with flux2-klein) needs a token secret:
@@ -64,6 +65,7 @@ kubectl -n open-webui create secret generic openwebui-litellm \
 | Grafana   | https://grafana.lan/   | + Loki logs datasource, NVIDIA DCGM dash|
 | Open WebUI| https://openwebui.lan/ | chat UI -> LiteLLM gateway (local LLMs) |
 | JupyterLab| https://jupyter.lan/   | GPU notebooks on a2 (shared 4090), token auth|
+| InvokeAI  | https://invokeai.lan/  | image gen on a2; hostPath /home/brian/invokeai (ext4, ~23G)|
 
 > **One-time transition note:** these three apps were first installed
 > imperatively with `helm install`. Applying the kustomize render above adopts

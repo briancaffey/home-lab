@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: invokeai
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "InvokeAI"
+    gethomepage.dev/description: "Image generation (a2)"
+    gethomepage.dev/group: "AI"
+    gethomepage.dev/icon: "invokeai.png"
+    gethomepage.dev/href: "https://invokeai.lan/"
+    gethomepage.dev/pod-selector: "app=invokeai"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["invokeai.lan"]
+      secretName: invokeai-tls
+  rules:
+    - host: invokeai.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: invokeai
+                port:
+                  number: 80

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invokeai
+spec:
+  replicas: 1
+  # Single instance over the existing on-disk data — never run two writers
+  # (the docker container OR a second pod) against the same sqlite DB.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: invokeai
+  template:
+    metadata:
+      labels:
+        app: invokeai
+    spec:
+      # Service named `invokeai` would inject INVOKEAI_PORT=tcp://... which
+      # InvokeAI reads as config — disable the Docker-link env vars.
+      enableServiceLinks: false
+      # Data (~23G) lives on a2 at /home/brian/invokeai (ext4 root, writable).
+      # NOT /home/brian/d/InvokeAI — that's a read-only NTFS drive. Pin here and
+      # mount in place (hostPath). Shares a2's 4090 with flux2-klein (+ jupyter),
+      # same shared-GPU pattern (no exclusive device-plugin claim).
+      nodeSelector:
+        inference-club.com/box: a2
+      runtimeClassName: nvidia
+      # NOTE: run as root (like the original `docker run`, no --user). The image
+      # entrypoint chowns /invokeai then drops privileges to its `ubuntu` user
+      # (uid 1000 = brian, matching the data owner). Forcing runAsUser breaks
+      # that ("operation not permitted" switching user).
+      containers:
+        - name: invokeai
+          # matches the user's `docker run ghcr.io/invoke-ai/invokeai` (latest).
+          # TODO: pin to a specific :vX.Y.Z for reproducibility once verified.
+          image: ghcr.io/invoke-ai/invokeai
+          ports:
+            - name: http
+              containerPort: 9090
+          env:
+            # bind all interfaces so the k8s Service can reach it (the on-disk
+            # invokeai.yaml doesn't set host; modern InvokeAI defaults to 127.0.0.1)
+            - name: INVOKEAI_HOST
+              value: "0.0.0.0"
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
+            # Optional — only needed to download new gated models. Create with:
+            #   kubectl -n invokeai create secret generic invokeai-secrets \
+            #     --from-literal=hf-token=hf_xxx
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: invokeai-secrets
+                  key: hf-token
+                  optional: true
+          resources:
+            requests:
+              cpu: "1"
+              memory: 4Gi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 60
+          volumeMounts:
+            - name: invokeai-root
+              mountPath: /invokeai
+      volumes:
+        - name: invokeai-root
+          hostPath:
+            path: /home/brian/invokeai
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: invokeai
+spec:
+  selector:
+    app: invokeai
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

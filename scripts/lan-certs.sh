@@ -9,7 +9,7 @@
 # whenever you add a new <name>.lan host (add it to HOSTS below).
 set -euo pipefail
 
-HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan "*.lan")
+HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan invokeai.lan "*.lan")
 
 # secret-name : namespace
 SECRETS=(
@@ -18,6 +18,7 @@ SECRETS=(
   "grafana-tls:monitoring"
   "openwebui-tls:open-webui"
   "jupyter-tls:jupyter"
+  "invokeai-tls:invokeai"
 )
 
 command -v mkcert >/dev/null || { echo "mkcert not found (brew install mkcert nss)"; exit 1; }
