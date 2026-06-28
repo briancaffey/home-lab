@@ -92,3 +92,22 @@ spec:
     - name: http
       port: 80
       targetPort: http
+---
+# Direct LAN access for clients that can't resolve the `jellyfin.lan` name and
+# don't want a TLS cert prompt — e.g. Apple TV (Swiftfin / VLC). The hostname
+# ingress only answers to `jellyfin.lan`; this NodePort serves Jellyfin's HTTP
+# port on every node IP, so any device on the LAN can use:
+#     http://192.168.5.173:30096   (or any other node IP)
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin-direct
+spec:
+  type: NodePort
+  selector:
+    app: jellyfin
+  ports:
+    - name: http
+      port: 8096
+      targetPort: http
+      nodePort: 30096
