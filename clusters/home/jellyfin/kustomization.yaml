@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: jellyfin
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/jellyfin
+# Requires out-of-band secret jellyfin-tls (scripts/lan-certs.sh).
+# Media library: /home/brian/media (writable, add content here) +
+# /home/brian/e/Videos (read-only captures). Pinned to a2.
+
+resources:
+  - namespace.yaml
+  - jellyfin.yaml
+  - ingress.yaml

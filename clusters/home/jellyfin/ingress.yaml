@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jellyfin
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Jellyfin"
+    gethomepage.dev/description: "Media server (a2)"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "jellyfin.png"
+    gethomepage.dev/href: "https://jellyfin.lan/"
+    gethomepage.dev/pod-selector: "app=jellyfin"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["jellyfin.lan"]
+      secretName: jellyfin-tls
+  rules:
+    - host: jellyfin.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jellyfin
+                port:
+                  number: 80

@@ -1,0 +1,126 @@
+# Audiobookshelf — self-hosted audiobook + podcast server at https://abs.lan/.
+# Single container with its own embedded SQLite (no external DB). Pinned to a3:
+# it's a lightweight CPU-only utility, so keeping it off the GPU boxes (a1/a2/spark)
+# leaves their headroom for actual model work.
+#
+# Storage is three local-path PVCs (so they re-attach to a3's disk):
+#   - config   : the SQLite DB + settings
+#   - metadata : cached covers, backups, downloads
+#   - media    : the library files, surfaced at /audiobooks and /podcasts via subPath
+#
+# Populating the library: either upload through the web UI, or copy files straight
+# into the media PVC on a3 at
+#   /var/lib/rancher/k3s/storage/<pvc-id>-audiobookshelf-media/{audiobooks,podcasts}/
+# then add those as library folders in the UI. If you already have an audiobook
+# directory on a node, replace the `media` PVC + its volume below with a hostPath:
+#   volumes:
+#     - name: media
+#       hostPath: { path: /path/to/your/media, type: Directory }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobookshelf-config
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobookshelf-metadata
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobookshelf-media
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audiobookshelf
+spec:
+  replicas: 1
+  # One writer only — never run two pods against the same SQLite config volume.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: audiobookshelf
+  template:
+    metadata:
+      labels:
+        app: audiobookshelf
+    spec:
+      nodeSelector:
+        inference-club.com/box: a3
+      containers:
+        - name: audiobookshelf
+          # matches the project's docker-compose (latest). Pin to :2.x.y for
+          # reproducibility once verified.
+          image: ghcr.io/advplyr/audiobookshelf:latest
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            # Affects timestamps + podcast download scheduling. Adjust to taste.
+            - name: TZ
+              value: "Etc/UTC"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 12
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: metadata
+              mountPath: /metadata
+            - name: media
+              mountPath: /audiobooks
+              subPath: audiobooks
+            - name: media
+              mountPath: /podcasts
+              subPath: podcasts
+      volumes:
+        - name: config
+          persistentVolumeClaim: { claimName: audiobookshelf-config }
+        - name: metadata
+          persistentVolumeClaim: { claimName: audiobookshelf-metadata }
+        - name: media
+          persistentVolumeClaim: { claimName: audiobookshelf-media }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audiobookshelf
+spec:
+  selector:
+    app: audiobookshelf
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

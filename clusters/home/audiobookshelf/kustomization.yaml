@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: audiobookshelf
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/audiobookshelf
+#
+# Single-container audiobook/podcast server (embedded SQLite, no external DB),
+# pinned to a3 with three local-path PVCs (config/metadata/media). Requires the
+# out-of-band TLS secret audiobookshelf-tls (abs.lan + audiobookshelf-tls are
+# already wired into scripts/lan-certs.sh):
+#   bash scripts/lan-certs.sh       # (re)issues the *.lan cert + creates audiobookshelf-tls
+#
+# Client access: add `192.168.5.173 abs.lan` to /etc/hosts.
+
+resources:
+  - namespace.yaml
+  - audiobookshelf.yaml
+  - ingress.yaml

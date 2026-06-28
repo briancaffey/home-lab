@@ -1,7 +1,7 @@
 # 05 — Service Directory
 
 Everything running on the home cluster, what it does, and where to reach it on the
-LAN. Live as of 2026-06-15.
+LAN. Live as of 2026-06-27.
 
 **Nodes:** a1 `192.168.5.253` · a2 `192.168.5.96` · a3 `192.168.5.173` · spark `192.168.6.19`
 
@@ -55,6 +55,26 @@ Consumed through the inference.club platform/agent, or directly where noted.
 | Phoenix | LLM traces & evals (OTLP) | UI http://192.168.5.173:30606 · OTLP grpc `:4317` |
 | dcgm-exporter | Per-GPU metrics → Prometheus | (feeds Grafana) |
 | node-exporter | Host CPU/RAM/disk → Prometheus | (feeds Grafana) |
+
+---
+
+## 🌐 Web UIs — LAN  (`*.lan`, Traefik + mkcert TLS)
+
+Browse over HTTPS once the name resolves — either a local `dnsmasq` wildcard
+(`*.lan` → `192.168.5.173`, client-side only) or a `/etc/hosts` entry per host.
+The one `*.lan` mkcert cert covers them all (copied into each namespace as a Secret;
+run `mkcert -install` once per client to trust the CA).
+
+| Service | What it does | Reach it |
+|---|---|---|
+| Homepage | Service dashboard (auto-discovers ingresses) | https://home.lan/ |
+| Headlamp | Kubernetes dashboard | https://headlamp.lan/ |
+| Open WebUI | Chat UI for local LLMs (via LiteLLM) | https://openwebui.lan/ |
+| Grafana | Dashboards (also NodePort 30030) | https://grafana.lan/ |
+| Jupyter | GPU JupyterLab (a2) | https://jupyter.lan/ |
+| InvokeAI | Image generation (a2) | https://invokeai.lan/ |
+| Jellyfin | Media server (a2, NVENC) | https://jellyfin.lan/ |
+| Audiobookshelf | Audiobooks & podcasts (a3) | https://abs.lan/ |
 
 ---
 

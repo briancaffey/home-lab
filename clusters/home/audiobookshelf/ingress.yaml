@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: audiobookshelf
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Audiobookshelf"
+    gethomepage.dev/description: "Audiobooks & podcasts (a3)"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "audiobookshelf.png"
+    gethomepage.dev/href: "https://abs.lan/"
+    gethomepage.dev/pod-selector: "app=audiobookshelf"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["abs.lan"]
+      secretName: audiobookshelf-tls
+  rules:
+    - host: abs.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: audiobookshelf
+                port:
+                  number: 80
