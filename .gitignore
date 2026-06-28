@@ -15,3 +15,7 @@ secret*.yaml
 secrets*.yaml
 *-secret.yaml
 *.secret.yaml
+
+# kustomize `--enable-helm` pulls charts here on build; re-pulled each time,
+# so we don't vendor them.
+charts/
