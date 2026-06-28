@@ -60,8 +60,10 @@ Consumed through the inference.club platform/agent, or directly where noted.
 
 ## 🌐 Web UIs — LAN  (`*.lan`, Traefik + mkcert TLS)
 
-Add `192.168.5.173 <name>.lan` to `/etc/hosts`, then browse over HTTPS. The one
-`*.lan` mkcert wildcard covers them all (copied into each namespace as a Secret).
+Browse over HTTPS once the name resolves — either a local `dnsmasq` wildcard
+(`*.lan` → `192.168.5.173`, client-side only) or a `/etc/hosts` entry per host.
+The one `*.lan` mkcert cert covers them all (copied into each namespace as a Secret;
+run `mkcert -install` once per client to trust the CA).
 
 | Service | What it does | Reach it |
 |---|---|---|
@@ -71,6 +73,7 @@ Add `192.168.5.173 <name>.lan` to `/etc/hosts`, then browse over HTTPS. The one
 | Grafana | Dashboards (also NodePort 30030) | https://grafana.lan/ |
 | Jupyter | GPU JupyterLab (a2) | https://jupyter.lan/ |
 | InvokeAI | Image generation (a2) | https://invokeai.lan/ |
+| Jellyfin | Media server (a2, NVENC) | https://jellyfin.lan/ |
 | Audiobookshelf | Audiobooks & podcasts (a3) | https://abs.lan/ |
 
 ---
