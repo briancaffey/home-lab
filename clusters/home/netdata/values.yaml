@@ -1,0 +1,39 @@
+# Netdata — live per-node hardware/system monitoring with a single pane over all
+# nodes. Deployed as a HELM RELEASE (chart netdata/netdata):
+#   helm repo add netdata https://netdata.github.io/helmchart/
+#   helm upgrade --install netdata netdata/netdata -n netdata --create-namespace \
+#     -f clusters/home/netdata/values.yaml --wait
+#
+# Architecture: one `parent` (dashboard + metrics DB, pinned to a2 for disk) and
+# a `child` DaemonSet on every node that streams to the parent. The parent's
+# "Nodes" view aggregates a1/a2/a3/spark — jump into any one for a live look.
+# Fully local (no Netdata Cloud claiming). Exposed via the Tailscale operator
+# (clusters/home/tailscale/ingress-netdata.yaml) + a .lan Traefik ingress.
+
+# We provide our own ingresses; disable the chart's.
+ingress:
+  enabled: false
+
+parent:
+  enabled: true
+  # Pin the parent (and its local-path PVCs) to a2 — most free disk, not the
+  # control plane.
+  nodeSelector:
+    inference-club.com/box: a2
+  database:
+    persistence: true
+    storageclass: local-path
+    volumesize: 10Gi
+  alarms:
+    persistence: true
+    storageclass: local-path
+    volumesize: 1Gi
+
+# child DaemonSet runs on all nodes (incl. arm64 spark) and streams to the parent.
+child:
+  enabled: true
+
+k8sState:
+  enabled: true
+  persistence:
+    storageclass: local-path

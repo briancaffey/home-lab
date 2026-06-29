@@ -1,0 +1,31 @@
+# https://netdata.lan/  ->  netdata/netdata:19999 (parent dashboard)
+# TLS via the per-namespace mkcert secret `netdata-tls` (create with
+# scripts/lan-certs.sh). gethomepage.dev annotations let Homepage auto-discover it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: netdata
+  namespace: netdata
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Netdata"
+    gethomepage.dev/description: "Live per-node hardware & system metrics"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "netdata.png"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: netdata.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: netdata
+                port:
+                  number: 19999
+  tls:
+    - secretName: netdata-tls
+      hosts:
+        - netdata.lan
