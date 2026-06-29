@@ -63,8 +63,11 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
   handful you actually want remote, not everything.
 - **Homepage** is the dashboard/front door (auto-discovers `.lan` ingresses; a
   static "Tailnet" group provides the `*.ts.net` links).
-- Node IPs also expose NodePort services, reachable from any tailnet device at
-  `<node-tailscale-ip>:<nodeport>`.
+- **Tailnet ACL is default-deny.** Reaching the *nodes* over their tailnet IPs
+  (NodePort services, SSH, host VNC) requires an explicit grant —
+  `autogroup:member -> autogroup:member` is in place for device-to-device access;
+  the operator proxies use a `tag:k8s` grant. `tailscale ping` can succeed while
+  TCP is still ACL-blocked, so test with an actual `nc <tailnet-ip> <port>`.
 
 ## GPU conventions
 - GPU pods set `runtimeClassName: nvidia` (RuntimeClass in `clusters/home/gpu/`).

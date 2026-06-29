@@ -12,9 +12,14 @@ set -euo pipefail
 
 RUNUSER="${SUDO_USER:-$USER}"
 HOMEDIR="$(getent passwd "$RUNUSER" | cut -d: -f6)"
-DISP=1
-PORT=$((5900 + DISP))
 GEOMETRY="${VNC_GEOMETRY:-1920x1080}"
+
+# Pick the first free X display (>=1). If a physical desktop already owns :1
+# (e.g. a logged-in console session, as on a2), this falls through to :2 etc.,
+# avoiding the "X11 server already running for display :N" collision.
+DISP=1
+while [ -S "/tmp/.X11-unix/X$DISP" ] || [ -e "/tmp/.X$DISP-lock" ]; do DISP=$((DISP + 1)); done
+PORT=$((5900 + DISP))
 
 [ "$(id -u)" -eq 0 ] || { echo "Please run with sudo."; exit 1; }
 echo "==> TigerVNC virtual desktop for '$RUNUSER' on $(hostname), display :$DISP (port $PORT)"
@@ -30,8 +35,16 @@ systemctl disable --now x11vnc.service 2>/dev/null || true
 echo "==> Mapping display :$DISP -> $RUNUSER in /etc/tigervnc/vncserver.users"
 mkdir -p /etc/tigervnc
 touch /etc/tigervnc/vncserver.users
-sed -i "/^:$DISP=/d" /etc/tigervnc/vncserver.users
+# Disable any prior tigervnc mapping for this user on a different display
+# (handles re-runs and the :1 -> :2 move on nodes with a physical session).
+for d in $(awk -F= -v u="$RUNUSER" '$2==u{gsub(/:/,"",$1);print $1}' /etc/tigervnc/vncserver.users); do
+  [ "$d" = "$DISP" ] && continue
+  echo "    (disabling stale tigervncserver@:$d)"
+  systemctl disable --now "tigervncserver@:$d" 2>/dev/null || true
+done
+sed -i "/=$RUNUSER\$/d" /etc/tigervnc/vncserver.users
 echo ":$DISP=$RUNUSER" >> /etc/tigervnc/vncserver.users
+rm -f "$HOMEDIR/.vnc/"*":$DISP.pid" 2>/dev/null || true
 
 echo "==> Writing ~/.vnc/config (Xfce session, $GEOMETRY, listen on all interfaces)"
 install -d -o "$RUNUSER" -g "$RUNUSER" "$HOMEDIR/.vnc"
