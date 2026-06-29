@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: forgejo
+
+# Apply:  kubectl apply -k clusters/home/forgejo
+# Requires the TLS secret `forgejo-tls` (scripts/lan-certs.sh) and the pre-created
+# data dir /home/brian/e/k3s/volumes/forgejo on a2.
+resources:
+  - namespace.yaml
+  - storage.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml

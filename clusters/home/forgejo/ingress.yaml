@@ -1,0 +1,30 @@
+# https://forgejo.lan/ (Traefik + mkcert forgejo-tls). gethomepage annotations
+# let Homepage auto-discover it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: forgejo
+  namespace: forgejo
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Forgejo"
+    gethomepage.dev/description: "Self-hosted Git forge"
+    gethomepage.dev/group: "Infra"
+    gethomepage.dev/icon: "forgejo.png"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: forgejo.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: forgejo
+                port:
+                  number: 3000
+  tls:
+    - secretName: forgejo-tls
+      hosts:
+        - forgejo.lan

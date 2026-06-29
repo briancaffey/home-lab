@@ -1,0 +1,19 @@
+# https://forgejo.<tailnet>.ts.net  ->  forgejo/forgejo:3000
+# Note: Forgejo's ROOT_URL is forgejo.lan, so clone URLs/redirects favour the LAN
+# name; the tailnet host is best-effort for browsing. Push from the LAN/tailnet
+# Mac works via https://forgejo.lan/.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: forgejo-ts
+  namespace: forgejo
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: forgejo
+      port:
+        number: 3000
+  tls:
+    - hosts:
+        - forgejo

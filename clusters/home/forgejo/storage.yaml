@@ -1,0 +1,40 @@
+# Forgejo data (SQLite DB + git repos + config) on a2's E drive (~5.4 TB free),
+# via the shared `e-local-a2` StorageClass (defined in clusters/home/harbor/storage.yaml).
+# The dir /home/brian/e/k3s/volumes/forgejo must pre-exist on a2 (a `local` PV
+# won't create it); it's owned by brian (uid 1000) = the Forgejo container user.
+# claimRef pre-binds this PV to the forgejo PVC so it can't grab Harbor's PV.
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: forgejo-data-e
+spec:
+  capacity:
+    storage: 50Gi          # advisory only — real limit is the E filesystem
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: e-local-a2
+  claimRef:
+    namespace: forgejo
+    name: forgejo-data
+  local:
+    path: /home/brian/e/k3s/volumes/forgejo
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: ["a2"]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forgejo-data
+  namespace: forgejo
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: e-local-a2
+  resources:
+    requests:
+      storage: 50Gi

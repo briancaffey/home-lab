@@ -17,3 +17,4 @@ resources:
   - ingress-speedtest.yaml
   - ingress-vaultwarden.yaml
   - ingress-netdata.yaml
+  - ingress-forgejo.yaml
