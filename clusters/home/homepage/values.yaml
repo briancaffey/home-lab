@@ -6,6 +6,10 @@ serviceAccount:
 # Required by Homepage v1.x or it rejects requests.
 env:
   - name: HOMEPAGE_ALLOWED_HOSTS
+    # LAN ingress only here (safe to publish). The Tailscale `*.ts.net` host is
+    # appended by the gitignored values.local.yaml (see values.local.yaml.example)
+    # so the tailnet name stays out of this public repo. Homepage rejects any
+    # Host header not listed.
     value: "home.lan"
 
 service:
@@ -60,9 +64,19 @@ config:
           cpu: true
           memory: true
           showLabel: true
-    - search:
-        provider: duckduckgo
-        target: _blank
+    - datetime:
+        text_size: xl
+        locale: en-US
+        format:
+          timeStyle: short
+          dateStyle: long
+          hourCycle: h12
+    - openmeteo:
+        label: Washington, DC
+        latitude: 38.9072
+        longitude: -77.0369
+        units: imperial
+        cache: 5
   settingsString: |
     title: Brian's Homelab
     headerStyle: boxed

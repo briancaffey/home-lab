@@ -19,3 +19,7 @@ secrets*.yaml
 # kustomize `--enable-helm` pulls charts here on build; re-pulled each time,
 # so we don't vendor them.
 charts/
+
+# Local-only overrides for environment-specific (non-secret but private) values
+# — e.g. the tailnet MagicDNS suffix. Committed counterpart: *.local.yaml.example
+*.local.yaml

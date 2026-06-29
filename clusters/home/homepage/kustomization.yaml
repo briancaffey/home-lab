@@ -1,9 +1,20 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Build/apply with the standalone kustomize binary:
-#   kustomize build --enable-helm clusters/home/homepage | kubectl apply -f -
-# Requires the TLS secret `home-tls` — see scripts/lan-certs.sh.
+# Homepage is deployed as a HELM RELEASE in the `homepage` namespace. Apply
+# config changes with helm:
+#   helm upgrade homepage homepage \
+#     --repo https://jameswynn.github.io/helm-charts --version 2.1.0 -n homepage \
+#     -f values.yaml -f values.local.yaml
+#
+# WARNING: do NOT `kustomize build --enable-helm | kubectl apply` this. The chart
+# renders namespaceless objects, and kustomize's `namespace:` does not reliably
+# stamp Helm-inflated resources — so without an explicit `-n homepage` they land
+# in `default` and fight the real release for home.lan (this caused an incident
+# on 2026-06-29). If you ever must use kubectl, force the namespace:
+#   kustomize build --enable-helm clusters/home/homepage | kubectl apply -n homepage -f -
+# Requires TLS secret `home-tls` (scripts/lan-certs.sh).
+namespace: homepage
 
 resources:
   - namespace.yaml
@@ -15,3 +26,7 @@ helmCharts:
     releaseName: homepage
     namespace: homepage
     valuesFile: values.yaml
+    # Local-only overlay (gitignored) carrying the tailnet-specific allowed host.
+    # Copy values.local.yaml.example -> values.local.yaml before building.
+    additionalValuesFiles:
+      - values.local.yaml
