@@ -1,0 +1,133 @@
+# CLAUDE.md — home-lab working context
+
+Context and conventions for working in this repo. Read this before acting on
+general home-lab requests. (Cross-tool note: this is the Claude-native file;
+symlink `AGENTS.md → CLAUDE.md` if you also use other agents.)
+
+## What this is
+Brian's home cluster: a GPU inference fleet **and** a growing set of self-hosted
+services, all on **k3s**. Four Ubuntu boxes on one LAN, registered to
+inference.club via the `inference-club-agent`. The repo is the source of truth
+for everything that runs on the cluster.
+
+**⚠️ This repository is PUBLIC.** Never commit secrets or environment-specific
+private values (see "Secrets & privacy").
+
+## Cluster topology
+| node  | LAN IP        | tailnet role | arch  | GPU              | k3s role |
+|-------|---------------|--------------|-------|------------------|----------|
+| a3    | 192.168.5.173 | online       | amd64 | RTX 4090         | **server (sole control plane)** + workloads |
+| a1    | 192.168.5.253 | online       | amd64 | RTX 4090         | agent |
+| a2    | 192.168.5.96  | online       | amd64 | RTX 4090         | agent |
+| spark | 192.168.6.19  | (often offline) | arm64 | DGX Spark GB10 (128 GB unified) | agent |
+
+Node selector convention: pin pods with `nodeSelector: { inference-club.com/box: <a1|a2|a3|spark> }`.
+
+**Known constraints (factor these into recommendations):**
+- **a3 is the only control plane**, on **SQLite** (not HA etcd) — single point of
+  failure for the API. HA (3-server embedded etcd) is a known future step.
+- **a1 has flaky USB WiFi** (no wired link): it corrupts multi-GB image pulls and
+  is a poor fit for network-heavy roles (etcd, storage replication).
+  **Build images elsewhere, not on a1.**
+- **a2 GPU** has periodically hit an NVML driver mismatch (needs reboot) — dcgm
+  is scoped to a1+a3 for that reason.
+- **spark** is arm64 + on a different subnet (192.168.6.x); keep it as an agent,
+  not a control-plane/etcd/storage member.
+
+## Repo layout
+- `clusters/home/<service>/` — LAN / cluster services (Homepage, Grafana, Jellyfin,
+  Harbor, Tailscale operator ingresses, monitoring, etc.). Aggregated by
+  `clusters/home/kustomization.yaml`.
+- `services/<name>/` — AI inference workloads (vLLM models, flux2, ltx2, dia,
+  nemotron-*, etc.).
+- `observability/`, `platform/`, `mcp/` — gateway/data layer, observability,
+  MCP backends.
+- `scripts/` — helpers (e.g. `scripts/lan-certs.sh` mints the mkcert `home-tls`
+  wildcard cert). `docs/` — guides incl. `docs/05-service-directory.md`.
+
+## How services are deployed & exposed
+- **Two deploy mechanisms coexist — know which a service uses:**
+  - **kustomize** (most things): `kubectl apply -k clusters/home/<svc>`, or for
+    charts inflated via kustomize `helmCharts`, use the **standalone** kustomize:
+    `kustomize build --enable-helm <dir> | kubectl apply -n <ns> -f -`.
+  - **Helm releases** (e.g. **homepage**): apply with `helm upgrade`, **never**
+    `kubectl apply`. See "Gotchas".
+- **LAN access:** each web UI gets a Traefik ingress at `https://<name>.lan/` with
+  the mkcert `home-tls` wildcard cert (`*.lan`). Add `gethomepage.dev/*`
+  annotations on the ingress so Homepage auto-discovers it.
+- **Remote access (Tailscale):** the Tailscale Kubernetes operator exposes select
+  services at `https://<name>.<tailnet>.ts.net` (trusted Let's Encrypt certs,
+  tailnet-only). One Ingress per service in `clusters/home/tailscale/` with
+  `ingressClassName: tailscale` and `tls.hosts: [<short-name>]` (operator appends
+  the suffix). Each = one proxy pod + one tagged tailnet device — expose only the
+  handful you actually want remote, not everything.
+- **Homepage** is the dashboard/front door (auto-discovers `.lan` ingresses; a
+  static "Tailnet" group provides the `*.ts.net` links).
+- Node IPs also expose NodePort services, reachable from any tailnet device at
+  `<node-tailscale-ip>:<nodeport>`.
+
+## GPU conventions
+- GPU pods set `runtimeClassName: nvidia` (RuntimeClass in `clusters/home/gpu/`).
+- NFD + gpu-feature-discovery publish `nvidia.com/gpu.*` node labels.
+- **No time-slicing/MPS.** Two sharing patterns:
+  - **Exclusive:** `resources.limits["nvidia.com/gpu"]: 1` — one pod owns a GPU.
+  - **Shared/unmanaged:** `NVIDIA_VISIBLE_DEVICES=all` with **no** `nvidia.com/gpu`
+    request — multiple pods share a GPU; the scheduler is blind to contention
+    (accounted for out-of-band by the `vram-reporter`).
+
+## Storage
+- **`local-path`** (node-local disk) only. PVCs are therefore **pinned to a node**
+  via `nodeSelector` (e.g. Grafana/Prometheus on a3). No mobility, no redundancy.
+- **No replicated storage and no NAS yet.** Free disk: a2 ~527 GB, a3 ~75 GB,
+  a1 ~49 GB (small). Longhorn (2-replica on a2+a3 to start) is the planned next
+  step for redundancy/mobility — see the bin-packing goal.
+
+## Secrets & privacy (PUBLIC repo)
+- **Never commit secrets or personal/sensitive data.** No passwords, tokens, API
+  keys, OAuth client secrets, bearer/claim tokens (`tskey-…`), TLS private keys
+  (`BEGIN … PRIVATE KEY`), kubeconfigs, or personal info (emails, etc.).
+  `.gitignore` covers `*.env`, `.env*`, `*secret*.yaml`, `*-secret.yaml`,
+  `*.key/.pem/.crt`, `*kubeconfig*`, and `*.local.yaml`.
+- **OK to commit:** private LAN IPs (`192.168.x`) and node names — already in the
+  README. **NOT OK:** the tailnet MagicDNS suffix and tailnet `100.x` IPs.
+- Credentials (e.g. the Tailscale OAuth client) go in via `helm --set` or
+  in-cluster secrets, never files. TLS secrets are created in-cluster by
+  `scripts/lan-certs.sh` (private keys never touch the repo). Future: adopt
+  Sealed Secrets / External Secrets so secrets can be safely committed.
+- **Keep the tailnet name out of committed files.** The MagicDNS suffix lives
+  only in gitignored `*.local.yaml` overlays (committed `*.local.yaml.example`
+  templates use a `<your-tailnet>` placeholder). In docs/manifests use
+  `<tailnet>.ts.net`.
+- **Before every commit, scan the staged diff** for leaks — e.g.
+  `git diff --cached | grep -niE 'tailb|PRIVATE KEY|tskey-|BEGIN .*KEY|password:|token:'`
+  — and confirm nothing sensitive is staged.
+
+## Gotchas (learned the hard way)
+- **`kubectl kustomize --enable-helm` is broken with Helm v4** (it calls the v3
+  `helm version -c`). Use the **standalone `kustomize` v5** binary instead.
+- **Helm-managed services must be applied with Helm, not kubectl.** The chart
+  renders namespaceless objects; `kubectl apply` without `-n` drops them in the
+  `default` namespace, where they fight the real release (this broke Homepage's
+  `home.lan` on 2026-06-29). **homepage** specifically is a Helm release in the
+  `homepage` ns — change it via `helm upgrade homepage homepage --repo
+  https://jameswynn.github.io/helm-charts --version 2.1.0 -n homepage
+  -f values.yaml -f values.local.yaml`.
+- **Homepage host validation:** any host serving Homepage must be in
+  `HOMEPAGE_ALLOWED_HOSTS` or it returns "Host validation failed".
+- **Monitoring is hand-rolled** (`clusters/home/monitoring/`): plain Prometheus
+  with **static_configs** (no Operator/ServiceMonitors) + Grafana with
+  file-provisioned dashboards (add JSON to `dashboards/` + the
+  `grafana-dashboards` configMapGenerator, then rollout restart). dcgm-exporter
+  (a1+a3) + node-exporter (all) + a custom `vram-reporter` (per-pod GPU VRAM).
+- **Image builds** go through the `inference-club-agent` repo's CI → GHCR (push to
+  its `main` triggers a multi-arch build). Don't build on a1.
+
+## Working style / preferences
+- **Goal: bin-packing** — maximize service density; move workloads to nodes with
+  headroom. Reliability hardening (HA control plane, Longhorn, backups, secrets
+  mgmt) is on the roadmap.
+- Learning-oriented: Brian likes standing up real infrastructure pieces and
+  understanding them; **opinionated, ranked recommendations are welcome** (lead
+  with a clear pick, not an exhaustive survey).
+- Privacy-conscious about the public repo (tailnet name, secrets).
+- Confirm before committing/pushing; prefer clean, logically-grouped commits.
