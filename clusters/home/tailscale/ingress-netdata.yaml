@@ -1,0 +1,18 @@
+# https://netdata.<tailnet>.ts.net  ->  netdata/netdata:19999 (parent dashboard)
+# The parent's "Nodes" view aggregates all child agents (a1/a2/a3/spark) — jump
+# into any node for a live hardware/system view.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: netdata-ts
+  namespace: netdata
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: netdata
+      port:
+        number: 19999
+  tls:
+    - hosts:
+        - netdata

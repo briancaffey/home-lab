@@ -1,0 +1,19 @@
+# https://vault.<tailnet>.ts.net  ->  vaultwarden/vaultwarden:80
+# NOTE: Vaultwarden's DOMAIN setting is tied to one URL; login works over any
+# HTTPS host, but WebAuthn/2FA-registration and email links use DOMAIN. If you
+# rely on those remotely, point DOMAIN at the ts.net host.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vaultwarden-ts
+  namespace: vaultwarden
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: vaultwarden
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - vault

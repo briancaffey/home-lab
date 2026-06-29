@@ -1,0 +1,16 @@
+# https://abs.<tailnet>.ts.net  ->  audiobookshelf/audiobookshelf:80
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: audiobookshelf-ts
+  namespace: audiobookshelf
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: audiobookshelf
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - abs

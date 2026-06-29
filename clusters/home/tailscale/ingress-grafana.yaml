@@ -1,0 +1,22 @@
+# Exposes Grafana on the tailnet as https://grafana.<tailnet>.ts.net
+# The Tailscale operator watches Ingresses with ingressClassName: tailscale,
+# spins up a proxy device named after tls.hosts[0] ("grafana"), and serves it
+# over HTTPS with a Tailscale-provisioned (Let's Encrypt) cert. Reachable only
+# from devices on your tailnet — nothing is exposed to the public internet.
+#
+# Named grafana-ts to avoid colliding with the existing *.lan grafana Ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-ts
+  namespace: monitoring
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: grafana
+      port:
+        number: 3000
+  tls:
+    - hosts:
+        - grafana

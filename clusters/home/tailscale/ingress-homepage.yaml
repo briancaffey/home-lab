@@ -1,0 +1,19 @@
+# Exposes Homepage on the tailnet as https://homepage.<tailnet>.ts.net
+# This is your remote "front door" — open it from any tailnet device and click
+# into the services it links. Homepage also needs the hostname in
+# HOMEPAGE_ALLOWED_HOSTS (set in clusters/home/homepage/values.yaml).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: homepage-ts
+  namespace: homepage
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: homepage
+      port:
+        number: 3000
+  tls:
+    - hosts:
+        - homepage

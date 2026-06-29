@@ -1,0 +1,18 @@
+# https://jupyter.<tailnet>.ts.net  ->  jupyter/jupyter:80
+# NOTE: Jupyter checks the Origin header for kernel WebSockets; if kernels fail
+# to connect over the new host, set NotebookApp.allow_origin / allow_remote_access.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jupyter-ts
+  namespace: jupyter
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: jupyter
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - jupyter

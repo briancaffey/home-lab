@@ -1,0 +1,16 @@
+# https://jellyfin.<tailnet>.ts.net  ->  jellyfin/jellyfin:80
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jellyfin-ts
+  namespace: jellyfin
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: jellyfin
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - jellyfin

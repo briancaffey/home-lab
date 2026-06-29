@@ -1,0 +1,57 @@
+# https://harbor.<tailnet>.ts.net  ->  Harbor (path-routed like the .lan ingress)
+#   /        -> harbor-portal:80   (UI)
+#   /api/ /service/ /v2/ /c/ -> harbor-core:80  (API / token / registry / auth)
+#
+# NOTE: Harbor pins its token realm + redirects to a single EXTERNAL_URL. The UI
+# will load and browser login generally works, but `docker login/push/pull`
+# against harbor.<tailnet>.ts.net will likely fail token audience checks unless
+# you set Harbor's externalURL to this host (it can only be ONE value, so doing
+# that would break the .lan name). Treat this as UI-only remote access.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: harbor-ts
+  namespace: harbor
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - harbor
+  rules:
+    - http:
+        paths:
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service:
+                name: harbor-core
+                port:
+                  number: 80
+          - path: /service/
+            pathType: Prefix
+            backend:
+              service:
+                name: harbor-core
+                port:
+                  number: 80
+          - path: /v2/
+            pathType: Prefix
+            backend:
+              service:
+                name: harbor-core
+                port:
+                  number: 80
+          - path: /c/
+            pathType: Prefix
+            backend:
+              service:
+                name: harbor-core
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: harbor-portal
+                port:
+                  number: 80

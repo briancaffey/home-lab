@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# No global namespace: each Ingress lives in its backend service's namespace
+# (monitoring / homepage). Apply AFTER the operator is installed, so the
+# `tailscale` IngressClass exists.
+resources:
+  - ingress-grafana.yaml
+  - ingress-homepage.yaml
+  - ingress-audiobookshelf.yaml
+  - ingress-harbor.yaml
+  - ingress-headlamp.yaml
+  - ingress-invokeai.yaml
+  - ingress-jellyfin.yaml
+  - ingress-jupyter.yaml
+  - ingress-open-webui.yaml
+  - ingress-speedtest.yaml
+  - ingress-vaultwarden.yaml
+  - ingress-netdata.yaml

@@ -1,0 +1,16 @@
+# https://invokeai.<tailnet>.ts.net  ->  invokeai/invokeai:80
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: invokeai-ts
+  namespace: invokeai
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: invokeai
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - invokeai

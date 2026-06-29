@@ -1,0 +1,16 @@
+# https://openwebui.<tailnet>.ts.net  ->  open-webui/open-webui:http (named port)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: open-webui-ts
+  namespace: open-webui
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: open-webui
+      port:
+        name: http
+  tls:
+    - hosts:
+        - openwebui
