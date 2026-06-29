@@ -28,6 +28,20 @@ scrape_configs:
       - targets: ["192.168.5.173:9400"]   # a3
         labels: { node: a3 }
 
+  # vram-reporter — per-pod GPU VRAM attribution (DaemonSet, hostPort 9401).
+  # Splits a shared GPU's memory across the services using it — the breakdown
+  # dcgm can't give. Covers all four GPU nodes incl. the Spark (GB10), where
+  # dcgm can't read the unified framebuffer. The `node` label is set by the
+  # exporter itself (from spec.nodeName), so targets here carry none.
+  - job_name: gpu-vram
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "192.168.5.253:9401"   # a1
+          - "192.168.5.96:9401"    # a2
+          - "192.168.5.173:9401"   # a3
+          - "192.168.6.19:9401"    # spark (GB10)
+
   # node-exporter — host metrics (DaemonSet, hostPort 9100, all nodes).
   - job_name: node
     static_configs:
