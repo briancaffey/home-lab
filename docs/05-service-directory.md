@@ -77,6 +77,7 @@ run `mkcert -install` once per client to trust the CA).
 | Audiobookshelf | Audiobooks & podcasts (a3) | https://abs.lan/ |
 | Vaultwarden | Passwords & secrets (Bitwarden-compatible, a3) | https://vault.lan/ |
 | Harbor | Private container registry + UI (a2) | https://harbor.lan/ · `docker/crane … harbor.lan/<project>/<repo>` |
+| Speedtest | WAN/ISP speed tracker (a2) → Grafana | https://speedtest.lan/ · dash "Speedtest — WAN/ISP" |
 
 ---
 

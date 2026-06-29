@@ -46,6 +46,15 @@ scrape_configs:
     static_configs:
       - targets: ["litellm.observability.svc.cluster.local:4000"]
 
+  # Speedtest Tracker — WAN/ISP speed (scheduled hourly). The /prometheus endpoint
+  # must be enabled in the app (Settings → Data Integration → Prometheus). Scraped
+  # in-cluster via cluster DNS; slow job (data changes hourly) so a 60s interval.
+  - job_name: speedtest
+    metrics_path: /prometheus
+    scrape_interval: 60s
+    static_configs:
+      - targets: ["speedtest.speedtest.svc.cluster.local:80"]
+
   # Prometheus scraping itself.
   - job_name: prometheus
     static_configs:

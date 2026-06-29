@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: speedtest
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/speedtest
+#
+# Single-container Speedtest Tracker (embedded SQLite), pinned to a2. Scheduled
+# WAN tests + /prometheus metrics scraped by Prometheus into Grafana (see the
+# `speedtest` job in clusters/home/monitoring/config/prometheus.yml and the
+# Speedtest dashboard in clusters/home/monitoring/dashboards/).
+#
+# Out-of-band secrets first (never in git):
+#   kubectl -n speedtest create secret generic speedtest-secrets \
+#     --from-literal=APP_KEY="base64:$(openssl rand -base64 32)"
+#   bash scripts/lan-certs.sh        # creates speedtest-tls (speedtest.lan wired in)
+#
+# One-time runtime step (persists in the SQLite /config PVC): enable the metrics
+# endpoint in the UI — Settings → Data Integration → Prometheus → enable. Without
+# it, GET /prometheus returns 404 and Prometheus can't scrape. The Grafana
+# "Speedtest — WAN/ISP" dashboard + the `speedtest` scrape job live in
+# clusters/home/monitoring/.
+#
+# Client access: add `192.168.5.173 speedtest.lan` to /etc/hosts.
+
+resources:
+  - namespace.yaml
+  - speedtest.yaml
+  - ingress.yaml

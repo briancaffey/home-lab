@@ -34,6 +34,7 @@ configMapGenerator:
     files:
       - dashboards/vllm.json
       - dashboards/nvidia-dcgm.json
+      - dashboards/speedtest.json
 
 secretGenerator:
   - name: grafana-admin
