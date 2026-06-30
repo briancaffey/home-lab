@@ -74,10 +74,11 @@ spec:
             # attachments, and the admin panel.
             - name: DOMAIN
               value: "https://vault.lan"
-            # First-run only: lets you create your account. Set to "false" and
-            # re-apply once registered. See the header note.
+            # Closed after first-run registration (own account + the claude-bot
+            # automation account). Flip to "true" + re-apply only to add a new
+            # account, then close again. See the header note and docs/11.
             - name: SIGNUPS_ALLOWED
-              value: "true"
+              value: "false"
             # No SMTP on the LAN, so don't gate signup on email verification.
             - name: SIGNUPS_VERIFY
               value: "false"
