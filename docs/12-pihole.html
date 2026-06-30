@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:13.5px;line-height:1.5;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;min-height:296mm;padding:15mm 14mm 16mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:33px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
+  h2{font-size:19px;font-weight:900;margin:0 0 9px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14.5px;font-weight:800;margin:0}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14.5px;color:#c7d0e4;max-width:165mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;
+        padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:6px 0 4px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:30px;font-weight:900;line-height:1}
+  .stat .l{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+  .stat .d{font-size:11px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)}
+  .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);
+           border-radius:0 13px 13px 0;padding:13px 16px;margin:13px 0}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:13px 16px;margin:11px 0;break-inside:avoid}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:11px 14px;margin:10px 0}
+  .note h3{color:var(--ok)}
+  .warn{border:1px solid var(--line);border-radius:15px;background:var(--card);padding:0;margin:11px 0;overflow:hidden;break-inside:avoid}
+  .warn .top{display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid var(--line)}
+  .warn .top.hi{background:linear-gradient(90deg,rgba(255,159,67,.15),transparent)}
+  .warn .top.me{background:linear-gradient(90deg,rgba(255,209,102,.12),transparent)}
+  .warn .top.lo{background:linear-gradient(90deg,rgba(94,200,240,.12),transparent)}
+  .sev{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:10.5px;letter-spacing:.05em;
+       padding:4px 9px;border-radius:7px;flex:none;text-transform:uppercase}
+  .sev.hi{background:var(--high);color:#3a1e00} .sev.me{background:var(--med);color:#3a2e00} .sev.lo{background:var(--low);color:#03283a}
+  .warn .id{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--mut);font-size:12.5px;flex:none}
+  .warn h3{flex:1;font-size:13.5px}
+  .warn .body{padding:10px 16px 12px;font-size:12.5px;color:#cdd6ea}
+  .warn .body .mit{margin-top:7px;color:var(--mut)}
+  .warn .body .mit b{color:var(--ok)}
+  .where{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);
+         background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:2px 7px;display:inline-block;margin:1px 0}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);
+     padding:6px 7px;border-bottom:2px solid var(--line)}
+  td{padding:7px 7px;border-bottom:1px solid var(--line);vertical-align:top;color:#cdd6ea}
+  td code{color:var(--blue)}
+  ul.tick{list-style:none;margin:4px 0} ul.tick li{padding:4px 0 4px 22px;position:relative;font-size:12.5px;color:#cdd6ea}
+  ul.tick li::before{content:"▸";position:absolute;left:3px;color:var(--blue);font-weight:800}
+  ul.cross li::before{content:"✕";color:var(--high)}
+  /* DNS flow diagram */
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0 6px}
+  .node{flex:1;border:1px solid var(--line);border-radius:12px;background:var(--soft);padding:11px 12px;text-align:center;position:relative}
+  .node .t{font-weight:800;font-size:12.5px} .node .s{font-size:10.5px;color:var(--mut);margin-top:2px;line-height:1.3}
+  .node.acc{border-color:var(--blue);background:linear-gradient(160deg,rgba(55,182,230,.13),var(--soft))}
+  .arrow{flex:none;width:34px;display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:20px;font-weight:800}
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:9px}
+  .branch .node .t{font-size:12px}
+  .foot{position:absolute;bottom:9mm;left:14mm;right:14mm;border-top:1px solid var(--line);
+        padding-top:6px;font-size:10px;color:var(--dim);display:flex;justify-content:space-between}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  /* compact the dense final page so it fits on one sheet */
+  .tight{padding-top:12mm}
+  .tight h2{margin-bottom:5px}
+  .tight>p{margin-bottom:5px;font-size:12.5px}
+  .tight .warn{margin:6px 0}
+  .tight .warn .top{padding:7px 16px}
+  .tight .warn h3{font-size:13px}
+  .tight .warn .body{padding:6px 16px 8px;font-size:11.8px;line-height:1.42}
+  .tight .warn .body .mit{margin-top:5px}
+  .tight .note{margin-top:6px;padding:9px 14px}
+</style></head>
+<body>
+
+<!-- ===== PAGE 1 — COVER + WHAT IT IS ===== -->
+<section class="page">
+  <div class="kick">Home-lab service brief</div>
+  <h1 style="margin:9px 0 10px">Pi-hole —<br><span class="grad">network-wide DNS ad-blocking</span></h1>
+  <p class="lead">What Pi-hole is, how it's wired into the k3s home-cluster, what it actually does to
+  ads and trackers, and — just as important — the ways a DNS sinkhole can quietly break things. A
+  plain-language brief for a single-operator home network.</p>
+
+  <div class="meta">
+    <span class="chip"><b>Date</b> · 2026-06-30</span>
+    <span class="chip"><b>Version</b> · Pi-hole FTL v6.6.2</span>
+    <span class="chip"><b>Runs on</b> · k3s · node a2</span>
+    <span class="chip"><b>Admin</b> · https://pihole.lan/admin</span>
+  </div>
+
+  <h2 style="margin:18px 0 11px"><span class="bar"></span>At a glance</h2>
+  <div class="cards">
+    <div class="stat b"><div class="n blue">53</div><div class="l" style="color:var(--blue)">DNS port</div>
+      <div class="d"><code>192.168.5.96:53</code> tcp+udp on a2</div></div>
+    <div class="stat g"><div class="n okc">82,755</div><div class="l" style="color:var(--ok)">Domains blocked</div>
+      <div class="d">StevenBlack default list</div></div>
+    <div class="stat p"><div class="n purp">0.0.0.0</div><div class="l" style="color:var(--purple)">Sinkhole reply</div>
+      <div class="d">Ad domains answered with a dead address</div></div>
+    <div class="stat o"><div class="n orng">1</div><div class="l" style="color:var(--high)">Replicas</div>
+      <div class="d">Single pod — no DNS failover yet</div></div>
+  </div>
+
+  <div class="posture">
+    <h3 style="margin-bottom:5px">In one sentence — <span class="grad">it's a DNS server that lies about ad domains</span></h3>
+    <p class="small mut" style="margin:0">Pi-hole sits between your devices and the internet's DNS. For ordinary names it
+    forwards the question upstream and returns the real answer. For names on its blocklist — ad servers, trackers,
+    telemetry endpoints — it returns a <b>dead address</b> (<code>0.0.0.0</code>), so the browser asks for the ad,
+    can't find the server, and silently gives up. Nothing is "stripped" from pages; the requests simply never connect.</p>
+  </div>
+
+  <h2 style="margin:16px 0 9px"><span class="bar"></span>What it is (and isn't)</h2>
+  <div class="grid2">
+    <div class="box">
+      <h3 class="grad">What it is</h3>
+      <ul class="tick" style="margin-top:6px">
+        <li>A recursive-ish <b>DNS forwarder</b> with a blocklist ("gravity")</li>
+        <li>Network-wide: protects <b>every device</b> that uses it for DNS — phones, TVs, IoT — with no per-device software</li>
+        <li>A <b>local resolver + dashboard</b> showing every query your network makes</li>
+        <li>Open-source; here it runs as one container (FTL = the DNS engine + web UI)</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3 style="color:var(--high)">What it is not</h3>
+      <ul class="tick cross" style="margin-top:6px">
+        <li>Not a firewall, VPN, or content filter for HTTPS payloads</li>
+        <li>Not an in-browser ad-blocker — it can't hide page elements, only block network requests</li>
+        <li>Not able to block ads served from the <b>same domain</b> as the content (e.g. first-party / YouTube)</li>
+        <li>Not effective against apps that use their own hardcoded DNS or DNS-over-HTTPS</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot"><span>Pi-hole · home-cluster service brief</span><span>1 / 4</span></div>
+</section>
+
+<!-- ===== PAGE 2 — THE NETWORKING ===== -->
+<section class="page">
+  <div class="kick">How it's wired</div>
+  <h2 style="margin:6px 0 9px"><span class="bar"></span>The networking around it</h2>
+  <p class="mut" style="margin-bottom:4px">Pi-hole has two front doors with very different needs: a <b>DNS service on
+  port 53</b> that the whole LAN must reach, and a <b>web dashboard</b> on HTTP. They're exposed two different ways.</p>
+
+  <div class="flow">
+    <div class="node"><div class="t">Client</div><div class="s">phone / TV / laptop<br>DNS set to a2</div></div>
+    <div class="arrow">→</div>
+    <div class="node acc"><div class="t">a2 : 53</div><div class="s"><code>hostPort</code> on the node<br>→ Pi-hole FTL pod</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="t">FTL engine</div><div class="s">checks the name<br>against gravity</div></div>
+  </div>
+  <div class="branch">
+    <div class="node" style="border-color:var(--high)"><div class="t" style="color:var(--high)">On blocklist → sinkholed</div>
+      <div class="s">replies <code>0.0.0.0</code> locally · never leaves the cluster</div></div>
+    <div class="node" style="border-color:var(--ok)"><div class="t" style="color:var(--ok)">Clean → forwarded upstream</div>
+      <div class="s">asks <code>1.1.1.1 / 1.0.0.1</code> · caches · returns the real IP</div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="box">
+      <h3 class="grad">DNS (port 53) — via <code>hostPort</code></h3>
+      <p class="small mut" style="margin-top:6px">Traefik, the cluster's ingress, only carries HTTP/HTTPS (80/443) — it
+      can't route raw DNS. So port 53 is published straight onto the node with a <code>hostPort</code>, pinning the pod
+      to <b>a2</b> and making Pi-hole reachable at <code>192.168.5.96:53</code> (tcp + udp). Point a device — or the
+      router's DHCP "DNS server" setting — at that IP and it's protected.</p>
+      <p class="small mut" style="margin:0"><code>listeningMode: all</code> is set so FTL answers queries arriving from
+      other subnets (the Kubernetes pod network NATs them in), not just its own.</p>
+    </div>
+    <div class="box">
+      <h3 class="grad">Dashboard — via Traefik ingress</h3>
+      <p class="small mut" style="margin-top:6px">The admin UI is a normal LAN web service: a Traefik ingress at
+      <code>https://pihole.lan/admin</code> with the shared mkcert <code>*.lan</code> TLS cert, auto-discovered by the
+      Homepage dashboard. The login password lives in an in-cluster Kubernetes secret — never in the public repo.</p>
+      <p class="small mut" style="margin:0">Config is stored on a node-local <code>local-path</code> volume on a2, so the
+      pod is pinned there for both its port and its data.</p>
+    </div>
+  </div>
+
+  <h3 style="margin:14px 0 4px">Why a2, not the control-plane (a3)</h3>
+  <table>
+    <tr><th>Factor</th><th>a3 (control-plane)</th><th>a2 (chosen)</th></tr>
+    <tr><td>Uptime profile</td><td>Always-on — ideal for DNS</td><td>Up reliably; the primary workload node</td></tr>
+    <tr><td>Network link</td><td>Wired</td><td>Wired</td></tr>
+    <tr><td>Free disk</td><td>~75 GB</td><td>~527 GB</td></tr>
+    <tr><td>Pulls images from docker.io</td><td><b style="color:var(--high)">Currently unreliable</b> (resolver issue)</td><td><b style="color:var(--ok)">Healthy</b></td></tr>
+  </table>
+  <p class="small dim" style="margin-top:6px">a3 was the natural "always-up" home for DNS, but its container runtime currently
+  can't reliably resolve <code>docker.io</code> to pull images — a separate node-level issue tracked as debt. a2 pulls cleanly,
+  is wired, has the most headroom, and already hosts most LAN services, so Pi-hole lives there for now.</p>
+
+  <div class="foot"><span>Pi-hole · home-cluster service brief</span><span>2 / 4</span></div>
+</section>
+
+<!-- ===== PAGE 3 — WHAT IT DOES TO ADS ===== -->
+<section class="page">
+  <div class="kick">The mechanism</div>
+  <h2 style="margin:6px 0 9px"><span class="bar"></span>What it does about ads &amp; trackers</h2>
+
+  <div class="box">
+    <h3 class="grad">DNS sinkholing, step by step</h3>
+    <ul class="tick" style="margin-top:6px">
+      <li>A page loads and tries to fetch a banner from, say, <code>doubleclick.net</code>.</li>
+      <li>The browser first asks DNS, "what's the IP for <code>doubleclick.net</code>?" — and that question goes to Pi-hole.</li>
+      <li>Pi-hole finds the name on its <b>gravity</b> blocklist and answers <code>0.0.0.0</code> instead of the real IP.</li>
+      <li>The browser tries to connect to <code>0.0.0.0</code>, which goes nowhere, so the ad request <b>fails instantly</b> and the slot stays empty.</li>
+      <li>Multiply that across <b>82,755</b> known ad/tracker domains and most display ads, trackers, and telemetry never load.</li>
+    </ul>
+  </div>
+
+  <div class="grid2">
+    <div class="note">
+      <h3>What this is good at</h3>
+      <ul class="tick" style="margin-top:5px">
+        <li><b>Trackers &amp; telemetry</b> — analytics and "phone-home" beacons on dedicated domains</li>
+        <li><b>Display / banner ad networks</b> — served from third-party ad domains</li>
+        <li><b>Smart-TV &amp; IoT spying</b> — devices you can't install a blocker on</li>
+        <li><b>Speed &amp; data</b> — blocked requests are never downloaded at all</li>
+        <li><b>Whole-network reach</b> — one config covers every device</li>
+      </ul>
+    </div>
+    <div class="box" style="border-color:rgba(255,159,67,.4)">
+      <h3 style="color:var(--high)">What it can't catch</h3>
+      <ul class="tick cross" style="margin-top:5px">
+        <li><b>First-party ads</b> — when ads come from the same domain as the content (YouTube, many apps), blocking the domain breaks the whole service, so it isn't blocked</li>
+        <li><b>In-page elements</b> — it works at the domain level, so it can't selectively hide a div or skip a pre-roll</li>
+        <li><b>Hardcoded resolvers / DoH</b> — apps that bake in <code>8.8.8.8</code> or use DNS-over-HTTPS skip Pi-hole entirely</li>
+        <li><b>"Empty box" leftovers</b> — the ad fails to load but the page may leave a blank rectangle</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="small mut">Because of those gaps, Pi-hole is best thought of as a <b>network-wide tracker/telemetry blocker</b>
+  that also removes a large share of display ads — complementary to, not a replacement for, an in-browser content blocker
+  (e.g. uBlock Origin) which <i>can</i> reach inside the page.</p>
+
+  <div class="box" style="margin-top:6px">
+    <h3 class="grad">Blocklists ("gravity")</h3>
+    <p class="small mut" style="margin-top:6px">The block set is just a big list of domains compiled from subscribed
+    <b>adlists</b> into a local database called <i>gravity</i>. This deployment uses the well-known StevenBlack consolidated
+    hosts list (<b>82,755</b> domains). You tune Pi-hole by <b>adding adlists</b> (more coverage, more risk of false
+    positives), <b>allowlisting</b> domains it shouldn't block, or <b>denylisting</b> extra ones by hand. Updating gravity
+    re-pulls the lists.</p>
+  </div>
+
+  <div class="foot"><span>Pi-hole · home-cluster service brief</span><span>3 / 4</span></div>
+</section>
+
+<!-- ===== PAGE 4 — POSSIBLE ISSUES ===== -->
+<section class="page tight">
+  <div class="kick">Failure modes &amp; gotchas</div>
+  <h2 style="margin:6px 0 9px"><span class="bar"></span>Possible issues it could create</h2>
+  <p class="mut" style="margin-bottom:6px">A DNS sinkhole becomes a piece of <b>critical infrastructure</b> the moment devices
+  depend on it — when it misbehaves, "the whole internet is broken" is the usual symptom. The main risks, ranked:</p>
+
+  <div class="warn">
+    <div class="top hi"><span class="sev hi">High</span><span class="id">P1</span><h3>Single point of failure for all DNS</h3></div>
+    <div class="body">One pod, on one node (a2), with no second replica. If a2 reboots, the pod crashes, or the volume
+      hiccups, <b>every device pointed at it loses DNS</b> — and DNS down feels like the entire network is down. The blast
+      radius is the whole house.
+      <div class="mit"><b>Mitigate:</b> hand out a <b>second DNS server</b> in DHCP (e.g. the router or <code>1.1.1.1</code>)
+        as a fallback; longer term, run a second Pi-hole / HA pair. Don't make it the only resolver for anything you can't afford to lose.</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="top me"><span class="sev me">Med</span><span class="id">P2</span><h3>Over-blocking &amp; false positives</h3></div>
+    <div class="body">Aggressive or stacked blocklists inevitably catch domains you actually need — a login that calls an
+      analytics SDK, a payment iframe, a CDN, app-store assets, push notifications. The failure is <b>silent and confusing</b>:
+      the site half-loads or a button does nothing, with no error pointing at DNS.
+      <div class="mit"><b>Mitigate:</b> when something breaks, check the <b>Query Log</b> for a blocked domain and
+        <b>allowlist</b> it. Add adlists conservatively.</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="top me"><span class="sev me">Med</span><span class="id">P3</span><h3>Upstream &amp; cache dependency</h3></div>
+    <div class="body">For non-blocked names Pi-hole forwards to an upstream (<code>1.1.1.1</code>). If that upstream or the
+      cluster's egress is slow/unreachable, lookups stall — exactly the cold-start timeout seen right after deploy.
+      <div class="mit"><b>Mitigate:</b> configure <b>two upstreams</b>; consider a local recursive resolver (unbound) to
+        reduce external dependence; watch query latency.</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="top lo"><span class="sev lo">Low</span><span class="id">P4</span><h3>Bypass &amp; a false sense of security</h3></div>
+    <div class="body">Modern browsers and apps increasingly use <b>DNS-over-HTTPS</b> or hardcoded resolvers that route
+      <i>around</i> Pi-hole, so blocking looks "leaky." And blocking a tracker's DNS name is <b>not</b> security — it doesn't
+      stop malware, phishing over allowed domains, or anything already inside an HTTPS session.
+      <div class="mit"><b>Mitigate:</b> disable DoH in browsers (or force them at Pi-hole); treat Pi-hole as privacy
+        hygiene, not a security control.</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="top lo"><span class="sev lo">Low</span><span class="id">P5</span><h3>Operational drift</h3></div>
+    <div class="body">Stale blocklists, an unbounded query database growing on the local volume, or a manual allowlist
+      that never made it back into the repo. Config lives on a node-local volume, so a lost node means re-creating tweaks.
+      <div class="mit"><b>Mitigate:</b> keep meaningful config as IaC in the repo; schedule gravity updates; back up
+        <code>/etc/pihole</code>; revisit the a3 control-plane image-pull issue so HA is an option.</div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:10px">
+    <h3>Bottom line</h3>
+    <p class="small mut" style="margin:0">Pi-hole is a high-value, low-cost privacy win for the whole network — but it
+    turns DNS into something you now <b>operate</b>. The two rules that keep it boring: always give clients a
+    <b>fallback resolver</b>, and when "the internet is broken," <b>check the query log first</b>.</p>
+  </div>
+
+  <div class="foot"><span>Pi-hole · home-cluster service brief · generated 2026-06-30</span><span>4 / 4</span></div>
+</section>
+
+</body></html>
