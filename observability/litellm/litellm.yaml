@@ -56,13 +56,13 @@ data:
         litellm_params:
           model: groq/llama-3.3-70b-versatile
           api_key: os.environ/GROQ_API_KEY
-      # OpenRouter — broad catalogue; this points at a strong free model with a
-      # big (262k) context window, which is why it's the context-window fallback.
+      # OpenRouter — broad catalogue; this points at a free model with a huge
+      # (1M) context window, which is why it's the context-window fallback.
       # OpenRouter rotates free model ids — if it 404s, pick another :free model
       # (curl https://openrouter.ai/api/v1/models) and swap the id here or in the UI.
-      - model_name: openrouter-qwen3-80b
+      - model_name: openrouter-nemotron-ultra
         litellm_params:
-          model: openrouter/qwen/qwen3-next-80b-a3b-instruct:free
+          model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
           api_key: os.environ/OPENROUTER_API_KEY
       # NVIDIA NIM (build.nvidia.com) — OpenAI-compatible at integrate.api.nvidia.com.
       - model_name: nvidia-nemotron-super
@@ -79,10 +79,10 @@ data:
       num_retries: 2
       timeout: 120
       fallbacks:
-        - nemotron-omni: ["groq-llama-3.3-70b", "openrouter-qwen3-80b", "nvidia-nemotron-super"]
+        - nemotron-omni: ["groq-llama-3.3-70b", "openrouter-nemotron-ultra", "nvidia-nemotron-super"]
       # If a prompt exceeds the local 64k window, spill to a bigger-context backend.
       context_window_fallbacks:
-        - nemotron-omni: ["openrouter-qwen3-80b", "groq-llama-3.3-70b"]
+        - nemotron-omni: ["openrouter-nemotron-ultra", "groq-llama-3.3-70b"]
 
     litellm_settings:
       # Export every request as an OTLP trace to Phoenix.
