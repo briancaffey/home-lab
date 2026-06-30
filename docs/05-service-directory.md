@@ -82,6 +82,7 @@ run `mkcert -install` once per client to trust the CA).
 | Vaultwarden | Passwords & secrets (Bitwarden-compatible, a3) | https://vault.lan/ |
 | Harbor | Private container registry + UI (a2) | https://harbor.lan/ · `docker/crane … harbor.lan/<project>/<repo>` |
 | Speedtest | WAN/ISP speed tracker (a2) → Grafana | https://speedtest.lan/ · dash "Speedtest — WAN/ISP" |
+| Pi-hole | Network-wide DNS ad-blocker (a2) | https://pihole.lan/admin · **DNS → `192.168.5.96:53`** (hostPort) |
 
 ---
 

@@ -1,0 +1,90 @@
+# Pi-hole — network-wide DNS sinkhole + ad/tracker blocking.
+#
+# Admin UI:  https://pihole.lan/admin   (Traefik ingress, 80 -> TLS)
+# DNS:       192.168.5.96:53 (tcp+udp)  via hostPort, pinned to a2
+#
+# Pinned to a2: the wired primary-workload node with the most free disk, and the
+# home of most LAN services. (a3, the control-plane, would be the "always-up"
+# pick for DNS, but its containerd currently can't reliably resolve docker.io to
+# pull images — see the build notes. Revisit a3 once that's fixed.) DNS is the
+# real product here: the Traefik ingress only fronts the web UI on 80/443, so
+# port 53 is published with hostPort instead of a Service/ingress.
+#
+# Web password is NOT in git — create it once out-of-band:
+#   kubectl -n pihole create secret generic pihole-secrets \
+#     --from-literal=WEBPASSWORD="$(openssl rand -base64 18)"
+#   bash scripts/lan-certs.sh        # mints pihole-tls (pihole.lan wired in)
+#
+# Point a client at it to test, or set the router's DNS to 192.168.5.96:
+#   dig @192.168.5.96 doubleclick.net    # blocked -> 0.0.0.0
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pihole-config
+  namespace: pihole
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pihole
+  namespace: pihole
+  labels: { app: pihole }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }   # single writer over the /etc/pihole config + FTL db
+  selector:
+    matchLabels: { app: pihole }
+  template:
+    metadata:
+      labels: { app: pihole }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: pihole
+          image: pihole/pihole:2026.06.0
+          env:
+            - { name: TZ, value: "America/New_York" }
+            # v6 config via FTLCONF_<toml_key_with_underscores>
+            - { name: FTLCONF_dns_upstreams, value: "1.1.1.1;1.0.0.1" }
+            # answer queries arriving from other subnets (k8s DNAT / whole LAN)
+            - { name: FTLCONF_dns_listeningMode, value: "all" }
+            - { name: FTLCONF_webserver_port, value: "80,443s" }
+            - name: FTLCONF_webserver_api_password
+              valueFrom:
+                secretKeyRef: { name: pihole-secrets, key: WEBPASSWORD }
+          ports:
+            - { name: dns-tcp, containerPort: 53, protocol: TCP, hostPort: 53 }
+            - { name: dns-udp, containerPort: 53, protocol: UDP, hostPort: 53 }
+            - { name: http,    containerPort: 80, protocol: TCP }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          readinessProbe:
+            httpGet: { path: /admin/login, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 18
+          volumeMounts:
+            - { name: config, mountPath: /etc/pihole }
+      volumes:
+        - name: config
+          persistentVolumeClaim: { claimName: pihole-config }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-web
+  namespace: pihole
+  labels: { app: pihole }
+spec:
+  selector: { app: pihole }
+  ports:
+    - { name: http, port: 80, targetPort: http }

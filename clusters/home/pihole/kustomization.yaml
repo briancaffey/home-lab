@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: pihole
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/pihole
+#
+# Pi-hole v6 (single FTL container), pinned to a2. Two access paths:
+#   - Web UI:  https://pihole.lan/admin   (Traefik ingress + pihole-tls)
+#   - DNS:     192.168.5.96:53 tcp+udp    (hostPort on a2)
+#
+# Out-of-band secret first (never in git):
+#   kubectl -n pihole create secret generic pihole-secrets \
+#     --from-literal=WEBPASSWORD="$(openssl rand -base64 18)"
+#   bash scripts/lan-certs.sh        # creates pihole-tls (pihole.lan wired in)
+#
+# Client access: add `192.168.5.173 pihole.lan` to /etc/hosts (or the Mac
+# dnsmasq *.lan wildcard) for the web UI. To actually use it for blocking, set
+# the client's or router's DNS server to 192.168.5.96 (a2).
+#
+# NOTE: Kept OUT of clusters/home/kustomization.yaml (per-service apply), same as
+# the other LAN services.
+
+resources:
+  - namespace.yaml
+  - pihole.yaml
+  - ingress.yaml

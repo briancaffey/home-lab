@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pihole
+  namespace: pihole
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Pi-hole"
+    gethomepage.dev/description: "Network-wide DNS ad-blocker (a2)"
+    gethomepage.dev/group: "Network"
+    gethomepage.dev/icon: "pi-hole.png"
+    gethomepage.dev/href: "https://pihole.lan/admin"
+    gethomepage.dev/pod-selector: "app=pihole"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["pihole.lan"]
+      secretName: pihole-tls
+  rules:
+    - host: pihole.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pihole-web
+                port:
+                  number: 80
