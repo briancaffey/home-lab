@@ -1,0 +1,33 @@
+# https://litellm.lan/  ->  litellm:4000 (gateway API + Admin UI at /ui)
+# TLS via the per-namespace mkcert secret `litellm-tls` (create with
+# scripts/lan-certs.sh). gethomepage.dev annotations let Homepage auto-discover it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: litellm
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "LiteLLM"
+    gethomepage.dev/description: "LLM gateway / router — Admin UI, virtual keys, fallbacks"
+    gethomepage.dev/group: "AI"
+    gethomepage.dev/icon: "litellm.png"
+    gethomepage.dev/href: "https://litellm.lan/ui"
+    gethomepage.dev/pod-selector: "app=litellm"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: litellm.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: litellm
+                port:
+                  number: 4000
+  tls:
+    - secretName: litellm-tls
+      hosts:
+        - litellm.lan

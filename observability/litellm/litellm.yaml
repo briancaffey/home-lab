@@ -1,19 +1,27 @@
-# LiteLLM proxy — the keystone gateway (Phase B, docs/04). One OpenAI-compatible
-# endpoint in front of every in-cluster LLM, with per-key budgets, fallback routing,
-# and full tracing exported to Phoenix via OTLP. Point Claude, the inference.club
-# apps, and the agent at this single URL. Official multi-arch image, no pull secret.
+# LiteLLM proxy — the keystone LLM gateway (Phase B, docs/04). One OpenAI-compatible
+# endpoint in front of every model the cluster can reach: in-cluster vLLM/LM Studio
+# AND free cloud providers (NVIDIA NIM, OpenRouter, Groq) used as automatic fallback.
+# Per-key budgets, fallback routing, and full tracing exported to Phoenix via OTLP.
+# Point Claude, Open WebUI, the inference.club apps, and the agent at this one URL.
 #
-# Stateless: master key only (Secret litellm-secret). For virtual keys + the admin
-# UI, add DATABASE_URL=postgresql://...@postgres.platform.svc.cluster.local:5432/litellm
-# (create the `litellm` database first). Config is inlined as a ConfigMap so the
-# whole service is one `kubectl apply -f`; edit it and `rollout restart` to reload.
+# DB-backed: DATABASE_URL (postgres.platform) unlocks the Admin UI + virtual keys +
+# spend tracking. Config below is the bootstrap (master key, models, routing); the
+# UI persists any models/keys you add at runtime into Postgres (STORE_MODEL_IN_DB).
 #
 # API : litellm.observability.svc.cluster.local:4000   (NodePort 30400)
-# UI  : http://<a3-ip>:30400/ui   (login with the master key)
+# UI  : https://litellm.lan/ui   (or http://<a3-ip>:30400/ui) — log in with the master key
 #
-# Secret (create once):
-#   kubectl -n observability create secret generic litellm-secret \
-#     --from-literal=master-key=sk-<MASTER_KEY>
+# Secrets (create once — see the deploy notes at the top of this file):
+#   litellm-secret      : master-key, database-url            (required)
+#   litellm-providers   : nvidia/openrouter/groq api keys     (optional; fallbacks)
+#
+# Add a provider key later, then restart:
+#   kubectl -n observability create secret generic litellm-providers \
+#     --from-literal=groq-api-key=gsk_... \
+#     --from-literal=openrouter-api-key=sk-or-... \
+#     --from-literal=nvidia-api-key=nvapi-... \
+#     --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl -n observability rollout restart deploy/litellm
 #
 # Deploy:  kubectl apply -f observability/litellm/litellm.yaml
 ---
@@ -25,29 +33,67 @@ metadata:
 data:
   config.yaml: |
     model_list:
-      # In-cluster vLLM (nemotron-omni). vLLM ignores auth, so api_key is a stub.
+      # ── In-cluster (primary, free, private) ───────────────────────────────
+      # vLLM nemotron-omni on spark. vLLM ignores auth, so api_key is a stub.
       - model_name: nemotron-omni
         litellm_params:
           model: openai/nemotron-3-nano-omni
           api_base: http://nemotron-omni.inference-club.svc.cluster.local:8000/v1
           api_key: "vllm-local"
-      # LM Studio host process (external endpoint registered in inference-club ns).
-      # Wildcard passthrough so whichever model LM Studio has loaded just works.
+      # LM Studio host process (scaled to 0 today). Wildcard passthrough so
+      # whichever model LM Studio has loaded just works when it's up.
       - model_name: lmstudio/*
         litellm_params:
           model: openai/*
           api_base: http://lmstudio.inference-club.svc.cluster.local:1234/v1
           api_key: "lm-studio"
-      # Add image/embeddings/etc. here as OpenAI-compatible endpoints come online,
-      # e.g. text-embeddings-inference (TEI) for RAG (Phase E).
+
+      # ── Free cloud providers (backup / burst capacity) ────────────────────
+      # Keys are optional: if the env var is empty the model simply errors at
+      # call time and the router falls through to the next backend.
+      # Groq — very fast Llama 3.3 70B.
+      - model_name: groq-llama-3.3-70b
+        litellm_params:
+          model: groq/llama-3.3-70b-versatile
+          api_key: os.environ/GROQ_API_KEY
+      # OpenRouter — broad catalogue; this points at a strong free DeepSeek model.
+      # Change the model id in the UI or here to taste (openrouter/<author>/<model>).
+      - model_name: openrouter-deepseek
+        litellm_params:
+          model: openrouter/deepseek/deepseek-chat-v3-0324:free
+          api_key: os.environ/OPENROUTER_API_KEY
+      # NVIDIA NIM (build.nvidia.com) — OpenAI-compatible at integrate.api.nvidia.com.
+      - model_name: nvidia-nemotron-super
+        litellm_params:
+          model: openai/nvidia/llama-3.3-nemotron-super-49b-v1
+          api_base: https://integrate.api.nvidia.com/v1
+          api_key: os.environ/NVIDIA_API_KEY
+
+    # Routing & fallbacks. The local nemotron is preferred; if it's down or scaled
+    # to 0, requests transparently fall through to the free cloud backends in order.
+    # Hit model_name "nemotron-omni" and you always get an answer.
+    router_settings:
+      routing_strategy: simple-shuffle
+      num_retries: 2
+      timeout: 120
+      fallbacks:
+        - nemotron-omni: ["groq-llama-3.3-70b", "openrouter-deepseek", "nvidia-nemotron-super"]
+      # If a prompt exceeds the local 64k window, spill to a bigger-context backend.
+      context_window_fallbacks:
+        - nemotron-omni: ["openrouter-deepseek", "groq-llama-3.3-70b"]
 
     litellm_settings:
       # Export every request as an OTLP trace to Phoenix.
       callbacks: ["otel"]
       drop_params: true
+      # Don't let one slow/broken backend hang the gateway.
+      request_timeout: 600
 
     general_settings:
       master_key: os.environ/LITELLM_MASTER_KEY
+      # DB-backed mode: virtual keys, spend tracking, and the Admin UI.
+      database_url: os.environ/DATABASE_URL
+      store_model_in_db: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -73,13 +119,35 @@ spec:
             - name: LITELLM_MASTER_KEY
               valueFrom:
                 secretKeyRef: { name: litellm-secret, key: master-key }
+            # Postgres (platform ns) — enables the Admin UI + virtual keys.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: litellm-secret, key: database-url }
+            - { name: STORE_MODEL_IN_DB, value: "True" }
+            # Free-provider keys (optional — proxy boots even when unset/empty).
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef: { name: litellm-providers, key: groq-api-key, optional: true }
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef: { name: litellm-providers, key: openrouter-api-key, optional: true }
+            - name: NVIDIA_API_KEY
+              valueFrom:
+                secretKeyRef: { name: litellm-providers, key: nvidia-api-key, optional: true }
             # OTLP → Phoenix (same namespace).
             - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://phoenix-svc.observability.svc.cluster.local:4317" }
             - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
           ports: [{ name: http, containerPort: 4000 }]
           resources:
-            requests: { cpu: 100m, memory: 256Mi }
-            limits: { memory: 1Gi }
+            # DB-backed mode (Prisma client + proxy) needs more headroom than the
+            # old stateless 1Gi — it OOMKilled at boot. 2Gi is comfortable.
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 2Gi }
+          # DB migrations run on first boot; give it room before probing.
+          startupProbe:
+            httpGet: { path: /health/liveliness, port: http }
+            periodSeconds: 10
+            failureThreshold: 30
           readinessProbe:
             httpGet: { path: /health/liveliness, port: http }
             initialDelaySeconds: 15

@@ -1,0 +1,19 @@
+# https://litellm.<tailnet>.ts.net  ->  litellm:4000 (gateway API + Admin UI)
+# Tailnet-only LLM gateway. The operator spins up a proxy device named "litellm"
+# and serves it with a Let's Encrypt cert. Handy for pointing remote clients
+# (laptop, phone) at the homelab's models from anywhere on the tailnet.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: litellm-ts
+  namespace: observability
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: litellm
+      port:
+        number: 4000
+  tls:
+    - hosts:
+        - litellm

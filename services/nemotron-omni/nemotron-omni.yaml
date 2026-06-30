@@ -10,8 +10,9 @@
 # Mapping notes:
 #   --runtime=nvidia       -> runtimeClassName: nvidia
 #   --ipc=host             -> spec.hostIPC: true (vLLM needs large /dev/shm)
-#   --network host -p 8000 -> containerPort 8000 + hostPort 8000 (repo convention:
-#                             reach it at <spark-LAN-IP>:8000, here 192.168.6.19:8000)
+#   --network host -p 8000 -> containerPort 8000 + hostPort 8001 (repo convention is
+#                             :8000, but trellis2 holds host:8000 on spark, so direct
+#                             host access is at <spark-LAN-IP>:8001 / 192.168.6.19:8001)
 #   --runtime=nvidia + GPU -> resources.limits nvidia.com/gpu: 1 (spark advertises
 #                             exactly 1; claimed exclusively now that acestep/
 #                             nemotron-asr/trellis2 are scaled to 0)
@@ -66,7 +67,7 @@ spec:
             # Tunables for the vllm serve command below. Edit these and re-apply
             # to change concurrency / context length / memory budget.
             - name: MAX_NUM_SEQS # max concurrent/parallel requests
-              value: "8"
+              value: "4"
             - name: MAX_MODEL_LEN # max context length (prompt + output)
               value: "64000"
             - name: GPU_MEM_UTIL
@@ -74,7 +75,9 @@ spec:
               # Lowered from 0.75 (~91 GiB, when nemotron owned the GPU) to ~0.40
               # (~48 GiB) so it coexists with lmstudio-headless + acestep, which
               # already hold ~44 GiB. ~15 GiB weights leaves ample fp8 KV cache
-              # for 8 seqs x 64k (the model is mostly Mamba, so KV is small).
+              # for 4 seqs x 64k (the model is mostly Mamba, so KV is small).
+              # NOTE: lmstudio + acestep are scaled to 0 today, so spark has even
+              # more headroom now; 0.40 stays a safe, proven floor.
               value: "0.40"
           command: ["bash", "-c"]
           # Verbatim port of the docker `-c` script: install audio extras + the
@@ -108,7 +111,12 @@ spec:
           ports:
             - name: http
               containerPort: 8000
-              hostPort: 8000
+              # hostPort moved 8000 -> 8001: trellis2 (also on spark) already
+              # holds host:8000, so sharing it would leave this pod Pending. The
+              # in-cluster Service targets the named `http` port (containerPort
+              # 8000), so LiteLLM / agent discovery are unaffected; only direct
+              # host access moves to <spark-LAN-IP>:8001 (192.168.6.19:8001).
+              hostPort: 8001
           # NOTE: no `nvidia.com/gpu` device-plugin claim. The spark advertises
           # exactly 1 GPU slot and acestep holds it; claiming it here would leave
           # this pod Pending. Instead we share the physical GB10 GPU via

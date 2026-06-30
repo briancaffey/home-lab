@@ -38,7 +38,7 @@ Consumed through the inference.club platform/agent, or directly where noted.
 
 | Service | What it does | Reach it |
 |---|---|---|
-| **LiteLLM** | One OpenAI-compatible URL for all LLMs (budgets, fallback, tracing) | http://192.168.5.173:30400 (UI `/ui`) |
+| **LiteLLM** | One OpenAI-compatible URL for all LLMs — Admin UI, virtual keys, budgets, fallback (local→Groq/OpenRouter/NVIDIA), tracing | https://litellm.lan/ui · `http://192.168.5.173:30400` · `litellm.observability.svc:4000` |
 | Postgres + pgvector | Shared SQL + vector store | `a3:5432` / `postgres.platform.svc:5432` |
 | Redis | Shared cache / queue | `redis.platform.svc:6379` |
 | MinIO | S3-compatible object storage | console http://192.168.5.173:30901 · S3 `:30900` |
