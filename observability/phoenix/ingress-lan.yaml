@@ -11,7 +11,9 @@ metadata:
     gethomepage.dev/name: "Phoenix"
     gethomepage.dev/description: "LLM tracing & evals (OTLP from LiteLLM)"
     gethomepage.dev/group: "Observability"
-    gethomepage.dev/icon: "arize-phoenix.png"
+    # No Arize-Phoenix logo exists in dashboard-icons/selfh.st, so use a Material
+    # Design Icon (the "phoenix" firebird mnemonic), tinted orange.
+    gethomepage.dev/icon: "mdi-fire-#f97316"
 spec:
   ingressClassName: traefik
   rules:
