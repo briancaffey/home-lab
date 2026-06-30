@@ -14,6 +14,9 @@ metadata:
     # No Arize-Phoenix logo exists in dashboard-icons/selfh.st, so use a Material
     # Design Icon (the "phoenix" firebird mnemonic), tinted orange.
     gethomepage.dev/icon: "mdi-fire-#f97316"
+    # Status indicator: chart pods are labeled app=phoenix (not the default
+    # app.kubernetes.io/name=<svc>), so Homepage needs an explicit selector.
+    gethomepage.dev/pod-selector: "app=phoenix"
 spec:
   ingressClassName: traefik
   rules:

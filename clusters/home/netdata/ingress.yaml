@@ -12,6 +12,8 @@ metadata:
     gethomepage.dev/description: "Live per-node hardware & system metrics"
     gethomepage.dev/group: "Observability"
     gethomepage.dev/icon: "netdata.png"
+    # Point the status indicator at the parent (dashboard) pod, not the children.
+    gethomepage.dev/pod-selector: "app=netdata,role=parent"
 spec:
   ingressClassName: traefik
   rules:

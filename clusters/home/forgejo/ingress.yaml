@@ -11,6 +11,7 @@ metadata:
     gethomepage.dev/description: "Self-hosted Git forge"
     gethomepage.dev/group: "Infra"
     gethomepage.dev/icon: "forgejo.png"
+    gethomepage.dev/pod-selector: "app=forgejo"
 spec:
   ingressClassName: traefik
   rules:
