@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:13.5px;line-height:1.5;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;min-height:296mm;padding:15mm 14mm 16mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:33px;font-weight:900;letter-spacing:-.02em;line-height:1.05}
+  h2{font-size:19px;font-weight:900;margin:0 0 9px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14.5px;font-weight:800;margin:0}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  /* cover */
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14.5px;color:#c7d0e4;max-width:165mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;
+        padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  /* scorecard */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:6px 0 4px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:34px;font-weight:900;line-height:1}
+  .stat .l{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+  .stat .d{font-size:11px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+  .stat.c::before{background:var(--crit)} .stat.h::before{background:var(--high)}
+  .stat.m::before{background:var(--med)} .stat.l::before{background:var(--low)}
+  .stat.c .n{color:var(--crit)} .stat.h .n{color:var(--high)}
+  .stat.m .n{color:var(--med)} .stat.l .n{color:var(--low)}
+  /* posture */
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);
+           border-radius:0 13px 13px 0;padding:13px 16px;margin:13px 0}
+  /* finding */
+  .find{border:1px solid var(--line);border-radius:15px;background:var(--card);
+        padding:0;margin:11px 0;overflow:hidden;break-inside:avoid}
+  .find .top{display:flex;align-items:center;gap:11px;padding:12px 16px 11px;border-bottom:1px solid var(--line)}
+  .find .top.cr{background:linear-gradient(90deg,rgba(255,93,108,.16),transparent)}
+  .find .top.hi{background:linear-gradient(90deg,rgba(255,159,67,.15),transparent)}
+  .find .top.me{background:linear-gradient(90deg,rgba(255,209,102,.12),transparent)}
+  .sev{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;letter-spacing:.05em;
+       padding:4px 9px;border-radius:7px;flex:none;text-transform:uppercase}
+  .sev.cr{background:var(--crit);color:#2a0a0e} .sev.hi{background:var(--high);color:#3a1e00}
+  .sev.me{background:var(--med);color:#3a2e00} .sev.lo{background:var(--low);color:#03283a}
+  .find .id{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--mut);font-size:12.5px;flex:none}
+  .find .body{padding:11px 16px 13px}
+  .row{display:flex;gap:9px;margin:7px 0}
+  .row .k{flex:none;width:64px;font-size:10.5px;font-weight:800;text-transform:uppercase;
+          letter-spacing:.04em;color:var(--dim);padding-top:2px}
+  .row .v{flex:1}
+  .fix{background:rgba(67,197,158,.10);border:1px solid rgba(67,197,158,.35);border-radius:10px;
+       padding:9px 12px;margin-top:8px}
+  .fix .k{color:var(--ok)}
+  .where{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue);
+         background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:2px 7px;display:inline-block;margin:1px 0}
+  .eff{font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 8px;display:inline-block;
+       background:var(--soft);border:1px solid var(--line);color:var(--mut)}
+  .eff.fast{color:var(--ok);border-color:rgba(67,197,158,.4)}
+  /* generic */
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);
+     padding:6px 7px;border-bottom:2px solid var(--line)}
+  td{padding:7px 7px;border-bottom:1px solid var(--line);vertical-align:top;color:#cdd6ea}
+  .check{list-style:none;margin:4px 0} .check li{padding:6px 0 6px 30px;position:relative;border-bottom:1px dashed var(--line)}
+  .check li:last-child{border-bottom:0}
+  .check li::before{content:attr(data-n);position:absolute;left:0;top:5px;width:21px;height:21px;border-radius:6px;
+    background:var(--grad);color:#fff;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center}
+  .tag{display:inline-block;font-size:10px;font-weight:800;color:#0b1322;border-radius:5px;padding:1px 7px;margin-left:5px}
+  .t-c{background:var(--crit)} .t-h{background:var(--high)} .t-m{background:var(--med)}
+  .proj{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line)}
+  .proj:last-child{border-bottom:0}
+  .proj .dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--purple);margin-top:5px}
+  .foot{position:absolute;bottom:9mm;left:14mm;right:14mm;border-top:1px solid var(--line);
+        padding-top:6px;font-size:10px;color:var(--dim);display:flex;justify-content:space-between}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+</style></head>
+<body>
+
+<!-- ===== COVER ===== -->
+<section class="page">
+  <div class="kick">Home-lab security review</div>
+  <h1 style="margin:9px 0 10px">Security Audit —<br><span class="grad">k3s home-cluster</span></h1>
+  <p class="lead">A practical, risk-ranked review of the live cluster and the public GitOps
+  repo. Scoped to a solo home-lab threat model — accidental exposure, a leaked secret in a
+  public repo, one compromised service pivoting across a flat network, and data loss — not an
+  enterprise checklist.</p>
+
+  <div class="meta">
+    <span class="chip"><b>Date</b> · 2026-06-30</span>
+    <span class="chip"><b>Cluster</b> · 4 nodes · k3s v1.35.5</span>
+    <span class="chip"><b>Method</b> · live kubectl + full git-history scan</span>
+    <span class="chip"><b>Repo</b> · PUBLIC</span>
+  </div>
+
+  <h2 style="margin:18px 0 11px"><span class="bar"></span>Scorecard</h2>
+  <div class="cards">
+    <div class="stat c"><div class="n">1</div><div class="l" style="color:var(--crit)">Critical</div>
+      <div class="d">No-login cluster-admin on the tailnet</div></div>
+    <div class="stat h"><div class="n">2</div><div class="l" style="color:var(--high)">High</div>
+      <div class="d">Open registry · open vault signups</div></div>
+    <div class="stat m"><div class="n">8</div><div class="l" style="color:var(--med)">Medium</div>
+      <div class="d">Network, secrets, images, exposure</div></div>
+    <div class="stat l"><div class="n">4</div><div class="l" style="color:var(--low)">Low / Expected</div>
+      <div class="d">Justified GPU/monitoring access</div></div>
+  </div>
+
+  <div class="posture">
+    <h3 style="margin-bottom:5px">Overall posture — <span class="grad">reasonable, with a few sharp edges</span></h3>
+    <p class="small mut" style="margin:0">Repo hygiene is genuinely good: <b style="color:var(--ok)">no hard secrets are
+    committed</b> in the current tree or full history — your <code>.gitignore</code> discipline works. The risk is
+    concentrated in <b>exposure</b> (a couple of powerful, unauthenticated services reachable beyond where they
+    should be) and <b>architecture</b> (one unencrypted SQLite control plane holding every secret; a flat pod network
+    with zero policies). Everything below is cheap to fix at your stage.</p>
+  </div>
+
+  <h2 style="margin:16px 0 9px"><span class="bar"></span>Fix these four this week</h2>
+  <ul class="check">
+    <li data-n="1"><b>Headlamp</b> — take it off the tailnet & set role to <code>view</code>
+      <span class="tag t-c">C1</span> <span class="eff fast">~5 min</span></li>
+    <li data-n="2"><b>Vaultwarden</b> — <code>SIGNUPS_ALLOWED:"false"</code>
+      <span class="tag t-h">H2</span> <span class="eff fast">~2 min</span></li>
+    <li data-n="3"><b>Registry</b> — add htpasswd basic-auth
+      <span class="tag t-h">H1</span> <span class="eff">~30 min</span></li>
+    <li data-n="4"><b>Docs</b> — scrub tailnet 100.x IPs from <code>docs/07</code>
+      <span class="tag t-m">M5</span> <span class="eff fast">~5 min</span></li>
+  </ul>
+
+  <div class="foot"><span>home-cluster · security audit</span><span>1 — Overview</span></div>
+</section>
+
+<!-- ===== CRITICAL + HIGH ===== -->
+<section class="page">
+  <h2><span class="bar"></span>🔴 Critical</h2>
+
+  <div class="find">
+    <div class="top cr"><span class="sev cr">Critical</span><span class="id">C1</span>
+      <h3>Headlamp runs as no-login <code>cluster-admin</code>, exposed over Tailscale</h3></div>
+    <div class="body">
+      <div class="row"><div class="k">What</div><div class="v">Headlamp authenticates every visitor as a pod
+        ServiceAccount bound to <code>cluster-admin</code>, with <b>no login prompt</b>. The values file is commented
+        "LAN-only" — but the Tailscale Ingress right beside it publishes it at <code>headlamp.&lt;tailnet&gt;.ts.net</code>.
+        Confirmed live: binding <code>headlamp-admin → cluster-admin</code>.</div></div>
+      <div class="row"><div class="k">Why</div><div class="v">Anyone who reaches that tailnet host — any tailnet member,
+        any device that ever receives a tagged key, or one ACL slip — gets <b>full read/write control of the entire
+        cluster</b>, no password. Highest-impact finding: game-over if reached.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v">
+        <span class="where">clusters/home/headlamp/values.yaml</span>
+        <span class="where">clusters/home/tailscale/ingress-headlamp.yaml</span></div></div>
+      <div class="fix"><div class="row" style="margin:0"><div class="k">Fix</div><div class="v">
+        Remove <code>ingress-headlamp.yaml</code> from the tailscale kustomization (keep it <code>.lan</code>-only),
+        <b>and</b> set <code>clusterRoleName: view</code> + disable <code>unsafeUseServiceAccountToken</code>.
+        Recommended: do both. <span class="eff fast">~5 min</span></div></div></div>
+    </div>
+  </div>
+
+  <h2 style="margin-top:16px"><span class="bar"></span>🟠 High</h2>
+
+  <div class="find">
+    <div class="top hi"><span class="sev hi">High</span><span class="id">H1</span>
+      <h3>Private registry: no auth, plaintext, push &amp; pull open on the LAN</h3></div>
+    <div class="body">
+      <div class="row"><div class="k">Why</div><div class="v">NodePort <code>30500</code>, no htpasswd,
+        <code>insecure_skip_verify</code>, reachable on every node IP. Anyone who reaches a node can <b>push</b> an image —
+        a poisoned image is direct code execution on the cluster (every node pulls from it).</div></div>
+      <div class="row"><div class="k">Where</div><div class="v"><span class="where">clusters/home/registry/registry.yaml</span></div></div>
+      <div class="fix"><div class="row" style="margin:0"><div class="k">Fix</div><div class="v">Add an htpasswd Secret
+        (basic auth); stop exposing it past where it's needed — pushes should come from CI. <span class="eff">~30 min</span></div></div></div>
+    </div>
+  </div>
+
+  <div class="find">
+    <div class="top hi"><span class="sev hi">High</span><span class="id">H2</span>
+      <h3>Vaultwarden allows open signups and is on the tailnet</h3></div>
+    <div class="body">
+      <div class="row"><div class="k">Why</div><div class="v">This is the app that stores <b>every other
+        credential</b>. <code>SIGNUPS_ALLOWED:"true"</code> + <code>SIGNUPS_VERIFY:"false"</code> means anyone who
+        reaches it can create an account on your vault.</div></div>
+      <div class="row"><div class="k">Where</div><div class="v">
+        <span class="where">clusters/home/vaultwarden/vaultwarden.yaml:79</span>
+        <span class="where">clusters/home/tailscale/ingress-vaultwarden.yaml</span></div></div>
+      <div class="fix"><div class="row" style="margin:0"><div class="k">Fix</div><div class="v">Set
+        <code>SIGNUPS_ALLOWED:"false"</code> now that your account exists; flip back on only transiently to add a user.
+        <span class="eff fast">~2 min</span></div></div></div>
+    </div>
+  </div>
+
+  <div class="foot"><span>home-cluster · security audit</span><span>2 — Critical &amp; High</span></div>
+</section>
+
+<!-- ===== MEDIUM ===== -->
+<section class="page">
+  <h2><span class="bar"></span>🟡 Medium <span class="small mut" style="font-weight:600">— architecture &amp; hygiene</span></h2>
+
+  <div class="grid2">
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M1</span><h3>No NetworkPolicies</h3></div>
+      <div class="body small"><p class="mut"><b>0</b> policies across 28 namespaces — any pod can reach any service. One
+        compromised <code>:latest</code> image can hit Vaultwarden's DB, the registry, MinIO, Postgres.</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> default-deny + allow on the 2–3 crown jewels
+        (vaultwarden, registry, platform Postgres). No mesh needed.</div></div></div>
+
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M2</span><h3>Secrets unencrypted at rest</h3></div>
+      <div class="body small"><p class="mut">a3 is the sole control plane on <b>SQLite</b>, secrets base64-only. Whoever
+        gets a3's disk or a raw backup gets <b>every</b> secret — and it's a single API SPOF.</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> <code>k3s secrets-encrypt enable</code>; pair with the planned
+        HA/etcd migration.</div></div></div>
+
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M3</span><h3>No managed secrets</h3></div>
+      <div class="body small"><p class="mut">No Sealed/External Secrets/SOPS. Secrets live only in live SQLite + your head —
+        the GitOps repo isn't actually reproducible.</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> <b>Sealed Secrets</b> — encrypted secrets become safe to commit.
+        Great "next infra" project.</div></div></div>
+
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M4</span><h3><code>:latest</code> images</h3></div>
+      <div class="body small"><p class="mut"><b>16 of 70</b> images float on <code>:latest</code> (invokeai is untagged).
+        Non-reproducible; a re-pull can change or poison the image; no rollback.</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> pin a tag/digest per image; internet-facing first.</div></div></div>
+
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M5</span><h3>Tailnet IPs in public repo</h3></div>
+      <div class="body small"><p class="mut"><code>docs/07:19-22</code> lists real <code>100.x</code> tailnet IPs (→ VNC) —
+        the repo's own stated red line. Not exploitable (CGNAT) but should be scrubbed.</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> replace with node names / <code>&lt;tailnet&gt;</code>.</div></div></div>
+
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M6</span><h3>No Pod Security baseline</h3></div>
+      <div class="body small"><p class="mut">No namespace carries a <code>pod-security.kubernetes.io</code> label — nothing
+        stops a future manifest running privileged/hostPath by accident.</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> <code>enforce: baseline</code> on app namespaces; leave
+        GPU/monitoring at <code>privileged</code>.</div></div></div>
+
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M7</span><h3>NodePort sprawl (14)</h3></div>
+      <div class="body small"><p class="mut">14 services on every node IP — incl. unauthenticated <b>prometheus</b>,
+        <b>minio</b> console, and <b>litellm</b> (master key). Gated only by "the LAN is trusted."</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> prefer <code>.lan</code>/Tailscale Ingress; drop the NodePort
+        once an Ingress exists (Phoenix is the template).</div></div></div>
+
+    <div class="find"><div class="top me"><span class="sev me">Med</span><span class="id">M8</span><h3>Root containers</h3></div>
+      <div class="body small"><p class="mut">~10 of ~44 workloads set any <code>securityContext</code>; a few are explicitly
+        <code>runAsUser:0</code>. A container escape starts as root.</p>
+        <div class="fix"><b style="color:var(--ok)">Fix:</b> add <code>runAsNonRoot</code> + <code>seccompProfile:
+        RuntimeDefault</code> on new services. Low priority on an isolated LAN.</div></div></div>
+  </div>
+
+  <div class="foot"><span>home-cluster · security audit</span><span>3 — Medium</span></div>
+</section>
+
+<!-- ===== LOW + ROADMAP ===== -->
+<section class="page">
+  <h2><span class="bar"></span>🔵 Low / Expected <span class="small mut" style="font-weight:600">— noted, not alarming</span></h2>
+  <table>
+    <tr><th style="width:48px">ID</th><th>Finding</th><th>Why it's OK (for now)</th></tr>
+    <tr><td>L1</td><td>Privileged &amp; host-level DaemonSets (gpu-feature-discovery, dcgm, node-exporter, vram-reporter,
+      nvidia-device-plugin, promtail, nfd, netdata-child)</td><td>All justified by GPU/node telemetry. Keep them scoped to
+      their system namespaces — they're the highest-value escape targets, so don't add more.</td></tr>
+    <tr><td>L2</td><td>Traefik dashboard enabled (<code>--api.dashboard=true</code>)</td><td>Not routed externally — no
+      IngressRoute exposes it. Just don't add one.</td></tr>
+    <tr><td>L3</td><td>No backups</td><td>Integrity/availability, not confidentiality. Covered by the storage+HA plan;
+      <code>k8up</code> → MinIO is the cheap first step.</td></tr>
+    <tr><td>L4</td><td>Helm charts pinned but unverified</td><td>Version-pinned from official repos into a gitignored
+      <code>charts/</code>. No digest provenance, but reasonable here.</td></tr>
+  </table>
+
+  <h2 style="margin-top:17px"><span class="bar"></span>What to do next (after the four quick wins)</h2>
+  <p class="small mut" style="margin-bottom:8px">These line up with your existing roadmap — each is a real "stand up a
+  piece of infra and understand it" project, ordered by value.</p>
+  <div class="proj"><span class="dot"></span><div><b>Sealed Secrets</b> <span class="tag t-m">M3</span> — makes the GitOps
+    repo truly reproducible. Best next project: install the controller, convert existing Secrets to <code>SealedSecret</code> CRDs.</div></div>
+  <div class="proj"><span class="dot"></span><div><b>secrets-encryption + HA/etcd</b> <span class="tag t-m">M2</span> — enable
+    encryption at rest on a3, then fold the etcd/HA migration into the storage+HA plan.</div></div>
+  <div class="proj"><span class="dot"></span><div><b>A few NetworkPolicies</b> <span class="tag t-m">M1</span> — default-deny on
+    vaultwarden / registry / platform first; expand from there.</div></div>
+  <div class="proj"><span class="dot"></span><div><b>Pin <code>:latest</code> images</b> <span class="tag t-m">M4</span> — a few
+    per session, internet-facing first.</div></div>
+  <div class="proj"><span class="dot"></span><div><b><code>k8up</code> backups → MinIO</b> — the reliability win from the
+    earlier project menu; protects Paperless, Grafana, Phoenix, Forgejo, Vaultwarden.</div></div>
+
+  <div class="posture" style="margin-top:15px;border-left-color:var(--blue)">
+    <p class="small mut" style="margin:0"><b style="color:var(--ink)">Bottom line.</b> Knock out the four quick wins this
+    week (issues are filed in <code>brian/home-lab</code>), then treat Sealed Secrets + secrets-encryption + a handful of
+    NetworkPolicies as your next infra projects. You're in good shape for a home lab — these changes move you from
+    "trusts the LAN" to "defends in depth."</p>
+  </div>
+
+  <div class="foot"><span>home-cluster · security audit · generated by Claude</span><span>4 — Low &amp; Next steps</span></div>
+</section>
+
+</body></html>
