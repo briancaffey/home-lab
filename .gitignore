@@ -23,3 +23,6 @@ charts/
 # Local-only overrides for environment-specific (non-secret but private) values
 # — e.g. the tailnet MagicDNS suffix. Committed counterpart: *.local.yaml.example
 *.local.yaml
+
+# macOS cruft
+.DS_Store
