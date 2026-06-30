@@ -1,12 +1,28 @@
 # https://litellm.lan/  ->  litellm:4000 (gateway API + Admin UI at /ui)
 # TLS via the per-namespace mkcert secret `litellm-tls` (create with
 # scripts/lan-certs.sh). gethomepage.dev annotations let Homepage auto-discover it.
+#
+# Plain http://litellm.lan is force-upgraded to https via the redirect-https
+# Middleware below, so the browser never shows "Not Secure" for the bare host.
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: observability
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: litellm
   namespace: observability
   annotations:
+    # Force HTTP -> HTTPS (scoped to this ingress; avoids a global Traefik change).
+    traefik.ingress.kubernetes.io/router.middlewares: observability-redirect-https@kubernetescrd
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "LiteLLM"
     gethomepage.dev/description: "LLM gateway / router — Admin UI, virtual keys, fallbacks"

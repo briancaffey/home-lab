@@ -126,6 +126,10 @@ spec:
               valueFrom:
                 secretKeyRef: { name: litellm-secret, key: database-url }
             - { name: STORE_MODEL_IN_DB, value: "True" }
+            # Behind Traefik TLS termination: trust X-Forwarded-Proto so the app
+            # emits https:// redirects (not http://) for /ui etc. Pairs with the
+            # redirect-https Middleware on the ingress so the bare host is secure.
+            - { name: FORWARDED_ALLOW_IPS, value: "*" }
             # Free-provider keys (optional — proxy boots even when unset/empty).
             - name: GROQ_API_KEY
               valueFrom:
