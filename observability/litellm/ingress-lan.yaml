@@ -27,7 +27,9 @@ metadata:
     gethomepage.dev/name: "LiteLLM"
     gethomepage.dev/description: "LLM gateway / router — Admin UI, virtual keys, fallbacks"
     gethomepage.dev/group: "AI"
-    gethomepage.dev/icon: "litellm.png"
+    # "litellm.png" 404s in the default dashboard-icons set; the logo lives in the
+    # selfh.st set, reached via the sh- prefix.
+    gethomepage.dev/icon: "sh-litellm"
     gethomepage.dev/href: "https://litellm.lan/ui"
     gethomepage.dev/pod-selector: "app=litellm"
 spec:
