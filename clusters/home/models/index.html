@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3D Gallery — home cluster</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    :root { --bg:#0f1320; --card:#1a2030; --ink:#e7ebf2; --mut:#8a93a6; --accent:#9b5cc6; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:22px 26px; border-bottom:1px solid #222a3c; display:flex; align-items:baseline; gap:12px; }
+    header h1 { font-size:20px; font-weight:800; }
+    header span { color:var(--mut); font-size:13px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; padding:20px 26px; }
+    .card { background:var(--card); border:1px solid #222a3c; border-radius:14px; overflow:hidden; }
+    model-viewer { width:100%; height:280px; background:#0c0f18; --poster-color:transparent; }
+    .label { padding:10px 14px; font-size:13px; color:var(--mut); border-top:1px solid #222a3c; word-break:break-all; }
+    .empty { color:var(--mut); padding:40px 26px; font-size:15px; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧊 3D Gallery</h1>
+    <span>trellis2 meshes from <code>generations/3d/</code> · drag to orbit, scroll to zoom</span>
+  </header>
+  <div id="grid" class="grid"></div>
+  <script>
+    fetch('models/manifest.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : [])
+      .then(list => {
+        const grid = document.getElementById('grid');
+        if (!Array.isArray(list) || list.length === 0) {
+          grid.outerHTML = '<p class="empty">No models yet — push <code>.glb</code> / <code>.gltf</code> files to the <code>generations/3d/</code> bucket and they\'ll appear here within a few minutes.</p>';
+          return;
+        }
+        list.forEach(name => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          const mv = document.createElement('model-viewer');
+          mv.setAttribute('src', 'models/' + encodeURIComponent(name));
+          mv.setAttribute('camera-controls', '');
+          mv.setAttribute('auto-rotate', '');
+          mv.setAttribute('shadow-intensity', '1');
+          mv.setAttribute('environment-image', 'neutral');
+          mv.setAttribute('loading', 'lazy');
+          const label = document.createElement('div');
+          label.className = 'label';
+          label.textContent = name;
+          card.appendChild(mv);
+          card.appendChild(label);
+          grid.appendChild(card);
+        });
+      })
+      .catch(() => {
+        document.getElementById('grid').outerHTML = '<p class="empty">Could not load the model manifest.</p>';
+      });
+  </script>
+</body>
+</html>

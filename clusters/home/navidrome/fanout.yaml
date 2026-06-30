@@ -1,0 +1,46 @@
+# MinIO fan-out: mirror generations/music/ → the navidrome-music PVC every 5 min.
+# Idempotent (mc mirror only transfers new/changed objects); the music library
+# persists, so a plain mirror is correct here. Runs on a2 to mount the PVC.
+# Needs Secret `minio-generations` (access-key/secret-key) in this namespace.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: navidrome-fanout
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            inference-club.com/box: a2
+          containers:
+            - name: mc
+              image: minio/mc:latest
+              env:
+                - name: S3_ENDPOINT
+                  value: http://minio.platform.svc:9000
+                - name: ACCESS
+                  valueFrom:
+                    secretKeyRef: { name: minio-generations, key: access-key }
+                - name: SECRET
+                  valueFrom:
+                    secretKeyRef: { name: minio-generations, key: secret-key }
+              command:
+                - sh
+                - -ec
+                - |
+                  mc alias set m "$S3_ENDPOINT" "$ACCESS" "$SECRET"
+                  mc mirror --overwrite --exclude '.keep' m/generations/music/ /music/
+              volumeMounts:
+                - name: music
+                  mountPath: /music
+          volumes:
+            - name: music
+              persistentVolumeClaim:
+                claimName: navidrome-music

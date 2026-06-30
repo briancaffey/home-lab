@@ -1,0 +1,58 @@
+# MinIO fan-out for Immich. Mirrors generations/{images,video}/ into the
+# immich-import PVC; the immich-server mounts the same PVC read-only at /import
+# and indexes it as an "External Library" (Settings → External Libraries, path
+# /import) — originals stay in MinIO, no duplication into Immich's own store.
+# Runs on a2 (mounts the PVC). Needs Secret `minio-generations` in this namespace.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-import
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 250Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: immich-fanout
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            inference-club.com/box: a2
+          containers:
+            - name: mc
+              image: minio/mc:latest
+              env:
+                - name: S3_ENDPOINT
+                  value: http://minio.platform.svc:9000
+                - name: ACCESS
+                  valueFrom:
+                    secretKeyRef: { name: minio-generations, key: access-key }
+                - name: SECRET
+                  valueFrom:
+                    secretKeyRef: { name: minio-generations, key: secret-key }
+              command:
+                - sh
+                - -ec
+                - |
+                  mc alias set m "$S3_ENDPOINT" "$ACCESS" "$SECRET"
+                  mc mirror --overwrite --exclude '.keep' m/generations/images/ /import/images/
+                  mc mirror --overwrite --exclude '.keep' m/generations/video/  /import/video/
+              volumeMounts:
+                - name: import
+                  mountPath: /import
+          volumes:
+            - name: import
+              persistentVolumeClaim:
+                claimName: immich-import

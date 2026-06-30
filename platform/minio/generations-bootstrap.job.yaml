@@ -1,0 +1,69 @@
+# One-shot bootstrap for the media-pipeline landing zone (docs/08).
+# Creates the `generations` bucket + prefix placeholders, a bucket-scoped policy,
+# and the scoped service user whose key lives in Secret `minio-generations`
+# (created out-of-band, never committed):
+#
+#   kubectl -n platform create secret generic minio-generations \
+#     --from-literal=access-key=generations \
+#     --from-literal=secret-key="$(openssl rand -hex 24)"
+#
+# Apply:   kubectl apply -f platform/minio/generations-bootstrap.job.yaml
+# Re-run:  kubectl -n platform delete job minio-generations-bootstrap && kubectl apply -f ...
+# Idempotent (mb --ignore-existing; user/policy create tolerate "already exists").
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-generations-bootstrap
+  namespace: platform
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: minio/mc:latest
+          env:
+            - name: ROOT_USER
+              valueFrom:
+                secretKeyRef: { name: platform-minio, key: root-user }
+            - name: ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: platform-minio, key: root-password }
+            - name: SVC_ACCESS
+              valueFrom:
+                secretKeyRef: { name: minio-generations, key: access-key }
+            - name: SVC_SECRET
+              valueFrom:
+                secretKeyRef: { name: minio-generations, key: secret-key }
+          command:
+            - sh
+            - -ec
+            - |
+              mc alias set m http://minio.platform.svc:9000 "$ROOT_USER" "$ROOT_PASSWORD"
+              mc mb --ignore-existing m/generations
+              for p in music images video pdf 3d _meta; do
+                echo placeholder | mc pipe "m/generations/$p/.keep"
+              done
+              cat >/tmp/pol.json <<'JSON'
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": ["s3:*"],
+                    "Resource": [
+                      "arn:aws:s3:::generations",
+                      "arn:aws:s3:::generations/*"
+                    ]
+                  }
+                ]
+              }
+              JSON
+              mc admin policy create m generations-rw /tmp/pol.json || echo "policy exists"
+              mc admin user add m "$SVC_ACCESS" "$SVC_SECRET" || echo "user exists"
+              mc admin policy attach m generations-rw --user "$SVC_ACCESS" || echo "already attached"
+              echo "=== result ==="
+              mc ls m/generations/
+              echo "BOOTSTRAP DONE"

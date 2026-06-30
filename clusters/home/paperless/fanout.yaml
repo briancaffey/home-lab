@@ -1,0 +1,74 @@
+# MinIO fan-out for Paperless. The consume dir DRAINS (Paperless deletes each
+# file after import), so a plain mirror would re-import forever. Instead:
+#   1. mirror generations/pdf/ → a persistent holding PVC (idempotent),
+#   2. copy only recently-arrived PDFs from holding → consume.
+# First run (no .initialized flag) backfills everything once; later runs use a
+# 25m window (> the 15m schedule, so there's overlap). Runs on a2.
+# Needs Secret `minio-generations` in this namespace.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-holding
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: paperless-fanout
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            inference-club.com/box: a2
+          containers:
+            - name: mc
+              image: minio/mc:latest
+              env:
+                - name: S3_ENDPOINT
+                  value: http://minio.platform.svc:9000
+                - name: ACCESS
+                  valueFrom:
+                    secretKeyRef: { name: minio-generations, key: access-key }
+                - name: SECRET
+                  valueFrom:
+                    secretKeyRef: { name: minio-generations, key: secret-key }
+              command:
+                - sh
+                - -ec
+                - |
+                  mc alias set m "$S3_ENDPOINT" "$ACCESS" "$SECRET"
+                  mc mirror --overwrite --exclude '.keep' m/generations/pdf/ /holding/
+                  if [ -f /holding/.initialized ]; then
+                    mc find /holding --name '*.pdf' --newer-than 25m | while IFS= read -r f; do
+                      mc cp "$f" /consume/
+                    done
+                  else
+                    mc find /holding --name '*.pdf' | while IFS= read -r f; do
+                      mc cp "$f" /consume/
+                    done
+                    touch /holding/.initialized
+                  fi
+              volumeMounts:
+                - name: holding
+                  mountPath: /holding
+                - name: consume
+                  mountPath: /consume
+          volumes:
+            - name: holding
+              persistentVolumeClaim:
+                claimName: paperless-holding
+            - name: consume
+              persistentVolumeClaim:
+                claimName: paperless-consume

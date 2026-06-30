@@ -20,4 +20,5 @@ resources:
   - redis.yaml
   - machine-learning.yaml
   - server.yaml
+  - fanout.yaml
   - ingress.yaml

@@ -8,6 +8,13 @@ This is a **home-lab** roadmap, distinct from inference.club product work. The
 goal is to keep growing the cluster with real, well-run services and to practice
 storage, ingest pipelines, and (eventually) backup/redundancy.
 
+> **Status (2026-06-30):** Phases 0–3 are **built and verified** — MinIO
+> `generations/` landing zone + scoped key, all four apps (Immich, Navidrome,
+> Paperless, 3D gallery) on a2, the four fan-out CronJobs, and the `push-media`
+> CLI (`scripts/push-media.sh`). Remaining: Phase 4 (inference.club sink, other
+> repo) and Phase 5 (backups, deferred). One manual step per app: Immich needs an
+> **External Library** pointed at `/import` (Settings → External Libraries).
+
 ---
 
 ## 1. The vision in one paragraph

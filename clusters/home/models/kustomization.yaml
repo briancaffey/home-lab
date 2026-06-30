@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: models
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/models
+# Requires Secret minio-generations (S3 key, copied from platform ns) and
+# models-tls (scripts/lan-certs.sh, host models.lan). Pinned to a2.
+#
+# Static nginx gallery: the index.html page renders each .glb/.gltf from the
+# models-data PVC via Google's <model-viewer>; the models-sync CronJob mirrors
+# generations/3d/ into that PVC and regenerates manifest.json. No custom image.
+resources:
+  - namespace.yaml
+  - gallery.yaml
+  - sync.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  - name: models-index
+    files:
+      - index.html

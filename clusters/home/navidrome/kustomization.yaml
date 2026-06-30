@@ -11,3 +11,4 @@ resources:
   - namespace.yaml
   - navidrome.yaml
   - ingress.yaml
+  - fanout.yaml

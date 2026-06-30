@@ -60,10 +60,18 @@ spec:
           volumeMounts:
             - name: library
               mountPath: /data
+            # MinIO fan-out target (immich-fanout CronJob writes here). Indexed
+            # in-place as an External Library (Settings → External Libraries → /import).
+            - name: import
+              mountPath: /import
+              readOnly: true
       volumes:
         - name: library
           persistentVolumeClaim:
             claimName: immich-library
+        - name: import
+          persistentVolumeClaim:
+            claimName: immich-import
 ---
 apiVersion: v1
 kind: Service
