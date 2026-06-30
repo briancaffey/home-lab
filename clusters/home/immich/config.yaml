@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: immich-config
+data:
+  # Postgres connection (immich-postgres Service). Password comes from the
+  # out-of-band Secret `immich-secret` (key DB_PASSWORD), never committed.
+  DB_HOSTNAME: immich-postgres
+  DB_USERNAME: postgres
+  DB_DATABASE_NAME: immich
+  # Redis/Valkey connection (immich-redis Service).
+  REDIS_HOSTNAME: immich-redis
+  # Server → machine-learning (CLIP / face recognition) over cluster DNS.
+  IMMICH_MACHINE_LEARNING_URL: http://immich-machine-learning:3003
+  # Originals + generated derivatives live on the library PVC, mounted at /data.
+  IMMICH_MEDIA_LOCATION: /data

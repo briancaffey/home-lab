@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: immich-redis
+  template:
+    metadata:
+      labels:
+        app: immich-redis
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: redis
+          # Valkey (Redis-compatible) — Immich's job queue / cache. Ephemeral:
+          # data is re-derivable, so no PVC (emptyDir).
+          image: docker.io/valkey/valkey:9@sha256:4963247afc4cd33c7d3b2d2816b9f7f8eeebab148d29056c2ca4d7cbc966f2d9
+          ports:
+            - name: redis
+              containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: "50m"
+              memory: 64Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-redis
+spec:
+  selector:
+    app: immich-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis

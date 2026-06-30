@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{--ink:#1c2333;--mut:#5b6577;--bg:#fff;--line:#e7ebf2;--soft:#f5f7fb;
+        --blue:#00a4dc;--purple:#9b5cc6;--green:#2bb673;--amber:#e8920c;
+        --grad:linear-gradient(120deg,#00a4dc,#9b5cc6)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:14px;line-height:1.55}
+  code,.mono{font-family:'IBM Plex Mono',monospace}
+  .page{width:210mm;min-height:296mm;padding:18mm 16mm;background:var(--bg);page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.08}
+  h2{font-size:21px;font-weight:800;margin:0 0 8px;display:flex;align-items:center;gap:10px}
+  h2 .n{display:inline-flex;width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;
+        align-items:center;justify-content:center;font-size:16px;flex:none}
+  h3{font-size:15px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 8px} .mut{color:var(--mut)} .small{font-size:12.5px}
+  .lead{font-size:16px;color:#3a4154}
+  .pill{display:inline-block;background:var(--grad);color:#fff;font-weight:800;border-radius:9px;padding:5px 13px;font-size:14px}
+  .card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff;margin:9px 0}
+  .soft{background:var(--soft)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .tag{display:inline-block;background:#eef6ff;color:#0277bd;border-radius:7px;padding:1px 8px;font-size:11.5px;font-weight:700;margin:1px}
+  .rec{background:var(--purple);color:#fff;border-radius:7px;padding:1px 9px;font-size:11px;font-weight:800;display:inline-block}
+  .tip{border-left:4px solid var(--blue);background:#f0f9ff;border-radius:0 10px 10px 0;padding:10px 13px;margin:9px 0;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:2px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);padding:5px 6px;border-bottom:2px solid var(--line)}
+  td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  .foot{position:absolute;bottom:10mm;left:16mm;right:16mm;border-top:1px solid var(--line);
+        padding-top:6px;font-size:10.5px;color:#aab;display:flex;justify-content:space-between}
+  .flow{font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;background:#0f1320;color:#cdd6f4;
+        border-radius:12px;padding:14px 16px;white-space:pre;overflow:hidden}
+  .flow .b{color:#89dceb} .flow .p{color:#cba6f7} .flow .g{color:#a6e3a1} .flow .m{color:#f9e2af}
+  .num{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--soft);border:2px solid var(--purple);
+       color:var(--purple);font-weight:800;font-size:12px;align-items:center;justify-content:center;flex:none}
+  .phase{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .phase:last-child{border-bottom:0}
+  .badge{font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 7px;display:inline-block}
+  .b-now{background:#eafaf1;color:var(--green)} .b-def{background:#fdf3e3;color:var(--amber)}
+</style></head><body>
+
+<!-- COVER -->
+<div class="page">
+  <span class="pill">home-lab roadmap</span>
+  <h1 style="margin-top:20px">Media Pipeline &amp;<br><span style="background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">Self-Hosted Storage</span> 🗄️</h1>
+  <p class="lead" style="margin-top:13px;max-width:150mm">
+    Capture everything the cluster and your dev box generate — music, images, video, PDFs, 3D meshes —
+    into one durable store, then browse, search, and stream it with the right self-hosted app for each.
+  </p>
+
+  <div class="card soft" style="margin-top:20px">
+    <h3>The one-line mental model</h3>
+    <p class="small mut" style="margin:4px 0 0">
+      <b>Producers push to MinIO</b> (one source of truth) → <b>small syncs fan out</b> to purpose-built apps.
+      Producers only ever learn <i>"push to S3"</i> — they never learn how each app works.
+    </p>
+  </div>
+
+  <div class="grid2" style="margin-top:14px">
+    <div class="card"><h3>🖼️ Immich <span class="rec">CLIP</span></h3><p class="small mut" style="margin:3px 0 0">Images + video library with semantic search &amp; face recognition. Your CLIP model, set up for free.</p></div>
+    <div class="card"><h3>🎵 Navidrome</h3><p class="small mut" style="margin:3px 0 0">Dedicated music player for <code>acestep</code> songs. Subsonic clients on iOS &amp; Apple TV.</p></div>
+    <div class="card"><h3>📄 Paperless-ngx</h3><p class="small mut" style="margin:3px 0 0">PDF library: OCR, full-text search, tags. For your debugging &amp; HyperFrames PDFs.</p></div>
+    <div class="card"><h3>🧊 3D gallery</h3><p class="small mut" style="margin:3px 0 0"><code>&lt;model-viewer&gt;</code> gallery for <code>trellis2</code> meshes, reading straight from MinIO.</p></div>
+  </div>
+
+  <div class="tip" style="margin-top:14px">
+    <b>Decisions locked (2026-06-29):</b> MinIO landing zone + fan-out · build all four apps on <b>a2</b> ·
+    Navidrome (dedicated) for music · backups <b>sketched but deferred</b>.
+  </div>
+
+  <div class="foot"><span>home-cluster · docs/08-media-pipeline-roadmap</span><span>2026-06-29</span></div>
+</div>
+
+<!-- ARCHITECTURE -->
+<div class="page">
+  <h2><span class="n">1</span> Architecture — MinIO landing zone + fan-out</h2>
+  <div class="flow"><span class="m">PRODUCERS</span>                      <span class="b">CANONICAL STORE</span>                <span class="p">PRESENTATION APPS</span>
+
+ inference.club ──┐
+  (external sink) │
+                  ├─push─►  <span class="b">MinIO: generations/</span>  ──┐
+ local dev CLI ───┘          ├─ music/   .mp3/.flac   ├─►  <span class="p">Navidrome</span>   music.lan
+  (push-media)               ├─ images/  .png/.jpg    ├─►  <span class="p">Immich</span>      immich.lan
+                             ├─ video/   .mp4         ├─►  <span class="p">Immich / Jellyfin</span>
+                             ├─ pdf/     .pdf         ├─►  <span class="p">Paperless</span>   paperless.lan
+                             ├─ 3d/      .glb/.gltf   └─►  <span class="p">3D gallery</span>  models.lan
+                             └─ _meta/   sidecar .json
+                                                      <span class="g">fan-out = small `mc mirror`
+                                                      CronJobs / watchers per app</span></div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h3><span class="num" style="display:inline-flex">1</span> MinIO is the source of truth</h3><p class="small mut" style="margin:5px 0 0">Every artifact lands first as <code>generations/&lt;type&gt;/&lt;id&gt;.&lt;ext&gt;</code> with an optional <code>_meta/</code> JSON sidecar. Back up one bucket → back up everything.</p></div>
+    <div class="card"><h3><span class="num" style="display:inline-flex">2</span> Producers only speak S3</h3><p class="small mut" style="margin:5px 0 0">inference.club &amp; the local CLI need only an endpoint, bucket, prefix &amp; creds. They never learn how Immich or Navidrome work.</p></div>
+    <div class="card"><h3><span class="num" style="display:inline-flex">3</span> Fan-out is a cluster concern</h3><p class="small mut" style="margin:5px 0 0">Each app gets a tiny <code>mc mirror</code> sync into its preferred shape. Swap or add apps without touching producers.</p></div>
+    <div class="card"><h3><span class="num" style="display:inline-flex">4</span> Keep it boring</h3><p class="small mut" style="margin:5px 0 0">MinIO ships <code>mc</code>; v1 needs <b>no custom code</b> — a CronJob or <code>mc mirror --watch</code> sidecar per destination.</p></div>
+  </div>
+
+  <h3 style="margin-top:14px">Fan-out per app</h3>
+  <table>
+    <tr><th>Destination</th><th>Sync</th><th>App behavior</th></tr>
+    <tr><td><b>Navidrome</b></td><td><code>mc mirror …/music/ → /music</code></td><td>auto-scans library</td></tr>
+    <tr><td><b>Paperless</b></td><td><code>mc mirror …/pdf/ → consume/</code></td><td>consumes + OCRs, then removes</td></tr>
+    <tr><td><b>Immich</b></td><td><code>mc mirror …/{images,video}/ → /import</code></td><td>External Library (read-only) indexes folder</td></tr>
+    <tr><td><b>3D gallery</b></td><td><i>none</i> — reads MinIO directly</td><td>lists <code>3d/</code>, renders inline via presigned URLs</td></tr>
+  </table>
+
+  <div class="foot"><span>home-cluster · docs/08-media-pipeline-roadmap</span><span>2 / 4</span></div>
+</div>
+
+<!-- SERVICES -->
+<div class="page">
+  <h2><span class="n">2</span> The four apps (build-now)</h2>
+
+  <div class="card">
+    <h3>🖼️ Immich — images + video + CLIP <span class="rec">highest value</span></h3>
+    <p class="small" style="margin:5px 0 6px">Library with a great mobile app, <b>CLIP semantic search</b>, face recognition, and a real <b>API + CLI</b>. This is also how you stand up a CLIP model — its ML container does it out of the box.</p>
+    <p class="small mut" style="margin:0"><b>Where:</b> a2 (server + ML + Postgres + Redis). <b>CLIP/GPU:</b> a2's GPU is taken by flux2 → run ML <b>CPU-first</b>, share GPU later if needed. <b>Alt:</b> PhotoPrism — weaker search, no clean ingest API.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>🎵 Navidrome — music</h3>
+      <p class="small" style="margin:5px 0 5px">Tiny Subsonic-compatible server for <code>acestep</code> songs; iOS/Apple TV clients (Amperfy, play:Sub).</p>
+      <p class="small mut" style="margin:0"><b>Where:</b> a2, one container + SQLite. <b>Alt:</b> reuse Jellyfin music (simpler, worse UX).</p>
+    </div>
+    <div class="card">
+      <h3>📄 Paperless-ngx — PDFs</h3>
+      <p class="small" style="margin:5px 0 5px">Drop a PDF → OCR, full-text search, tags, web viewer. For debugging &amp; HyperFrames PDFs.</p>
+      <p class="small mut" style="margin:0"><b>Where:</b> a2 (web + Postgres + Redis). <b>Alt:</b> Stirling-PDF = tools, a complement.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🧊 3D gallery — trellis2 meshes <span class="rec">small custom build</span></h3>
+    <p class="small" style="margin:5px 0 6px">No mature "Immich for 3D," so: a tiny static app that lists <code>generations/3d/</code> and renders each <code>.glb</code>/<code>.gltf</code> inline with Google's <code>&lt;model-viewer&gt;</code> (orbit/zoom in-browser).</p>
+    <p class="small mut" style="margin:0"><b>Where:</b> a2, small image via CI → Harbor. Reads MinIO via presigned URLs — no separate storage. <b>Auth:</b> none → keep LAN-only for now.</p>
+  </div>
+
+  <h2 style="margin-top:14px"><span class="n">3</span> The producer contract</h2>
+  <div class="grid2">
+    <div class="card"><h3>Local dev — <code>push-media</code> CLI</h3>
+      <p class="small mono" style="margin:5px 0;font-size:11.5px">push-media song.mp3  --type music<br>push-media debug.pdf --type pdf<br>push-media mesh.glb  --type 3d</p>
+      <p class="small mut" style="margin:0">Wraps <code>mc cp</code>; uploads to <code>generations/&lt;type&gt;/</code> + writes a <code>_meta/</code> sidecar.</p>
+    </div>
+    <div class="card"><h3>inference.club — "external sink"</h3>
+      <p class="small mut" style="margin:5px 0 0">An optional config block (<code>S3_ENDPOINT/BUCKET/PREFIX/KEY/SECRET</code>). When set, every generation is mirrored to your MinIO using the same contract. inference.club stays authoritative; the cluster gets a local copy to present. <i>(Lives in that repo.)</i></p>
+    </div>
+  </div>
+
+  <div class="foot"><span>home-cluster · docs/08-media-pipeline-roadmap</span><span>3 / 4</span></div>
+</div>
+
+<!-- PHASES + BACKUP -->
+<div class="page">
+  <h2><span class="n">4</span> Phased build order</h2>
+  <div class="card">
+    <div class="phase"><span class="num">0</span><div><h3>Contract <span class="badge b-now">do first</span></h3><p class="small mut" style="margin:2px 0 0">MinIO <code>generations/</code> buckets + scoped creds + <code>push-media</code> CLI. The foundation everything rides on.</p></div></div>
+    <div class="phase"><span class="num">1</span><div><h3>Immich <span class="badge b-now">build now</span></h3><p class="small mut" style="margin:2px 0 0">Images/video library + CLIP search on a2. Highest value; also stands up CLIP.</p></div></div>
+    <div class="phase"><span class="num">2</span><div><h3>Navidrome + Paperless <span class="badge b-now">build now</span></h3><p class="small mut" style="margin:2px 0 0">Music player + PDF library on a2. Two quick, lightweight wins.</p></div></div>
+    <div class="phase"><span class="num">3</span><div><h3>3D gallery <span class="badge b-now">build now</span></h3><p class="small mut" style="margin:2px 0 0">model-viewer gallery reading MinIO. Small custom image via CI → Harbor.</p></div></div>
+    <div class="phase"><span class="num">4</span><div><h3>inference.club sink <span class="badge b-now">build now</span></h3><p class="small mut" style="margin:2px 0 0">"External sink" S3 mirror in the product (inference.club repo).</p></div></div>
+    <div class="phase"><span class="num">5</span><div><h3>Backups <span class="badge b-def">deferred</span></h3><p class="small mut" style="margin:2px 0 0">restic → Backblaze B2 + a real restore drill. Documented now, built later.</p></div></div>
+  </div>
+
+  <h2 style="margin-top:14px"><span class="n">5</span> Storage &amp; backup — sketched, deferred</h2>
+  <div class="card">
+    <p class="small" style="margin:0 0 6px">The cluster has <b>no backups today</b> (flagged risk). MinIO-as-truth makes it tractable: protect a short list and you've protected everything.</p>
+    <p class="small mut" style="margin:0"><b>Back up:</b> MinIO <code>generations/</code> + app DBs (Immich PG, Paperless PG+media, Navidrome SQLite). 3D gallery is stateless. <b>How (later):</b> restic → offsite <b>Backblaze B2</b> for 3-2-1; Longhorn/second-node for on-LAN mobility. <b>Note:</b> the NTFS <code>d</code>/<code>e</code> drives are read-only — not valid backup targets. A backup you've never restored isn't a backup.</p>
+  </div>
+
+  <h2 style="margin-top:14px"><span class="n">6</span> Cross-cutting</h2>
+  <div class="card"><p class="small mut" style="margin:0">
+    <span class="tag">TLS/DNS</span> new <code>*.lan</code> hosts → <code>scripts/lan-certs.sh</code> &nbsp;
+    <span class="tag">Homepage</span> ingress annotations, a "Media" group &nbsp;
+    <span class="tag">Tailscale</span> expose only Immich (+ maybe Navidrome) remotely &nbsp;
+    <span class="tag">Auth</span> apps self-auth; 3D gallery LAN-only until SSO &nbsp;
+    <span class="tag">GPU</span> only Immich ML wants one → CPU-first on a2.
+  </p></div>
+
+  <div class="foot"><span>home-cluster · docs/08-media-pipeline-roadmap</span><span>4 / 4</span></div>
+</div>
+
+</body></html>

@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: immich
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Immich"
+    gethomepage.dev/description: "Photos & video, CLIP search (a2)"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "immich.png"
+    gethomepage.dev/href: "https://immich.lan/"
+    gethomepage.dev/pod-selector: "app=immich-server"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["immich.lan"]
+      secretName: immich-tls
+  rules:
+    - host: immich.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: immich-server
+                port:
+                  number: 80

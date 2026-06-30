@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: navidrome
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Navidrome"
+    gethomepage.dev/description: "Music streaming — AI songs (a2)"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "navidrome.png"
+    gethomepage.dev/href: "https://music.lan/"
+    gethomepage.dev/pod-selector: "app=navidrome"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["music.lan"]
+      secretName: navidrome-tls
+  rules:
+    - host: music.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: navidrome
+                port:
+                  number: 80

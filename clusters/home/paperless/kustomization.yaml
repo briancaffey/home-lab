@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: paperless
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/paperless
+#
+# Requires two out-of-band secrets (never committed):
+#   - paperless-secret  (keys: DBPASS, SECRET_KEY, ADMIN_PASSWORD):
+#       kubectl -n paperless create secret generic paperless-secret \
+#         --from-literal=DBPASS="$(openssl rand -hex 24)" \
+#         --from-literal=SECRET_KEY="$(openssl rand -hex 32)" \
+#         --from-literal=ADMIN_PASSWORD="$(openssl rand -hex 16)"
+#   - paperless-tls     — *.lan cert (add paperless.lan to scripts/lan-certs.sh)
+#
+# Components (all pinned to a2): postgres + redis/valkey + webserver.
+# Consume dir (paperless-consume PVC) is fed by the MinIO generations/pdf/ fan-out.
+resources:
+  - namespace.yaml
+  - config.yaml
+  - database.yaml
+  - redis.yaml
+  - webserver.yaml
+  - ingress.yaml

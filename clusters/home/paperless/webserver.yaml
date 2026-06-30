@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+  # Index, classifier models, originals metadata.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-media
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 50Gi
+  # Archived (OCR'd) documents + thumbnails.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-consume
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+  # Drop folder. The MinIO fan-out mc-mirrors generations/pdf/ here; Paperless
+  # consumes + OCRs each file, then removes it.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paperless-webserver
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: paperless-webserver
+  template:
+    metadata:
+      labels:
+        app: paperless-webserver
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: paperless
+          image: ghcr.io/paperless-ngx/paperless-ngx:2.20.15
+          envFrom:
+            - configMapRef:
+                name: paperless-config
+          env:
+            - name: PAPERLESS_DBPASS
+              valueFrom:
+                secretKeyRef:
+                  name: paperless-secret
+                  key: DBPASS
+            - name: PAPERLESS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: paperless-secret
+                  key: SECRET_KEY
+            - name: PAPERLESS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: paperless-secret
+                  key: ADMIN_PASSWORD
+          ports:
+            - name: http
+              containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 40
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /usr/src/paperless/data
+            - name: media
+              mountPath: /usr/src/paperless/media
+            - name: consume
+              mountPath: /usr/src/paperless/consume
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: paperless-data
+        - name: media
+          persistentVolumeClaim:
+            claimName: paperless-media
+        - name: consume
+          persistentVolumeClaim:
+            claimName: paperless-consume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paperless-webserver
+spec:
+  selector:
+    app: paperless-webserver
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

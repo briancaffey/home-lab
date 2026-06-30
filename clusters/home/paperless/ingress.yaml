@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: paperless
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Paperless"
+    gethomepage.dev/description: "PDF & document library, OCR (a2)"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "paperless-ngx.png"
+    gethomepage.dev/href: "https://paperless.lan/"
+    gethomepage.dev/pod-selector: "app=paperless-webserver"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["paperless.lan"]
+      secretName: paperless-tls
+  rules:
+    - host: paperless.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: paperless-webserver
+                port:
+                  number: 80

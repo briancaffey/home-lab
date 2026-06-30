@@ -1,7 +1,7 @@
 # 05 — Service Directory
 
 Everything running on the home cluster, what it does, and where to reach it on the
-LAN. Live as of 2026-06-27.
+LAN. Live as of 2026-06-29.
 
 **Nodes:** a1 `192.168.5.253` · a2 `192.168.5.96` · a3 `192.168.5.173` · spark `192.168.6.19`
 
@@ -74,7 +74,10 @@ run `mkcert -install` once per client to trust the CA).
 | Jupyter | GPU JupyterLab (a2) | https://jupyter.lan/ |
 | InvokeAI | Image generation (a2) | https://invokeai.lan/ |
 | Jellyfin | Media server (a2, NVENC) | https://jellyfin.lan/ |
+| Immich | Photos & video, CLIP semantic search + faces (a2) | https://immich.lan/ · app → `http://192.168.5.96:30283` |
+| Navidrome | Music streaming — AI songs (a2) | https://music.lan/ · Subsonic clients → `http://192.168.5.96:30533` |
 | Audiobookshelf | Audiobooks & podcasts (a3) | https://abs.lan/ |
+| Paperless | PDF & document library, OCR + search (a2) | https://paperless.lan/ (user `admin`) |
 | Vaultwarden | Passwords & secrets (Bitwarden-compatible, a3) | https://vault.lan/ |
 | Harbor | Private container registry + UI (a2) | https://harbor.lan/ · `docker/crane … harbor.lan/<project>/<repo>` |
 | Speedtest | WAN/ISP speed tracker (a2) → Grafana | https://speedtest.lan/ · dash "Speedtest — WAN/ISP" |

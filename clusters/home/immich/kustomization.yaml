@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: immich
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/immich
+#
+# Requires two out-of-band secrets (never committed):
+#   - immich-secret  (key DB_PASSWORD)  — Postgres password:
+#       kubectl -n immich create secret generic immich-secret \
+#         --from-literal=DB_PASSWORD="$(openssl rand -hex 24)"
+#   - immich-tls     — *.lan TLS cert (add immich.lan to scripts/lan-certs.sh)
+#
+# Components (all pinned to a2; local-path PVCs are node-local):
+#   postgres (VectorChord for CLIP) + redis/valkey + machine-learning (CPU) + server
+resources:
+  - namespace.yaml
+  - config.yaml
+  - database.yaml
+  - redis.yaml
+  - machine-learning.yaml
+  - server.yaml
+  - ingress.yaml

@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: navidrome
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/navidrome
+# Requires out-of-band secret navidrome-tls (scripts/lan-certs.sh, host music.lan).
+# Music library (navidrome-music PVC) is fed by the MinIO generations/music/
+# fan-out; first admin user is created in the web UI on first visit. Pinned to a2.
+resources:
+  - namespace.yaml
+  - navidrome.yaml
+  - ingress.yaml

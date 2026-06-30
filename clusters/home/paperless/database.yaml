@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paperless-postgres
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paperless-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: paperless-postgres
+  template:
+    metadata:
+      labels:
+        app: paperless-postgres
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: paperless
+            - name: POSTGRES_USER
+              value: paperless
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: paperless-secret
+                  key: DBPASS
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "paperless", "-d", "paperless"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: "100m"
+              memory: 256Mi
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: paperless-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paperless-postgres
+spec:
+  selector:
+    app: paperless-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

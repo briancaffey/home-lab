@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-library
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 250Gi
+  # Originals + thumbnails/derivatives. local-path ignores the size (node-local
+  # bind mount on a2's disk, ~527 GB free) — it's nominal, grow the disk not this.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-server
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: immich-server
+  template:
+    metadata:
+      labels:
+        app: immich-server
+    spec:
+      # Service `immich-server` would inject IMMICH_SERVER_* env that the app
+      # mis-reads — disable the auto service links (same fix as jupyter).
+      enableServiceLinks: false
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: immich-server
+          image: ghcr.io/immich-app/immich-server:release
+          ports:
+            - name: http
+              containerPort: 2283
+          envFrom:
+            - configMapRef:
+                name: immich-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: immich-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /api/server/ping
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 40
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 512Mi
+          volumeMounts:
+            - name: library
+              mountPath: /data
+      volumes:
+        - name: library
+          persistentVolumeClaim:
+            claimName: immich-library
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-server
+spec:
+  selector:
+    app: immich-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Direct LAN access for the mobile app (no TLS-trust prompt) — reachable at
+# http://<any-node-ip>:30283, mirroring the jellyfin-direct pattern.
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-direct
+spec:
+  type: NodePort
+  selector:
+    app: immich-server
+  ports:
+    - name: http
+      port: 2283
+      targetPort: http
+      nodePort: 30283

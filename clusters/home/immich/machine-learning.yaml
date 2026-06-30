@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-model-cache
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 15Gi
+  # CLIP / face-recognition model weights are downloaded here on first use.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-machine-learning
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: immich-machine-learning
+  template:
+    metadata:
+      labels:
+        app: immich-machine-learning
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: machine-learning
+          # CPU image (no -cuda suffix): a2's 4090 is exclusively flux2-klein,
+          # so run CLIP on CPU for now (indexing is just slower). Switch to the
+          # -cuda image + NVIDIA_VISIBLE_DEVICES=all later to share the GPU.
+          image: ghcr.io/immich-app/immich-machine-learning:release
+          ports:
+            - name: http
+              containerPort: 3003
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              memory: 4Gi
+          volumeMounts:
+            - name: model-cache
+              mountPath: /cache
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: immich-model-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-machine-learning
+spec:
+  selector:
+    app: immich-machine-learning
+  ports:
+    - name: http
+      port: 3003
+      targetPort: http
