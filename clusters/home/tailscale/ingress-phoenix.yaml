@@ -1,0 +1,18 @@
+# https://phoenix.<tailnet>.ts.net  ->  phoenix-svc:6006 (Phoenix UI)
+# Tailnet-only LLM-trace explorer. The operator spins up a proxy device named
+# "phoenix" and serves it with a Let's Encrypt cert.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: phoenix-ts
+  namespace: observability
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: phoenix-svc
+      port:
+        number: 6006
+  tls:
+    - hosts:
+        - phoenix

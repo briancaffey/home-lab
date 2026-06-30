@@ -1,0 +1,64 @@
+# Arize Phoenix — self-hosted LLM observability, via the OFFICIAL helm chart
+# (oci://registry-1.docker.io/arizephoenix/phoenix-helm). Replaces the previous
+# hand-rolled Deployment (SQLite-on-local-path) with the chart's Postgres-backed
+# layout — sturdier storage, upstream-maintained config surface.
+#
+# Managed as a Helm release (NOT kustomize): the chart is OCI-published,
+# autogenerates its own in-cluster Secret, and bundles a Postgres subchart —
+# all of which Helm handles natively. Deploy:
+#
+#   helm upgrade --install phoenix \
+#     oci://registry-1.docker.io/arizephoenix/phoenix-helm --version 9.0.11 \
+#     -n observability -f observability/phoenix/values.yaml
+#
+# Then the two ingresses (raw manifests, applied separately):
+#   kubectl apply -f observability/phoenix/ingress-lan.yaml
+#   kubectl apply -k clusters/home/tailscale            # picks up ingress-phoenix.yaml
+#
+# Service name is `phoenix-svc` (chart convention) on ports 6006 (UI/HTTP-OTLP)
+# and 4317 (gRPC-OTLP). LiteLLM exports traces to phoenix-svc:4317.
+
+fullnameOverride: phoenix
+replicaCount: 1
+
+# Phoenix itself is stateless here (state lives in Postgres); pin to a3 anyway so
+# it sits next to its DB.
+deployment:
+  nodeSelector:
+    inference-club.com/box: a3
+
+server:
+  grpcPort: 4317
+  port: 6006
+  # Don't phone home to Arize analytics.
+  telemetryEnabled: false
+
+# We expose Phoenix ourselves via Traefik (.lan) + Tailscale ingresses, so the
+# chart's built-in ingress + NodePort are off. ClusterIP is enough; LiteLLM and
+# the ingresses reach it in-cluster.
+ingress:
+  enabled: false
+service:
+  type: ClusterIP
+
+# LAN/tailnet-only service — keep it open like the prior deployment. To turn on
+# the login wall later, set enableAuth: true and pre-create `phoenix-secret`
+# out-of-band (don't commit it — this repo is public).
+auth:
+  enableAuth: false
+
+# Postgres-backed (the whole point of the switch). Bundled groundhog2k Postgres
+# StatefulSet, pinned to a3, on a 10Gi local-path PVC. NOT SQLite.
+persistence:
+  enabled: false
+postgresql:
+  enabled: true
+  nodeSelector:
+    inference-club.com/box: a3
+  storage:
+    requestedSize: 10Gi
+
+database:
+  # Auto-expire traces after 30 days so Postgres can't grow unbounded and fill
+  # a3's disk (the local-path PVC size is NOT enforced as a hard cap).
+  defaultRetentionPolicyDays: 30

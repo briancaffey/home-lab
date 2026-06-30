@@ -74,7 +74,7 @@ spec:
               valueFrom:
                 secretKeyRef: { name: litellm-secret, key: master-key }
             # OTLP → Phoenix (same namespace).
-            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://phoenix.observability.svc.cluster.local:4317" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://phoenix-svc.observability.svc.cluster.local:4317" }
             - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
           ports: [{ name: http, containerPort: 4000 }]
           resources:

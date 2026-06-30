@@ -18,3 +18,4 @@ resources:
   - ingress-vaultwarden.yaml
   - ingress-netdata.yaml
   - ingress-forgejo.yaml
+  - ingress-phoenix.yaml

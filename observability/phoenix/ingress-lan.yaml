@@ -1,0 +1,31 @@
+# https://phoenix.lan/  ->  phoenix-svc:6006 (Phoenix UI / HTTP-OTLP)
+# TLS via the per-namespace mkcert secret `phoenix-tls` (create with
+# scripts/lan-certs.sh). gethomepage.dev annotations let Homepage auto-discover it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: phoenix
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Phoenix"
+    gethomepage.dev/description: "LLM tracing & evals (OTLP from LiteLLM)"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "arize-phoenix.png"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: phoenix.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: phoenix-svc
+                port:
+                  number: 6006
+  tls:
+    - secretName: phoenix-tls
+      hosts:
+        - phoenix.lan
