@@ -44,6 +44,16 @@ spec:
               value: "8000"
             - name: ATTN_BACKEND
               value: flash-attn
+            # Persist the Triton compile cache AND the flex_gemm autotune cache
+            # on the mounted hostPath (triton_cache) so they survive the Recreate
+            # restart. WITHOUT these, both default to ephemeral /root/.triton and
+            # /root/.flex_gemm — wiped every pod restart, so the first generation
+            # after each boot pays a ~95s cold re-autotune tax (200s vs ~110s).
+            # See [[project-trellis2-perf]] (root-caused 2026-06-29 via py-spy).
+            - name: TRITON_CACHE_DIR
+              value: /workspace/cache/triton
+            - name: FLEX_GEMM_AUTOTUNE_CACHE_PATH
+              value: /workspace/cache/triton/flex_autotune_cache.json
             - name: HF_HOME
               value: /workspace/cache/huggingface
             - name: HF_TOKEN
