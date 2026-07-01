@@ -1,0 +1,96 @@
+# Manyfold — self-hosted 3D model organizer/gallery (https://manyfold.app).
+# Replaces the nginx <model-viewer> "3D Gallery" (clusters/home/models).
+#
+# Single app pod on a2:
+#   * SQLite (DATABASE_URL sqlite3:/config/…) — no separate Postgres pod; fine
+#     for a home library. Postgres is the upstream perf recommendation if this
+#     ever grows large.
+#   * Sidekiq talks to the dedicated manyfold-redis (redis.yaml).
+#   * SECRET_KEY_BASE comes from the in-cluster secret `manyfold-secret`
+#     (created out of band, NEVER committed — see kustomization.yaml).
+#   * /config holds the SQLite db + app config; /libraries holds model files
+#     (add "/libraries" as a Library in the UI after first login).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: manyfold-config
+  namespace: manyfold
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi   # SQLite db + config
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: manyfold-library
+  namespace: manyfold
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 100Gi   # 3D model files (.stl/.3mf/.glb/…). a2 has ~1.8 TB.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manyfold
+  namespace: manyfold
+spec:
+  replicas: 1
+  strategy: { type: Recreate }   # RWO PVCs — no two pods at once
+  selector:
+    matchLabels: { app: manyfold }
+  template:
+    metadata:
+      labels: { app: manyfold }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      securityContext:
+        fsGroup: 1000   # make the PVCs writable by the PUID/PGID the app drops to
+      containers:
+        - name: manyfold
+          image: ghcr.io/manyfold3d/manyfold:0.145.1
+          ports:
+            - { name: http, containerPort: 3214 }
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: REDIS_URL, value: "redis://manyfold-redis:6379/1" }
+            # SQLite: single-file db on the /config PVC.
+            - { name: DATABASE_URL, value: "sqlite3:/config/manyfold.sqlite3" }
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef: { name: manyfold-secret, key: SECRET_KEY_BASE }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: library, mountPath: /libraries }
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 2Gi }
+          startupProbe:
+            # First boot runs DB migrations — allow up to ~5 min before liveness.
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            timeoutSeconds: 5
+      volumes:
+        - name: config
+          persistentVolumeClaim: { claimName: manyfold-config }
+        - name: library
+          persistentVolumeClaim: { claimName: manyfold-library }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: manyfold
+  namespace: manyfold
+spec:
+  selector: { app: manyfold }
+  ports:
+    - { name: http, port: 80, targetPort: http }

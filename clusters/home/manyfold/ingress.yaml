@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: manyfold
+  namespace: manyfold
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Manyfold"
+    gethomepage.dev/description: "3D model library & organizer (a2)"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "manyfold.png"
+    gethomepage.dev/href: "https://manyfold.lan/"
+    gethomepage.dev/pod-selector: "app=manyfold"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["manyfold.lan"]
+      secretName: manyfold-tls
+  rules:
+    - host: manyfold.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: manyfold
+                port:
+                  number: 80

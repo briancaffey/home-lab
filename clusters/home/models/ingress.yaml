@@ -3,7 +3,8 @@ kind: Ingress
 metadata:
   name: models
   annotations:
-    gethomepage.dev/enabled: "true"
+    # Retiring — hidden from Homepage (superseded by Manyfold). See Forgejo issue.
+    gethomepage.dev/enabled: "false"
     gethomepage.dev/name: "3D Gallery"
     gethomepage.dev/description: "trellis2 meshes, model-viewer (a2)"
     gethomepage.dev/group: "Media"

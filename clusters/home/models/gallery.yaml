@@ -15,7 +15,9 @@ kind: Deployment
 metadata:
   name: models-gallery
 spec:
-  replicas: 1
+  # RETIRING — superseded by Manyfold (clusters/home/manyfold, manyfold.lan).
+  # Scaled to 0 and dropped from Homepage pending full removal (see Forgejo issue).
+  replicas: 0
   strategy:
     type: Recreate
   selector:

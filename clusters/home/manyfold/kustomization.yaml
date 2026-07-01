@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Manyfold — 3D model organizer (https://manyfold.app). Raw manifests, no Helm.
+# Apply with:
+#   kubectl apply -k clusters/home/manyfold
+#
+# Out-of-band prerequisites (never committed):
+#   * Secret `manyfold-secret` with SECRET_KEY_BASE (session/credential key):
+#       kubectl -n manyfold create secret generic manyfold-secret \
+#         --from-literal=SECRET_KEY_BASE="$(openssl rand -hex 64)"
+#   * TLS secret `manyfold-tls` for host manyfold.lan (scripts/lan-certs.sh).
+#
+# Pinned to a2. Replaces the retiring nginx 3D Gallery (clusters/home/models).
+
+namespace: manyfold
+
+resources:
+  - namespace.yaml
+  - redis.yaml
+  - manyfold.yaml
+  - ingress.yaml

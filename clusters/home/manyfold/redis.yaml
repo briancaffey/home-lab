@@ -1,0 +1,44 @@
+# Dedicated Redis for Manyfold's Sidekiq background jobs (library scans,
+# thumbnails). Isolated per-service (like paperless-redis) rather than sharing
+# platform Redis, to avoid db-index collisions. Ephemeral: the job queue is
+# transient — a restart just means Manyfold re-scans; no PVC needed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manyfold-redis
+  namespace: manyfold
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: manyfold-redis }
+  template:
+    metadata:
+      labels: { app: manyfold-redis }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["--save", "", "--appendonly", "no"]
+          ports:
+            - { name: redis, containerPort: 6379 }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: manyfold-redis
+  namespace: manyfold
+spec:
+  selector: { app: manyfold-redis }
+  ports:
+    - { name: redis, port: 6379, targetPort: redis }

@@ -6,6 +6,10 @@ kind: CronJob
 metadata:
   name: models-sync
 spec:
+  # Retiring with the gallery — no new syncs. The last-synced models-data PVC
+  # (generations/3d/) is preserved for a possible migration into a Manyfold
+  # library. See the Forgejo retire issue.
+  suspend: true
   schedule: "*/5 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
