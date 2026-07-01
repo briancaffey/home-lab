@@ -17,20 +17,23 @@ LAN. Live as of 2026-06-29.
 
 ## 🤖 Inference — the AI models  (`inference-club` ns)
 
-Consumed through the inference.club platform/agent, or directly where noted.
+Consumed through the inference.club platform/agent, or directly. Every service
+has a stable `.lan` hostname (`clusters/home/inference-lan`) — point scripts
+and containers at these instead of IP:port. `/docs` on each = OpenAPI UI.
 
 | Service | What it does | Reach it |
 |---|---|---|
-| nemotron-omni | LLM (multimodal, vLLM) | `spark:8000` · or via LiteLLM |
-| lmstudio | LLM (host app) | `spark:1234` |
-| flux2-klein | Image generation | `a2:8000` |
-| ltx2 | Video generation | `a3:8023` |
-| dia | Voice cloning / dialogue | `a1:8491` |
-| acestep | Music generation | cluster DNS `:8015` |
-| magpie-tts | Text-to-speech | cluster DNS `:9000` |
-| nemotron-asr | Speech-to-text | cluster DNS `:8105` |
-| trellis2 | 3D mesh generation | cluster DNS `:8000` |
-| firecrawl | URL → markdown scraping | cluster DNS `:3002` |
+| nemotron-omni | LLM (multimodal, vLLM) | **https://omni.lan** · or via LiteLLM |
+| nemotron-asr | Speech-to-text | **https://asr.lan** |
+| magpie-tts | Text-to-speech | **https://magpie.lan** |
+| flux2-klein | Image generation | **https://flux.lan** |
+| ltx2 | Video generation | **https://ltx.lan** |
+| studio-voice | Speech enhancement | **https://studio-voice.lan** |
+| firecrawl | URL → markdown scraping | **https://firecrawl.lan** (no /docs) |
+| acestep | Music generation (parked) | **https://acestep.lan** |
+| dia | Voice cloning / dialogue (parked) | **https://dia.lan** |
+| trellis2 | 3D mesh generation (parked) | **https://trellis.lan** |
+| lmstudio | LLM headless (parked) | **https://lmstudio.lan** |
 
 ---
 
