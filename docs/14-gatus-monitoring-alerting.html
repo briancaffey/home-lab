@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:12.8px;line-height:1.46;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;height:297mm;overflow:hidden;padding:11mm 13mm 12mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:5px 0 4px}
+  h2{font-size:18px;font-weight:900;margin:13px 0 7px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14px;color:#c7d0e4;max-width:172mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:9px 0 3px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:25px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .stat .d{font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)} .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 14px;margin:9px 0;break-inside:avoid}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);border-radius:0 13px 13px 0;padding:12px 15px;margin:11px 0}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .note h3{color:var(--ok)}
+  .warnbox{border:1px solid rgba(255,159,67,.38);background:rgba(255,159,67,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .warnbox h3{color:var(--high)}
+  .myth{border:1px solid rgba(255,93,108,.38);background:rgba(255,93,108,.09);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .myth h3{color:var(--crit)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.6px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  td b{color:var(--ink)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);border:1px solid var(--line);color:var(--blue)}
+  .tag.g{color:var(--ok)} .tag.o{color:var(--high)} .tag.p{color:var(--purple)} .tag.r{color:var(--crit)}
+  pre{background:#11151f;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:8px 0;overflow:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;color:#cdd6ea}
+  pre .c{color:var(--dim)} pre .k{color:var(--blue)} pre .s{color:var(--ok)}
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0;font-size:11px}
+  .col{flex:1;display:flex;flex-direction:column;gap:7px}
+  .node{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;text-align:center}
+  .node.hub{background:var(--grad);color:#0b1220;font-weight:900;border:none;display:flex;align-items:center;justify-content:center;min-height:100%}
+  .node b{display:block;font-size:11.5px} .node span{font-size:10px;color:var(--mut)}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 9px;color:var(--dim);font-size:20px;font-weight:900}
+  ul{margin:3px 0 7px 17px} li{margin:3px 0;font-size:12.2px;color:#cbd4e8}
+  ol{margin:3px 0 7px 18px} ol li{margin:5px 0;font-size:12.3px}
+  .rank{display:flex;gap:11px;align-items:flex-start;margin:7px 0;break-inside:avoid}
+  .rank .num{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:14px;color:#0b1220;background:var(--grad);border-radius:9px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank .num.b{background:var(--soft);color:var(--mut);border:1px solid var(--line)}
+  .rank h3{font-size:13px} .rank p{font-size:11.8px;color:#c2cbe0;margin:2px 0 0}
+  .foot{position:absolute;bottom:9mm;left:13mm;right:13mm;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--line);padding-top:6px}
+  .verdict{border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(55,182,230,.10),rgba(168,116,216,.10));padding:13px 16px;margin:9px 0}
+  .verdict h3{font-size:15px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style></head><body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="kick">Monitoring · Home Cluster · k3s</div>
+  <h1>Gatus, in plain terms<br><span class="grad">an uptime watchdog that pages you when the homelab breaks</span></h1>
+  <p class="lead">Gatus is a tiny, config-file-driven <b>health-checking service</b>. You give it a list of endpoints
+  (URLs, DNS names, pings) and the conditions that mean "healthy". It probes them on a loop, keeps a rolling
+  history, shows a red/green dashboard at <b>gatus.lan</b>, and — the part you care about — <b>emails you when
+  something goes down and again when it recovers</b>. It runs as one ~64&nbsp;MB pod. This is the piece that turns
+  "I'll notice when I next open Homepage" into "my phone buzzes three minutes after Immich dies."</p>
+
+  <div class="meta">
+    <div class="chip"><b>Image</b> ghcr.io/twin/gatus:v5.36.0</div>
+    <div class="chip"><b>Namespace</b> gatus (pinned to a3)</div>
+    <div class="chip"><b>Dashboard</b> https://gatus.lan/</div>
+    <div class="chip"><b>Manifests</b> clusters/home/gatus/</div>
+  </div>
+
+  <div class="cards">
+    <div class="stat b"><div class="n blue">~25</div><div class="l">Endpoints</div><div class="d">Cluster, Infra, Apps &amp; Inference probed on a loop</div></div>
+    <div class="stat p"><div class="n purp">1m</div><div class="l">Check interval</div><div class="d">Most checks; GPU/inference on 5m to cut noise</div></div>
+    <div class="stat g"><div class="n okc">~3m</div><div class="l">Time to alert</div><div class="d">3 consecutive failures before an email fires</div></div>
+    <div class="stat o"><div class="n orng">64Mi</div><div class="l">Footprint</div><div class="d">One pod + a 1&nbsp;GB SQLite volume for history</div></div>
+  </div>
+
+  <h2><span class="bar"></span>The core mental model (read this first)</h2>
+  <div class="posture">
+    <p style="margin:0"><b>Gatus is just a loop over three things:</b></p>
+    <ul style="margin:6px 0 0">
+      <li><b>Endpoint</b> — <i>what</i> to hit: an HTTP URL, a DNS query, an ICMP ping. In your setup these are the
+        <b>in-cluster Service DNS names</b> (e.g. <code>http://immich-server.immich:80</code>), not the <code>.lan</code> URLs.</li>
+      <li><b>Conditions</b> — <i>what "healthy" means</i>: e.g. <code>[STATUS] == 200</code>, <code>[BODY].status == healthy</code>,
+        <code>[CONNECTED] == true</code>. All must pass or the check is a failure.</li>
+      <li><b>Alert</b> — <i>what to do when it flips</i>: after N failures, send an email; after M successes, send the "resolved" email.</li>
+    </ul>
+  </div>
+  <div class="myth">
+    <h3>Why probe Service DNS instead of the pretty <code>.lan</code> URLs?</h3>
+    <p style="margin:3px 0 0" class="small">Hitting <code>https://immich.lan</code> from inside the pod would depend on <b>Pi-hole
+    resolving <code>.lan</code></b> and on the pod <b>trusting the mkcert CA</b> — two extra things that can break and give you
+    <i>false</i> outages. Probing <code>http://immich-server.immich:80</code> talks straight to the app over cluster DNS, so a red
+    marker means <b>the app is actually down</b>, not "DNS/TLS had a bad day." Traefik and Pi-hole get their <i>own</i> explicit
+    checks so the ingress path is still covered.</p>
+  </div>
+
+  <div class="note">
+    <h3>What it is not</h3>
+    <p style="margin:3px 0 0" class="small">Gatus is <b>black-box</b> monitoring — "is it up, does it answer correctly, how fast."
+    It does <b>not</b> replace Prometheus/Grafana (metrics, GPU util, trends) or Loki (logs). Think of it as the <b>alarm bell</b>
+    that sits in front of those richer tools: Gatus tells you <i>something's down</i>; Grafana/Loki tell you <i>why</i>.</p>
+  </div>
+
+  <div class="foot"><span>Gatus — Monitoring &amp; Alerting</span><span>1 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>How it fits your cluster</h2>
+  <p class="small mut">One Deployment on <b>a3</b> (co-located with Prometheus/Grafana). It writes uptime history to a
+  small SQLite DB on a <code>local-path</code> volume so history survives restarts, serves a dashboard through the usual
+  Traefik + mkcert ingress, and Homepage renders a live up/down widget from its in-cluster API.</p>
+
+  <div class="flow">
+    <div class="col">
+      <div class="node"><b>Gatus pod</b><span>a3 · 1 replica</span></div>
+      <div class="node"><b>SQLite</b><span>/data · local-path 1Gi</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="node"><b>Probes (cluster DNS)</b><span>http://svc.ns:port</span></div>
+      <div class="node"><b>DNS / ICMP</b><span>1.1.1.1 resolve + ping</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col" style="flex:.9">
+      <div class="node hub">Evaluate<br>conditions</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="node"><b>gatus.lan</b><span>dashboard + Homepage widget</span></div>
+      <div class="node"><b>Email alert</b><span>on fail &amp; on resolve</span></div>
+    </div>
+  </div>
+
+  <h3>What's being watched (grouped on the dashboard)</h3>
+  <table>
+    <tr><th>Group</th><th>Endpoints</th><th>Interval</th><th>Alerts?</th></tr>
+    <tr><td><b>Cluster</b></td><td>homepage, headlamp, grafana, prometheus, loki, harbor, netdata</td><td>1m / 5m</td><td><span class="tag g">email</span></td></tr>
+    <tr><td><b>Infra</b></td><td>traefik ingress, pi-hole admin, DNS resolution (1.1.1.1), internet (ICMP), speedtest</td><td>1m / 5m</td><td><span class="tag g">email</span> <span class="dim">(speedtest: no)</span></td></tr>
+    <tr><td><b>Apps</b></td><td>forgejo, vaultwarden, immich, paperless, jellyfin, navidrome, audiobookshelf, open-webui, manyfold, milvus</td><td>1m / 5m</td><td><span class="tag g">email</span> <span class="dim">(media: no)</span></td></tr>
+    <tr><td><b>Inference</b></td><td>lmstudio, inference-club-agent</td><td>5m</td><td><span class="tag">none</span></td></tr>
+  </table>
+  <p class="small mut" style="margin-top:2px">GPU/inference pods cycle on and off by design, so they're <b>visibility-only</b> — shown on the
+  dashboard but with no alert, so a deliberately-stopped model never pages you. Same reasoning for the media apps and speedtest:
+  monitored, but a blip there isn't worth a 2&nbsp;a.m. email. Flip any of these on later by adding <code>alerts: [{ type: email }]</code>.</p>
+
+  <div class="posture">
+    <p style="margin:0 0 4px"><b>Why a3, and why SQLite?</b></p>
+    <p class="small" style="margin:0">Storage is node-pinned <code>local-path</code> (per the repo's storage rules), so the pod
+    is pinned to <b>a3</b> to keep its history volume with the rest of the monitoring stack. History is nice-to-have, not sacred —
+    if a3 is ever rebuilt you lose the uptime graph, not any real data. Memory-only storage was the alternative (no volume, no pin)
+    but you'd lose all history on every restart, which defeats "am I <i>reliably</i> up over the last week?"</p>
+  </div>
+
+  <div class="foot"><span>Gatus — Monitoring &amp; Alerting</span><span>2 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Alerting — the part that matters</h2>
+  <p class="small mut">Alerting is wired but <b>delivery is off until you add one secret</b>. The dashboard and history work the
+  moment you deploy; email only starts sending once <code>gatus-secrets</code> exists. This is deliberate — no credential is
+  committed to this public repo, and a missing secret can't crash the pod (the <code>secretRef</code> is <code>optional</code>).</p>
+
+  <h3>How an alert decides to fire</h3>
+  <div class="box" style="margin-top:4px">
+    <table style="margin:0">
+      <tr><th>Knob</th><th>Value</th><th>Meaning</th></tr>
+      <tr><td><b>failure-threshold</b></td><td>3</td><td>3 checks in a row must fail before the "down" email fires</td></tr>
+      <tr><td><b>success-threshold</b></td><td>2</td><td>2 checks in a row must pass before the "resolved" email fires</td></tr>
+      <tr><td><b>send-on-resolved</b></td><td>true</td><td>You get a follow-up email when it comes back — no wondering</td></tr>
+      <tr><td><b>interval</b></td><td>1m</td><td>So: ~3&nbsp;min of real downtime → alert; ~2&nbsp;min healthy → all-clear</td></tr>
+    </table>
+  </div>
+  <p class="small mut">The thresholds live in the <code>default-alert</code> block, so every endpoint inherits them — you only write
+  <code>alerts: [{ type: email }]</code> per endpoint. Want a chatty endpoint to be slower to alert? Override the threshold on just
+  that endpoint.</p>
+
+  <h2><span class="bar"></span>Turn on email (Gmail) — one-time, ~5 min</h2>
+  <ol>
+    <li><b>Make an app password.</b> Google Account → Security → 2-Step Verification → <b>App passwords</b> → generate one for
+      "Gatus". (Regular account password won't work with 2FA on; the app password is a 16-char token.)</li>
+    <li><b>Stash it in Vaultwarden</b> as item <code>gatus-smtp</code> so it's recoverable and never lives on disk — matches the
+      repo's secret convention (<code>scripts/vault-secret.sh</code>).</li>
+    <li><b>Create the k8s secret</b> in the <code>gatus</code> namespace (keys are read by the config's <code>${GATUS_SMTP_*}</code> vars):</li>
+  </ol>
+  <pre><span class="c"># pull the app password straight from Vaultwarden into an env var (nothing written to disk)</span>
+APP_PW=$(scripts/vault-secret.sh gatus-smtp)
+
+kubectl -n gatus create secret generic <span class="k">gatus-secrets</span> \
+  --from-literal=<span class="k">GATUS_SMTP_FROM</span>=<span class="s">you@gmail.com</span> \
+  --from-literal=<span class="k">GATUS_SMTP_USERNAME</span>=<span class="s">you@gmail.com</span> \
+  --from-literal=<span class="k">GATUS_SMTP_PASSWORD</span>=<span class="s">"$APP_PW"</span> \
+  --from-literal=<span class="k">GATUS_SMTP_TO</span>=<span class="s">you@gmail.com</span>
+
+<span class="c"># pick up the new secret</span>
+kubectl -n gatus rollout restart deploy/gatus</pre>
+  <p class="small mut"><code>host: smtp.gmail.com</code> and <code>port: 587</code> are hard-coded in the config (not secret). Only the
+  address + app password come from the secret. Send a test by briefly scaling a watched app to zero and watching your inbox.</p>
+
+  <div class="note">
+    <h3>Better long-term: self-hosted ntfy (issue #19)</h3>
+    <p style="margin:3px 0 0" class="small">Email is the fastest path to a working phone alert with zero new services. Once you
+    stand up <b>ntfy</b>, add an <code>ntfy:</code> provider block to the config and switch each endpoint's alert type — you get
+    instant push to your phone with no reliance on Gmail SMTP, and nothing leaves the LAN. Gatus supports both; you can even run
+    them side by side during the switch.</p>
+  </div>
+
+  <div class="foot"><span>Gatus — Monitoring &amp; Alerting</span><span>3 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Operating it day-to-day</h2>
+
+  <h3>Deploy / first run</h3>
+  <pre><span class="c"># 1. mint the TLS cert (gatus.lan already added to the script)</span>
+bash scripts/lan-certs.sh
+
+<span class="c"># 2. apply the stack</span>
+kubectl apply -k clusters/home/gatus
+
+<span class="c"># 3. (optional) enable email — see page 3</span></pre>
+
+  <h3>Add or change an endpoint</h3>
+  <p class="small mut" style="margin-top:2px">Everything lives in <code>clusters/home/gatus/configmap.yaml</code>. Add a block,
+  then roll the pod (a plain ConfigMap doesn't auto-restart the Deployment):</p>
+  <pre><span class="k">- name</span>: my-service
+  <span class="k">group</span>: Apps
+  <span class="k">url</span>: <span class="s">"http://my-svc.my-ns:80/health"</span>
+  <span class="k">interval</span>: 1m
+  <span class="k">conditions</span>: [<span class="s">"[STATUS] == 200"</span>]
+  <span class="k">alerts</span>: [{ type: email }]      <span class="c"># omit this line = dashboard-only, no page</span>
+
+<span class="c"># then:</span>
+kubectl -n gatus rollout restart deploy/gatus</pre>
+
+  <h3>Condition placeholders you'll actually use</h3>
+  <table>
+    <tr><th>Placeholder</th><th>Example condition</th><th>Use it for</th></tr>
+    <tr><td><code>[STATUS]</code></td><td><code>[STATUS] == 200</code> · <code>[STATUS] &lt; 400</code></td><td>HTTP health</td></tr>
+    <tr><td><code>[BODY]</code></td><td><code>[BODY].status == healthy</code></td><td>JSON health payloads (e.g. Harbor)</td></tr>
+    <tr><td><code>[RESPONSE_TIME]</code></td><td><code>[RESPONSE_TIME] &lt; 500</code></td><td>Latency SLOs (ms)</td></tr>
+    <tr><td><code>[CONNECTED]</code></td><td><code>[CONNECTED] == true</code></td><td>ICMP ping / TCP reachability</td></tr>
+    <tr><td><code>[DNS_RCODE]</code></td><td><code>[DNS_RCODE] == NOERROR</code></td><td>DNS resolution checks</td></tr>
+    <tr><td><code>[CERTIFICATE_EXPIRATION]</code></td><td><code>[CERTIFICATE_EXPIRATION] &gt; 168h</code></td><td>Warn before a TLS cert expires</td></tr>
+  </table>
+
+  <h3>Troubleshooting</h3>
+  <table>
+    <tr><th>Symptom</th><th>Likely cause / fix</th></tr>
+    <tr><td>Endpoint red but the app works</td><td>Wrong <b>service name/port</b> or health path. Check with <code>kubectl get svc -n &lt;ns&gt;</code>; test from inside: <code>kubectl -n gatus exec deploy/gatus -- wget -qO- &lt;url&gt;</code>.</td></tr>
+    <tr><td>No emails despite a real outage</td><td>Secret missing/typo'd. <code>kubectl -n gatus logs deploy/gatus | grep -i alert</code> — look for "provider not configured". Verify the Gmail <b>app</b> password, not the login password.</td></tr>
+    <tr><td>Pod won't start</td><td>Config YAML error. <code>kubectl -n gatus logs deploy/gatus</code> shows the parse line. Validate with <code>kubectl kustomize clusters/home/gatus</code> before applying.</td></tr>
+    <tr><td>Homepage widget empty</td><td>Widget reads <code>http://gatus.gatus:8080</code> — confirm the Service and that Homepage re-discovered the ingress.</td></tr>
+  </table>
+
+  <div class="foot"><span>Gatus — Monitoring &amp; Alerting</span><span>4 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Where Gatus sits in the bigger reliability picture</h2>
+  <p class="small mut">Gatus answers "<b>is it up?</b>" instantly and loudly. It's the front line of a layered plan — the other
+  layers are already filed as tickets in <code>brian/home-lab</code>:</p>
+
+  <div class="rank"><div class="num">1</div><div><h3>Gatus — detection <span class="tag g">done (this doc)</span></h3><p>Know within ~3 min that something's down, and get told when it recovers. The alarm bell.</p></div></div>
+  <div class="rank"><div class="num b">2</div><div><h3>ntfy — better delivery <span class="tag o">#19</span></h3><p>Swap email for self-hosted push so alerts never leave the LAN and hit your phone instantly. Gatus is already ntfy-ready.</p></div></div>
+  <div class="rank"><div class="num b">3</div><div><h3>Alertmanager + Karma — metric alerts <span class="tag o">#24</span></h3><p>Gatus catches "down"; Prometheus alert rules catch "degrading" (disk filling, GPU too hot, memory creeping). Complementary, not overlapping.</p></div></div>
+  <div class="rank"><div class="num b">4</div><div><h3>k8up / Velero — recovery <span class="tag o">#18 · #21</span></h3><p>Detection is only half the job. When Gatus says Immich is down because a disk died, backups are what get it back. local-path has no redundancy today.</p></div></div>
+
+  <div class="verdict">
+    <h3>Bottom line</h3>
+    <p style="margin:5px 0 0" class="small">You now have a <b>single pane that goes red the instant any core service stops
+    answering</b>, backed by ~25 checks across the cluster, ingress, DNS, and the internet uplink — for the cost of one 64&nbsp;MB
+    pod. Deploy it, spend five minutes wiring the Gmail app password, and the homelab goes from "I hope it's fine" to "it will tell
+    me if it isn't." Then graduate to ntfy (#19) when you want the pushes to stay fully in-house.</p>
+  </div>
+
+  <h2><span class="bar"></span>Quick reference</h2>
+  <table>
+    <tr><th>Thing</th><th>Value</th></tr>
+    <tr><td>Dashboard</td><td><code>https://gatus.lan/</code></td></tr>
+    <tr><td>Manifests</td><td><code>clusters/home/gatus/</code> — apply with <code>kubectl apply -k</code></td></tr>
+    <tr><td>Config to edit</td><td><code>clusters/home/gatus/configmap.yaml</code> → <code>rollout restart deploy/gatus</code></td></tr>
+    <tr><td>Enable email</td><td>create secret <code>gatus-secrets</code> (4 <code>GATUS_SMTP_*</code> keys)</td></tr>
+    <tr><td>Node / storage</td><td>a3 · SQLite on <code>local-path</code> (1Gi)</td></tr>
+    <tr><td>Logs</td><td><code>kubectl -n gatus logs deploy/gatus</code></td></tr>
+  </table>
+
+  <div class="foot"><span>Gatus — Monitoring &amp; Alerting · home-cluster/docs/14</span><span>5 / 5</span></div>
+</div>
+
+</body></html>

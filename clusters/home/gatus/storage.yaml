@@ -1,0 +1,16 @@
+# Uptime history lives in a small SQLite DB so it survives pod restarts.
+# `local-path` provisions dynamically on whichever node the pod lands on; the
+# Deployment pins the pod to a3 (WaitForFirstConsumer binds the PV there),
+# co-locating Gatus with the rest of the monitoring stack (Prometheus/Grafana).
+# The DB is tiny (a few MB) — 1Gi is plenty.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gatus-data
+  namespace: gatus
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

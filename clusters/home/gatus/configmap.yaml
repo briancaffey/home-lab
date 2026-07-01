@@ -1,0 +1,198 @@
+# Gatus config. Endpoints are probed over IN-CLUSTER Service DNS
+# (http://<svc>.<ns>:<port>) — this tests the app itself and avoids any
+# dependency on .lan DNS resolution or mkcert TLS trust from inside the pod.
+#
+# ${GATUS_SMTP_*} are substituted from the OPTIONAL `gatus-secrets` secret at
+# startup (see deployment.yaml envFrom). Until that secret exists the email
+# provider is simply disabled (Gatus logs a warning and keeps running) — the
+# dashboard still works, only alert *delivery* is off. host/port are not secret
+# and are hard-coded; from/to/username/password come from the secret so no
+# personal email address is committed to this PUBLIC repo.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus-config
+  namespace: gatus
+data:
+  config.yaml: |
+    storage:
+      type: sqlite
+      path: /data/gatus.db
+
+    ui:
+      title: "Homelab Status | Gatus"
+      header: "Brian's Homelab — Cluster Health"
+      logo: ""
+
+    # ---- Alerting -----------------------------------------------------------
+    # Email (Gmail SMTP) is the active channel. Create a Google *app password*
+    # and store it in the `gatus-secrets` secret to turn on delivery (see
+    # docs/14). To migrate to self-hosted ntfy later (issue #19), add an
+    # `ntfy:` provider block here and switch each endpoint's `alerts:` type.
+    alerting:
+      email:
+        host: "smtp.gmail.com"
+        port: 587
+        from: "${GATUS_SMTP_FROM}"
+        username: "${GATUS_SMTP_USERNAME}"
+        password: "${GATUS_SMTP_PASSWORD}"
+        to: "${GATUS_SMTP_TO}"
+        default-alert:
+          enabled: true
+          failure-threshold: 3   # ~3 consecutive fails (3 min at 1m interval)
+          success-threshold: 2   # recovered after 2 successes
+          send-on-resolved: true
+          description: "homelab healthcheck failed"
+
+    # ---- Endpoints ----------------------------------------------------------
+    endpoints:
+      # ===== Cluster / platform =====
+      - name: homepage
+        group: Cluster
+        url: "http://homepage.homepage:3000"
+        interval: 1m
+        conditions: ["[STATUS] < 400"]
+        alerts: [{ type: email }]
+      - name: headlamp
+        group: Cluster
+        url: "http://headlamp.headlamp:80"
+        interval: 1m
+        conditions: ["[STATUS] < 400"]
+        alerts: [{ type: email }]
+      - name: grafana
+        group: Cluster
+        url: "http://grafana.monitoring:3000/api/health"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+      - name: prometheus
+        group: Cluster
+        url: "http://prometheus.monitoring:9090/-/healthy"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+      - name: loki
+        group: Cluster
+        url: "http://loki.monitoring:3100/ready"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+      - name: harbor
+        group: Cluster
+        url: "http://harbor-core.harbor:80/api/v2.0/health"
+        interval: 1m
+        conditions: ["[STATUS] == 200", "[BODY].status == healthy"]
+        alerts: [{ type: email }]
+      - name: netdata
+        group: Cluster
+        url: "http://netdata.netdata:19999/api/v1/info"
+        interval: 5m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+
+      # ===== Infra / networking =====
+      # Validates the real ingress data path: route THROUGH Traefik (:80 web
+      # entrypoint) to Homepage by sending the Host header, expecting a good
+      # status. (Traefik's own /ping lives on a separate entrypoint not exposed
+      # on the Service, and a bare request to :80 always 404s — no router match.)
+      - name: traefik-ingress
+        group: Infra
+        url: "http://traefik.kube-system:80/"
+        interval: 1m
+        headers:
+          Host: "home.lan"
+        conditions: ["[STATUS] < 400"]
+        alerts: [{ type: email }]
+      - name: pihole-admin
+        group: Infra
+        url: "http://pihole-web.pihole:80/admin/"
+        interval: 1m
+        conditions: ["[STATUS] < 400"]
+        alerts: [{ type: email }]
+      - name: dns-resolution
+        group: Infra
+        url: "1.1.1.1"
+        interval: 1m
+        dns:
+          query-name: "github.com"
+          query-type: "A"
+        conditions: ["[DNS_RCODE] == NOERROR"]
+        alerts: [{ type: email }]
+      - name: internet
+        group: Infra
+        url: "icmp://1.1.1.1"
+        interval: 1m
+        conditions: ["[CONNECTED] == true"]
+        alerts: [{ type: email }]
+      - name: speedtest
+        group: Infra
+        url: "http://speedtest.speedtest:80"
+        interval: 5m
+        conditions: ["[STATUS] < 400"]
+
+      # ===== Apps / services =====
+      - name: forgejo
+        group: Apps
+        url: "http://forgejo.forgejo:3000"
+        interval: 1m
+        conditions: ["[STATUS] < 400"]
+        alerts: [{ type: email }]
+      - name: vaultwarden
+        group: Apps
+        url: "http://vaultwarden.vaultwarden:80/alive"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+      - name: immich
+        group: Apps
+        url: "http://immich-server.immich:80/api/server/ping"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+      - name: paperless
+        group: Apps
+        url: "http://paperless-webserver.paperless:80"
+        interval: 1m
+        conditions: ["[STATUS] < 400"]
+        alerts: [{ type: email }]
+      - name: jellyfin
+        group: Apps
+        url: "http://jellyfin.jellyfin:80/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+      - name: navidrome
+        group: Apps
+        url: "http://navidrome.navidrome:80/ping"
+        interval: 5m
+        conditions: ["[STATUS] < 400"]
+      - name: audiobookshelf
+        group: Apps
+        url: "http://audiobookshelf.audiobookshelf:80/healthcheck"
+        interval: 5m
+        conditions: ["[STATUS] == 200"]
+      - name: open-webui
+        group: Apps
+        url: "http://open-webui.open-webui:80/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200"]
+      - name: manyfold
+        group: Apps
+        url: "http://manyfold.manyfold:80"
+        interval: 5m
+        conditions: ["[STATUS] < 400"]
+      - name: milvus
+        group: Apps
+        url: "http://milvus.milvus:9091/healthz"
+        interval: 5m
+        conditions: ["[STATUS] == 200"]
+
+      # ===== Inference (visibility only — GPU pods cycle, no alerts) =====
+      # lmstudio-headless parked (scaled to 0) — monitor removed.
+      - name: inference-club-agent
+        group: Inference
+        url: "https://agent-inference-club-agent.inference-club:443"
+        interval: 5m
+        client:
+          insecure: true
+        conditions: ["[STATUS] < 500"]

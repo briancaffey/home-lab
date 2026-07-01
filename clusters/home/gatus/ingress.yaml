@@ -1,0 +1,34 @@
+# https://gatus.lan/ (Traefik + mkcert gatus-tls). gethomepage annotations let
+# Homepage auto-discover it AND render a live Gatus widget (up/down counts) via
+# the in-cluster API — no auth (Gatus dashboard is read-only/unauthenticated).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gatus
+  namespace: gatus
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Gatus"
+    gethomepage.dev/description: "Uptime & alerting"
+    gethomepage.dev/group: "Infra"
+    gethomepage.dev/icon: "gatus.png"
+    gethomepage.dev/pod-selector: "app=gatus"
+    gethomepage.dev/widget.type: "gatus"
+    gethomepage.dev/widget.url: "http://gatus.gatus:8080"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: gatus.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: gatus
+                port:
+                  number: 8080
+  tls:
+    - secretName: gatus-tls
+      hosts:
+        - gatus.lan
