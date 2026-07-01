@@ -76,6 +76,48 @@ config:
         - GPU Fleet Util:
             - icon: grafana.png
               href: https://grafana.lan/d/gpu-fleet
+    # OpenAPI (/docs) pages for the long-lived inference services — the same
+    # hostnames scripts/containers should target (clusters/home/inference-lan).
+    - Inference API Docs:
+        - nemotron-omni:
+            - abbr: OM
+              href: https://omni.lan/docs
+        - nemotron-asr:
+            - abbr: ASR
+              href: https://asr.lan/docs
+        - magpie-tts:
+            - abbr: TTS
+              href: https://magpie.lan/docs
+        - flux2-klein:
+            - abbr: IMG
+              href: https://flux.lan/docs
+        - ltx2:
+            - abbr: VID
+              href: https://ltx.lan/docs
+        - studio-voice:
+            - abbr: SV
+              href: https://studio-voice.lan/docs
+        - acestep:
+            - abbr: MUS
+              href: https://acestep.lan/docs
+        - dia:
+            - abbr: DIA
+              href: https://dia.lan/docs
+        - trellis2:
+            - abbr: 3D
+              href: https://trellis.lan/docs
+        - firecrawl:
+            - abbr: FC
+              href: https://firecrawl.lan/
+        - lmstudio:
+            - abbr: LMS
+              href: https://lmstudio.lan/v1/models
+        - LiteLLM:
+            - abbr: LLM
+              href: https://litellm.lan/ui
+        - hermes:
+            - abbr: HRM
+              href: https://hermes.lan/
   widgets:
     - kubernetes:
         cluster:
@@ -105,3 +147,10 @@ config:
   settingsString: |
     title: Brian's Homelab
     headerStyle: boxed
+    # Pin the Inference group (auto-discovered from clusters/home/inference-lan
+    # ingress annotations) to the top as a compact indicator row; every other
+    # group keeps its default order below.
+    layout:
+      Inference:
+        style: row
+        columns: 4

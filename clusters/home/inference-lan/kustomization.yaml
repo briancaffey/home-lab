@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Stable .lan hostnames for the inference fleet (see ingress.yaml header).
+# Apply with:
+#   kubectl apply -k clusters/home/inference-lan
+# Out-of-band prereq: the shared inference-tls secret (scripts/lan-certs.sh).
+resources:
+  - ingress.yaml

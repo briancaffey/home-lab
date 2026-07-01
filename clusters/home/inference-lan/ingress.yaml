@@ -1,0 +1,280 @@
+# Stable .lan hostnames for every inference service, so scripts/containers can
+# say https://omni.lan/v1/... instead of memorizing IP:port pairs. One Traefik
+# Ingress per service, all in the inference-club namespace, all sharing the
+# `inference-tls` mkcert secret (the cert's *.lan wildcard SAN covers every
+# name here — no per-host cert entries needed; the secret is minted by
+# scripts/lan-certs.sh).
+#
+# Homepage: each ingress carries gethomepage annotations → an "Inference"
+# group (pinned to the top via the homepage layout). Tiles link to the
+# service's /docs (FastAPI/Swagger) where one exists; siteMonitor probes the
+# in-cluster Service so the tile shows up/down truthfully — parked services
+# (replicas 0) simply show as down until scaled up.
+#
+# Naming: short, memorable, one label:
+#   omni.lan asr.lan magpie.lan flux.lan ltx.lan studio-voice.lan
+#   firecrawl.lan acestep.lan dia.lan trellis.lan lmstudio.lan
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-nemotron-omni
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "nemotron-omni"
+    gethomepage.dev/description: "vLLM omni LLM (spark)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-brain"
+    gethomepage.dev/href: "https://omni.lan/docs"
+    gethomepage.dev/siteMonitor: "http://nemotron-omni.inference-club:8000/health"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["omni.lan"], secretName: inference-tls }]
+  rules:
+    - host: omni.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: nemotron-omni, port: { number: 8000 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-nemotron-asr
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "nemotron-asr"
+    gethomepage.dev/description: "Speech-to-text (spark)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-ear-hearing"
+    gethomepage.dev/href: "https://asr.lan/docs"
+    gethomepage.dev/siteMonitor: "http://nemotron-asr.inference-club:8105/docs"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["asr.lan"], secretName: inference-tls }]
+  rules:
+    - host: asr.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: nemotron-asr, port: { number: 8105 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-magpie
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "magpie-tts"
+    gethomepage.dev/description: "NIM multilingual TTS (a1)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-account-voice"
+    gethomepage.dev/href: "https://magpie.lan/docs"
+    gethomepage.dev/siteMonitor: "http://magpie-tts.inference-club:9000/v1/health/ready"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["magpie.lan"], secretName: inference-tls }]
+  rules:
+    - host: magpie.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: magpie-tts, port: { number: 9000 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-flux
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "flux2-klein"
+    gethomepage.dev/description: "Image generation (a2)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-image-multiple"
+    gethomepage.dev/href: "https://flux.lan/docs"
+    gethomepage.dev/siteMonitor: "http://flux2-klein.inference-club:8000/docs"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["flux.lan"], secretName: inference-tls }]
+  rules:
+    - host: flux.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: flux2-klein, port: { number: 8000 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-ltx
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "ltx2"
+    gethomepage.dev/description: "Video generation (a3)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-movie-open"
+    gethomepage.dev/href: "https://ltx.lan/docs"
+    gethomepage.dev/siteMonitor: "http://ltx2.inference-club:8023/docs"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["ltx.lan"], secretName: inference-tls }]
+  rules:
+    - host: ltx.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: ltx2, port: { number: 8023 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-studio-voice
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "studio-voice"
+    gethomepage.dev/description: "NIM speech enhancement (a1)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-microphone-variant"
+    gethomepage.dev/href: "https://studio-voice.lan/docs"
+    gethomepage.dev/siteMonitor: "http://studio-voice.inference-club:8080/docs"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["studio-voice.lan"], secretName: inference-tls }]
+  rules:
+    - host: studio-voice.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: studio-voice, port: { number: 8080 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-firecrawl
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "firecrawl"
+    gethomepage.dev/description: "Web scraping API (no /docs)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-fire"
+    gethomepage.dev/href: "https://firecrawl.lan/"
+    gethomepage.dev/siteMonitor: "http://firecrawl.inference-club:3002/"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["firecrawl.lan"], secretName: inference-tls }]
+  rules:
+    - host: firecrawl.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: firecrawl, port: { number: 3002 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-acestep
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "acestep"
+    gethomepage.dev/description: "Music generation (spark, parked)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-music-clef-treble"
+    gethomepage.dev/href: "https://acestep.lan/docs"
+    gethomepage.dev/siteMonitor: "http://acestep.inference-club:8015/health"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["acestep.lan"], secretName: inference-tls }]
+  rules:
+    - host: acestep.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: acestep, port: { number: 8015 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-dia
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "dia"
+    gethomepage.dev/description: "Dialogue TTS (parked)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-waveform"
+    gethomepage.dev/href: "https://dia.lan/docs"
+    gethomepage.dev/siteMonitor: "http://dia.inference-club:8491/docs"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["dia.lan"], secretName: inference-tls }]
+  rules:
+    - host: dia.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: dia, port: { number: 8491 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-trellis
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "trellis2"
+    gethomepage.dev/description: "3D generation (spark, parked)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-cube-outline"
+    gethomepage.dev/href: "https://trellis.lan/docs"
+    gethomepage.dev/siteMonitor: "http://trellis2.inference-club:8000/docs"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["trellis.lan"], secretName: inference-tls }]
+  rules:
+    - host: trellis.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: trellis2, port: { number: 8000 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-lmstudio
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "lmstudio"
+    gethomepage.dev/description: "LM Studio OpenAI API (parked, no /docs)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-desktop-classic"
+    gethomepage.dev/href: "https://lmstudio.lan/v1/models"
+    gethomepage.dev/siteMonitor: "http://lmstudio-headless.inference-club:1234/v1/models"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["lmstudio.lan"], secretName: inference-tls }]
+  rules:
+    - host: lmstudio.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: lmstudio-headless, port: { number: 1234 } } }

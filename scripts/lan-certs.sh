@@ -37,6 +37,10 @@ SECRETS=(
   "manyfold-tls:manyfold"
   "gatus-tls:gatus"
   "hermes-tls:hermes"
+  # One shared secret for ALL inference .lan ingresses (omni.lan, asr.lan,
+  # magpie.lan, flux.lan, ltx.lan, …) — covered by the cert's *.lan wildcard
+  # SAN, so new inference hostnames need no HOSTS entry.
+  "inference-tls:inference-club"
 )
 
 command -v mkcert >/dev/null || { echo "mkcert not found (brew install mkcert nss)"; exit 1; }
