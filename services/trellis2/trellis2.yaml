@@ -16,7 +16,10 @@ metadata:
   labels:
     app: trellis2
 spec:
-  replicas: 1
+  # PARKED (2026-07-01): scaled to 0 — not in active use, and a prime suspect
+  # in spark's unified-memory pressure (the box wedged + overheated when
+  # acestep generated alongside vLLM + trellis2). Bump to 1 to bring back.
+  replicas: 0
   strategy:
     type: Recreate
   selector:
