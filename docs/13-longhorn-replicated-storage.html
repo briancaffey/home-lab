@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:12.8px;line-height:1.46;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;height:297mm;overflow:hidden;padding:11mm 13mm 12mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:5px 0 4px}
+  h2{font-size:18px;font-weight:900;margin:13px 0 7px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14px;color:#c7d0e4;max-width:172mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:9px 0 3px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:25px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .stat .d{font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)} .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 14px;margin:9px 0;break-inside:avoid}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);border-radius:0 13px 13px 0;padding:12px 15px;margin:11px 0}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .note h3{color:var(--ok)}
+  .warnbox{border:1px solid rgba(255,159,67,.38);background:rgba(255,159,67,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .warnbox h3{color:var(--high)}
+  .myth{border:1px solid rgba(255,93,108,.38);background:rgba(255,93,108,.09);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .myth h3{color:var(--crit)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.6px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  td b{color:var(--ink)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);border:1px solid var(--line);color:var(--blue)}
+  .tag.g{color:var(--ok)} .tag.o{color:var(--high)} .tag.p{color:var(--purple)} .tag.r{color:var(--crit)}
+  pre{background:#11151f;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:8px 0;overflow:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;color:#cdd6ea}
+  pre .c{color:var(--dim)} pre .k{color:var(--blue)} pre .s{color:var(--ok)}
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0;font-size:11px}
+  .col{flex:1;display:flex;flex-direction:column;gap:7px}
+  .node{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;text-align:center}
+  .node.hub{background:var(--grad);color:#0b1220;font-weight:900;border:none;display:flex;align-items:center;justify-content:center;min-height:100%}
+  .node b{display:block;font-size:11.5px} .node span{font-size:10px;color:var(--mut)}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 9px;color:var(--dim);font-size:20px;font-weight:900}
+  ul{margin:3px 0 7px 17px} li{margin:3px 0;font-size:12.2px;color:#cbd4e8}
+  ol{margin:3px 0 7px 18px} ol li{margin:5px 0;font-size:12.3px}
+  .rank{display:flex;gap:11px;align-items:flex-start;margin:7px 0;break-inside:avoid}
+  .rank .num{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:14px;color:#0b1220;background:var(--grad);border-radius:9px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank .num.b{background:var(--soft);color:var(--mut);border:1px solid var(--line)}
+  .rank h3{font-size:13px} .rank p{font-size:11.8px;color:#c2cbe0;margin:2px 0 0}
+  .foot{position:absolute;bottom:9mm;left:13mm;right:13mm;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--line);padding-top:6px}
+  .verdict{border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(55,182,230,.10),rgba(168,116,216,.10));padding:13px 16px;margin:9px 0}
+  .verdict h3{font-size:15px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .vol{display:grid;grid-template-columns:auto 1fr;gap:9px;align-items:center;margin:7px 0}
+  .disk{border:1px dashed var(--line);border-radius:10px;background:var(--soft);padding:7px 10px;font-size:11px;text-align:center}
+  .disk b{display:block;font-size:11.5px} .disk .r{color:var(--ok);font-family:'IBM Plex Mono',monospace;font-size:10px}
+</style></head><body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="kick">Storage · Home Cluster · k3s</div>
+  <h1>Longhorn, in plain terms<br><span class="grad">replicated block storage for a GPU homelab</span></h1>
+  <p class="lead">Longhorn turns the local disks scattered across your nodes into one pool of
+  <b>replicated block storage</b>. Every volume gets kept as <b>2+ live copies on different machines</b>, so a
+  workload survives a dead disk and can move to another node. This writeup teaches how that works — and,
+  importantly, where your intuition about "duplicating model files everywhere" is right and where it isn't —
+  grounded in the exact boxes you run.</p>
+
+  <div class="meta">
+    <div class="chip"><b>Nodes</b> a1 · a2 · a3 · x1 (amd64) · spark (arm64)</div>
+    <div class="chip"><b>Today</b> local-path (pinned) + hostPath model caches</div>
+    <div class="chip"><b>Goal</b> redundancy + mobility (bin-packing)</div>
+  </div>
+
+  <div class="cards">
+    <div class="stat b"><div class="n blue">2</div><div class="l">Live copies</div><div class="d">A volume mirrored to 2 nodes (your recommended replica count)</div></div>
+    <div class="stat p"><div class="n purp">1</div><div class="l">Mount at a time</div><div class="d">A volume attaches to ONE node — copies are for safety, not sharing</div></div>
+    <div class="stat g"><div class="n okc">Live</div><div class="l">Replication</div><div class="d">Synchronous — every write hits all replicas at once</div></div>
+    <div class="stat o"><div class="n orng">≠</div><div class="l">Backup</div><div class="d">Replication is not backup — that's a separate, external copy</div></div>
+  </div>
+
+  <h2><span class="bar"></span>The core mental model (read this first)</h2>
+  <div class="posture">
+    <p style="margin:0"><b>A Longhorn <span class="grad">Volume</span> = one virtual disk with three parts:</b></p>
+    <ul style="margin:6px 0 0">
+      <li><b>Engine</b> — a tiny process on the node where the volume is <i>currently mounted</i>. All reads/writes go through it.</li>
+      <li><b>Replicas</b> — full copies of the volume's data, each living on a <i>different</i> node's disk. Default 3; you'll use <b>2</b>.</li>
+      <li><b>Synchronous mirroring</b> — the engine writes every block to <i>all</i> replicas simultaneously. They're never "stale"; they're a live mirror.</li>
+    </ul>
+  </div>
+  <div class="myth">
+    <h3>The one thing to unlearn</h3>
+    <p style="margin:3px 0 0" class="small">Replication is <b>not</b> "the model file is now readable locally on every computer." A
+    replicated volume still mounts on <b>one node at a time</b> (ReadWriteOnce). The copies exist so the volume <b>survives a
+    disk dying</b> and can <b>re-attach elsewhere</b> — not so two GPUs can read it at once. Duplicating a model to run it on
+    both the Spark and a 4090 <i>simultaneously</i> is a different thing (covered on p.4).</p>
+  </div>
+
+  <div class="foot"><span>Longhorn — Replicated Storage</span><span>1 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <div class="kick">How it works</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Anatomy of a replicated volume</h2>
+  <p class="mut">Say Postgres asks for a 20 GB volume with replica count 2. Longhorn picks two eligible nodes, lays
+  down a replica on each disk, and starts an engine on whichever node the Postgres pod runs on:</p>
+
+  <div class="flow">
+    <div class="col"><div class="node hub">Postgres pod<br><span style="color:#0b1220">writes to /data</span></div></div>
+    <div class="arrow">→</div>
+    <div class="col"><div class="node" style="border-color:var(--blue)"><b>Engine</b><span>on the mounted node (a2)</span></div></div>
+    <div class="arrow">⇉</div>
+    <div class="col">
+      <div class="node" style="border-color:var(--ok)"><b>Replica A</b><span>a2 disk (local)</span></div>
+      <div class="node" style="border-color:var(--ok)"><b>Replica B</b><span>x1 disk (over LAN)</span></div>
+    </div>
+  </div>
+  <p class="small mut">One write → engine → <b>both</b> replicas at once. If a2's disk fails, the engine rebuilds from
+  Replica B and the volume keeps serving. If the whole a2 node dies, Longhorn re-attaches the volume on a node that
+  has a replica, and the pod reschedules there. <b>That</b> is the mobility that unlocks bin-packing.</p>
+
+  <h2><span class="bar"></span>Does it happen automatically? — Yes.</h2>
+  <div class="two">
+    <div class="box" style="margin:6px 0"><h3 style="color:var(--ok)">Automatic</h3><ul>
+      <li><b>Placement:</b> Longhorn's scheduler picks which nodes hold replicas (by free space + tags).</li>
+      <li><b>Mirroring:</b> every write is replicated live — you don't trigger it.</li>
+      <li><b>Healing:</b> a lost replica is rebuilt on a healthy node on its own.</li>
+      <li><b>Failover:</b> volume re-attaches to a surviving replica node automatically.</li>
+    </ul></div>
+    <div class="box" style="margin:6px 0"><h3 style="color:var(--high)">You control</h3><ul>
+      <li><b>Replica count</b> per volume (2 = durable; 1 = scratch, no redundancy).</li>
+      <li><b>Which nodes are eligible</b> via <span class="mono">node tags</span> / disable-scheduling.</li>
+      <li><b>Data locality</b> — keep a replica on the mounting node for local-speed reads.</li>
+      <li><b>Backups</b> — opt-in, per volume (p.5). Not automatic.</li>
+    </ul></div>
+  </div>
+
+  <h2><span class="bar"></span>Your storage pool — who's in, who's out</h2>
+  <table>
+    <tr><th>Node</th><th>Role for Longhorn</th><th>Why</th></tr>
+    <tr><td><b>a2</b> · 4090 · ~1.9 TB</td><td><span class="tag g">replica member</span></td><td>Biggest disk, wired, amd64 — your storage anchor</td></tr>
+    <tr><td><b>x1</b> · no GPU · ~475 GB</td><td><span class="tag g">replica member</span></td><td>GPU-free = no VRAM contention; ideal dedicated-ish storage (confirm it's wired)</td></tr>
+    <tr><td><b>a3</b> · 4090 · ~230 GB</td><td><span class="tag g">replica member</span></td><td>Control plane; fine as a third replica home</td></tr>
+    <tr><td><b>a1</b> · 4090 · ~110 GB</td><td><span class="tag r">exclude</span></td><td><b>Flaky USB WiFi</b> — replication is network-heavy; it would corrupt/stall syncs</td></tr>
+    <tr><td><b>spark</b> · GB10 · arm64</td><td><span class="tag r">exclude</span></td><td>Different subnet (192.168.6.x) + arm64 + often offline — keep it pure compute</td></tr>
+  </table>
+  <p class="small dim">→ Longhorn on <b>a2 + x1 + a3</b>, default replica count <b>2</b>. Tag these <span class="mono">storage</span> and
+  disable scheduling on a1 &amp; spark.</p>
+
+  <div class="foot"><span>Longhorn — Replicated Storage</span><span>2 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <div class="kick">Model files · the crux</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>What replication does — and doesn't — do for model weights</h2>
+  <p class="mut">Your instinct: "replication duplicates model files across computers so I can run models on different
+  nodes." Here's the precise version.</p>
+
+  <div class="note">
+    <h3>Right</h3>
+    <p style="margin:3px 0 0" class="small">A model on a replicated Longhorn volume is <b>duplicated onto 2 nodes</b> and can
+    <b>move between them without re-downloading</b>. Benchmark on a2 today, re-attach to a3 tomorrow — same bytes, no second
+    15 GB pull. Weight files (safetensors) are <b>just data</b>, so an amd64 and an arm64 node can both read the same bytes.</p>
+  </div>
+  <div class="myth">
+    <h3>Wrong (the trap)</h3>
+    <p style="margin:3px 0 0" class="small">It does <b>not</b> make the file readable on <i>all</i> nodes at once. RWO = one mount at a
+    time. And "can read the bytes" ≠ "can run the model": what a model can run on is decided by <b>the container image's
+    architecture</b> (arm64 vs amd64) and <b>VRAM</b>, not by where the file sits. Replicating weights to a node that can't run
+    the model just wastes disk.</p>
+  </div>
+
+  <h2><span class="bar"></span>Grounded in your fleet</h2>
+  <table>
+    <tr><th>Case</th><th>Runs where</th><th>Storage choice</th></tr>
+    <tr><td><b>trellis2</b> (arm64 image, huge)</td><td>Spark only</td><td><span class="tag">hostPath on spark</span> — no other node can run it, so never replicate its data off-spark</td></tr>
+    <tr><td><b>Big model (only fits 128 GB)</b></td><td>Spark only</td><td><span class="tag">hostPath / local on spark</span> — a 24 GB 4090 can't hold it; replicating elsewhere is dead weight</td></tr>
+    <tr><td><b>Mid model you shuffle between 4090s</b></td><td>a1/a2/a3</td><td><span class="tag g">Longhorn RWO, replica 2</span> — download once, re-attach to whichever 4090 you're testing</td></tr>
+    <tr><td><b>Scratch model you're just trying</b></td><td>anywhere</td><td><span class="tag o">Longhorn replica 1</span> or hostPath — don't pay 2× disk for a maybe-keeper</td></tr>
+  </table>
+
+  <h2><span class="bar"></span>Three ways to hold a model file</h2>
+  <div class="two">
+    <div class="box" style="margin:6px 0"><h3>hostPath cache <span class="tag">today</span></h3>
+      <p class="small mut" style="margin:3px 0 0">Your <span class="mono">~/.cache/huggingface</span> per node. Fast, dead simple, node-local.
+      No redundancy, no mobility — each node downloads its own copy. <b>Perfect for spark-only + re-downloadable weights.</b></p></div>
+    <div class="box" style="margin:6px 0"><h3>Longhorn RWO <span class="tag g">recommended for 4090s</span></h3>
+      <p class="small mut" style="margin:3px 0 0">One volume, 2 replicas, moves between the 4090s. Survives a disk loss, no
+      re-download on move. <b>One node mounts it at a time.</b></p></div>
+  </div>
+  <div class="box" style="margin:6px 0"><h3>Longhorn RWX (ReadWriteMany) <span class="tag o">avoid for big weights</span></h3>
+    <p class="small mut" style="margin:3px 0 0">Longhorn can share one volume across nodes via an internal NFS layer — but it adds a
+    network hop on every read, and streaming 15–100 GB of weights over cross-subnet NFS (to spark) is slow and fragile.
+    Fine for small shared config; <b>not</b> for model loading.</p></div>
+
+  <div class="foot"><span>Longhorn — Replicated Storage</span><span>3 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <div class="kick">Walkthrough · issue #7</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>You download Qwen3.6-27B (NVFP4) to benchmark on Spark <span class="grad">and</span> a 4090</h2>
+  <p class="mut">This is exactly the scenario in Forgejo issue #7. Here's what happens, storage-wise, and the smart way to
+  do it.</p>
+
+  <div class="box">
+    <h3>What you actually need: the file on <span style="color:var(--high)">two different-arch nodes at once</span></h3>
+    <p class="small mut" style="margin:3px 0 6px">Spark (arm64, GB10) and a 4090 (amd64, Ada) can run <i>simultaneously</i> only if
+    each has the weights locally. One RWO Longhorn volume can't mount on both at once — so replication alone doesn't cover
+    "both at the same time." The clean play:</p>
+    <ol style="margin:2px 0 0">
+      <li><b>Spark copy:</b> download into spark's <span class="mono">hostPath</span> HF cache (your current pattern). Spark isn't a
+      Longhorn member anyway (arm64 / other subnet), so keep its weights node-local.</li>
+      <li><b>4090 copy:</b> a Longhorn <span class="mono">RWO</span> volume, replica&nbsp;2 on a2+x1, mounted to whichever 4090 you're
+      testing. Download once; it survives a disk loss and re-attaches across 4090s for free.</li>
+      <li><b>Result:</b> two copies total (one on spark, one Longhorn-backed for the 4090s) — the minimum for a true
+      side-by-side. Longhorn didn't magically clone it to spark; you deliberately placed one copy per arch.</li>
+    </ol>
+  </div>
+
+  <div class="warnbox">
+    <h3>NVFP4 caveat worth logging in the benchmark</h3>
+    <p class="small" style="margin:3px 0 0">NVFP4 kernels generally want <b>Blackwell</b>. The <b>GB10 (spark) is Blackwell</b>; the
+    <b>RTX 4090 is Ada</b> — it may fall back to a slower path or not run FP4 at all. So the storage question might be moot on the
+    4090 if the format won't execute there. (Captured as a checkbox in issue #7.)</p>
+  </div>
+
+  <h2><span class="bar"></span>Being smart about storage (your real worry)</h2>
+  <div class="two">
+    <div class="box" style="margin:6px 0"><h3 style="color:var(--ok)">Do</h3><ul>
+      <li>Set <b>replica 1</b> for models you're just sampling; promote to 2 only for keepers.</li>
+      <li>Keep <b>re-downloadable weights on hostPath</b> — don't back them up, don't 2×-replicate them.</li>
+      <li>Right-size the PVC; Longhorn thin-provisions but replicas still cost real bytes ×N.</li>
+      <li>Delete the volume when done — reclaims space on <i>all</i> replicas at once.</li>
+    </ul></div>
+    <div class="box" style="margin:6px 0"><h3 style="color:var(--crit)">Don't</h3><ul>
+      <li>Replicate a spark-only / arm64 model onto the 4090 nodes — pure waste.</li>
+      <li>Put a 100 GB model on replica 3 "to be safe" — that's 300 GB gone.</li>
+      <li>Use RWX to stream weights at load time.</li>
+      <li>Treat a replica as a backup (delete-on-mount deletes all copies instantly).</li>
+    </ul></div>
+  </div>
+  <p class="small dim">Rule of thumb: <b>replicas × size = real disk used.</b> A 15 GB model at replica 2 = 30 GB across the pool.
+  Budget models like you budget VRAM — pick what fits, evict what you're done with.</p>
+
+  <div class="foot"><span>Longhorn — Replicated Storage</span><span>4 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+  <div class="kick">Backup vs replication</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Untangling the "recursive backup" knot</h2>
+  <p class="mut">Your worry: "Longhorn backs up to MinIO, but MinIO is itself replicated by Longhorn — that's recursive!"
+  It feels that way because two different jobs share a name. They're not the same mechanism.</p>
+
+  <div class="two">
+    <div class="box" style="margin:6px 0"><h3 style="color:var(--blue)">Replication</h3>
+      <p class="small mut" style="margin:3px 0 0"><b>Live mirror, inside the cluster.</b> N copies of a volume on N nodes, always in
+      sync. Protects against a <b>dead disk / dead node</b>. Does <b>not</b> protect against "I deleted it" or "the cluster is
+      gone" — those hit every replica at once.</p></div>
+    <div class="box" style="margin:6px 0"><h3 style="color:var(--purple)">Backup</h3>
+      <p class="small mut" style="margin:3px 0 0"><b>Point-in-time snapshot, copied OUT</b> to S3-style object storage. Incremental,
+      versioned, separate from the live volume. Protects against <b>deletion, corruption, and disaster</b>.</p></div>
+  </div>
+
+  <div class="note">
+    <h3>Why it isn't actually recursive</h3>
+    <ul style="margin:3px 0 0">
+      <li>A backup is an <b>incremental blob of a snapshot</b> — inert data, not a live volume. Storing it doesn't "re-trigger" replication of anything.</li>
+      <li>You simply <b>don't back a volume up into itself.</b> Longhorn backs up the volumes you <i>choose</i>; you exclude the backup target's own volume.</li>
+      <li><b>The real rule:</b> a backup you keep on the same disks it's meant to protect isn't a disaster backup. So the backup target should live <b>outside the cluster</b> — a cheap cloud bucket (Backblaze B2 / S3), a NAS, or a separate box.</li>
+    </ul>
+  </div>
+  <div class="warnbox">
+    <h3>Practical takeaway for your MinIO</h3>
+    <p class="small" style="margin:3px 0 0">Your in-cluster MinIO (<span class="mono">platform/minio-data</span>) is great as a
+    Longhorn volume for <i>durability</i>, and fine as a backup target for <i>convenience</i> (undo a bad delete). But it is
+    <b>not</b> a disaster backup — if the cluster burns down, so does it. For true safety, point Longhorn backups at an
+    <b>offsite</b> S3 bucket. Then there's no loop: MinIO is replicated for uptime; the offsite bucket is the real backup.</p>
+  </div>
+
+  <h2><span class="bar"></span>Would Harbor / Forgejo / everything get backed up? How many times?</h2>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Does <b>every</b> volume get backed up?</td><td>No — only the ones you enable a backup schedule on. Backups are opt-in per volume (or per label group).</td></tr>
+    <tr><td>How many <b>replicas</b> (live copies)?</td><td>Whatever you set per volume — <b>2</b> for you. That's live redundancy, unrelated to backups.</td></tr>
+    <tr><td>How many <b>backup copies</b>?</td><td>Typically <b>1 target</b>, keeping the last <i>N</i> snapshots (retention). Incremental, so cheap.</td></tr>
+    <tr><td><b>Harbor</b> registry (500 GB) / <b>Forgejo</b> (50 GB)?</td><td>Back these up — they're precious &amp; hard to rebuild. Postgres, Vaultwarden, Immich, Paperless too.</td></tr>
+    <tr><td><b>Model weights</b> / caches?</td><td>Don't back up — re-downloadable. Save the backup space for irreplaceable data.</td></tr>
+  </table>
+
+  <div class="foot"><span>Longhorn — Replicated Storage</span><span>5 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="page">
+  <div class="kick">Your plan · cheat sheet</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>The simple version (what to remember)</h2>
+  <div class="verdict">
+    <h3>Three sentences</h3>
+    <p class="small" style="margin:5px 0 0"><b>1.</b> Replication keeps <b>2 live copies</b> of a volume on different nodes so it
+    survives a dead disk and can move — it does <b>not</b> put your files on every machine at once.
+    <b>2.</b> Backup is a <b>separate, external, point-in-time</b> copy for "oops" and "the cluster died" — keep it offsite, and
+    it's not recursive because you never back a volume up into itself.
+    <b>3.</b> You choose <b>per volume</b> what gets replicated and backed up — replicate/back up the irreplaceable
+    (Harbor, Forgejo, DBs), keep re-downloadable model weights lean on hostPath.</p>
+  </div>
+
+  <h2><span class="bar"></span>Recommended rollout for this cluster</h2>
+  <div class="rank"><div class="num">1</div><div><h3>Install Longhorn on a2 + x1 + a3, replica count 2</h3>
+    <p>Tag them <span class="mono">storage</span>; disable scheduling on a1 (WiFi) and spark (arm64/subnet). Confirm <span class="mono">open-iscsi</span> is installed on the three members first.</p></div></div>
+  <div class="rank"><div class="num">2</div><div><h3>Migrate the irreplaceable volumes onto Longhorn</h3>
+    <p>Forgejo (50 GB), Harbor registry (500 GB), Postgres, Vaultwarden, Immich, Paperless — one at a time, verify, keep local-path as a fallback until proven.</p></div></div>
+  <div class="rank"><div class="num">3</div><div><h3>Leave model caches on hostPath</h3>
+    <p>Spark's HF cache and any spark-only / re-downloadable weights stay node-local. Use Longhorn RWO only for models you shuffle between 4090s.</p></div></div>
+  <div class="rank"><div class="num">4</div><div><h3>Add an offsite backup target, then schedule backups</h3>
+    <p>Point Longhorn at a Backblaze B2 / external S3 bucket (not the in-cluster MinIO). Nightly backup + retention for the precious volumes only.</p></div></div>
+
+  <h2><span class="bar"></span>Concept cheat sheet</h2>
+  <table>
+    <tr><th>Term</th><th>In one line</th></tr>
+    <tr><td><b>Volume</b></td><td>A virtual disk your pod mounts (RWO = one node at a time).</td></tr>
+    <tr><td><b>Replica</b></td><td>A full live copy of a volume on one node's disk. You run 2.</td></tr>
+    <tr><td><b>Engine</b></td><td>The process on the mounted node that fans writes out to all replicas.</td></tr>
+    <tr><td><b>Data locality</b></td><td>Keep a replica on the mounting node so reads are local-speed.</td></tr>
+    <tr><td><b>Snapshot</b></td><td>In-cluster point-in-time marker (cheap, on the same disks).</td></tr>
+    <tr><td><b>Backup</b></td><td>A snapshot exported to external S3 — the real safety net.</td></tr>
+    <tr><td><b>Node tag</b></td><td>Label that controls which nodes may hold replicas.</td></tr>
+  </table>
+  <p class="small dim" style="margin-top:6px">Companion: Forgejo issue #7 (Qwen3.6-27B NVFP4 benchmark, Spark vs 4090). This
+  doc lives at <span class="mono">docs/13-longhorn-replicated-storage.{html,pdf}</span>.</p>
+
+  <div class="foot"><span>Longhorn — Replicated Storage · Home Cluster</span><span>6 / 6</span></div>
+</div>
+
+</body></html>
