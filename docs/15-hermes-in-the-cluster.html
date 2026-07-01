@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:12.8px;line-height:1.46;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;height:297mm;overflow:hidden;padding:11mm 13mm 12mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:5px 0 4px}
+  h2{font-size:18px;font-weight:900;margin:13px 0 7px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14px;color:#c7d0e4;max-width:172mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:9px 0 3px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:25px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .stat .d{font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)} .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 14px;margin:9px 0;break-inside:avoid}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);border-radius:0 13px 13px 0;padding:12px 15px;margin:11px 0}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .note h3{color:var(--ok)}
+  .warnbox{border:1px solid rgba(255,159,67,.38);background:rgba(255,159,67,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .warnbox h3{color:var(--high)}
+  .myth{border:1px solid rgba(255,93,108,.38);background:rgba(255,93,108,.09);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .myth h3{color:var(--crit)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.6px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  td b{color:var(--ink)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);border:1px solid var(--line);color:var(--blue)}
+  .tag.g{color:var(--ok)} .tag.o{color:var(--high)} .tag.p{color:var(--purple)} .tag.r{color:var(--crit)}
+  pre{background:#11151f;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:8px 0;overflow:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;color:#cdd6ea}
+  pre .c{color:var(--dim)} pre .k{color:var(--blue)} pre .s{color:var(--ok)}
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0;font-size:11px}
+  .col{flex:1;display:flex;flex-direction:column;gap:7px}
+  .node{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;text-align:center}
+  .node.hub{background:var(--grad);color:#0b1220;font-weight:900;border:none;display:flex;align-items:center;justify-content:center;min-height:100%}
+  .node b{display:block;font-size:11.5px} .node span{font-size:10px;color:var(--mut)}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 9px;color:var(--dim);font-size:20px;font-weight:900}
+  ul{margin:3px 0 7px 17px} li{margin:3px 0;font-size:12.2px;color:#cbd4e8}
+  ol{margin:3px 0 7px 18px} ol li{margin:5px 0;font-size:12.3px}
+  .rank{display:flex;gap:11px;align-items:flex-start;margin:7px 0;break-inside:avoid}
+  .rank .num{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:14px;color:#0b1220;background:var(--grad);border-radius:9px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank .num.b{background:var(--soft);color:var(--mut);border:1px solid var(--line)}
+  .rank h3{font-size:13px} .rank p{font-size:11.8px;color:#c2cbe0;margin:2px 0 0}
+  .foot{position:absolute;bottom:9mm;left:13mm;right:13mm;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--line);padding-top:6px}
+  .verdict{border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(55,182,230,.10),rgba(168,116,216,.10));padding:13px 16px;margin:9px 0}
+  .verdict h3{font-size:15px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style></head><body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="kick">AI Agents · Home Cluster · k3s</div>
+  <h1>Hermes, in the cluster<br><span class="grad">an autonomous agent with its own node, its own sandbox, its own traces</span></h1>
+  <p class="lead">The Nous Research <b>Hermes Agent</b> now runs as a first-class cluster service on the brand-new
+  CPU-only node <b>x1</b> — one pod that serves both an OpenAI-compatible API and a web dashboard, does all its
+  thinking through the <b>LiteLLM gateway</b>, and streams every agent step into <b>Arize Phoenix</b>. The headline:
+  the official image already ships Node&nbsp;22, ffmpeg&nbsp;7.1 and Playwright Chromium, so the <b>HyperFrames video-render
+  stack works inside the agent's sandbox with zero extra image work</b> — verified today with a 300-frame render in ~43&nbsp;s.
+  Closes Forgejo issue <b>brian/home-lab#10</b>.</p>
+
+  <div class="meta">
+    <div class="chip"><b>Image</b> nousresearch/hermes-agent:v2026.6.19</div>
+    <div class="chip"><b>Namespace</b> hermes (pinned to x1)</div>
+    <div class="chip"><b>Dashboard</b> https://hermes.lan/</div>
+    <div class="chip"><b>API</b> https://hermes.lan/v1 (bearer)</div>
+    <div class="chip"><b>Manifests</b> clusters/home/hermes/</div>
+  </div>
+
+  <div class="cards">
+    <div class="stat b"><div class="n blue">x1</div><div class="l">New node</div><div class="d">CPU-only · 8c / 7.6&nbsp;Gi / ~250&nbsp;G · 192.168.5.174</div></div>
+    <div class="stat g"><div class="n okc">43s</div><div class="l">300 frames</div><div class="d">HyperFrames smoke.mp4 rendered in-pod on x1's CPU</div></div>
+    <div class="stat p"><div class="n purp">$25</div><div class="l">30-day budget</div><div class="d">Dedicated LiteLLM virtual key, alias hermes-agent</div></div>
+    <div class="stat o"><div class="n orng">30Gi</div><div class="l">State PVC</div><div class="d">local-path at /opt/data — config, skills, memory, sessions</div></div>
+  </div>
+
+  <h2><span class="bar"></span>The core mental model: two sandboxes, not one</h2>
+  <div class="posture">
+    <p style="margin:0"><b>Hermes executes real shell commands as a tool. Where those commands land is the whole security story:</b></p>
+    <ul style="margin:6px 0 0">
+      <li><b>Outer sandbox = the pod.</b> Kubernetes-native isolation: its own filesystem (image + PVC), its own
+        cgroup limits (5&nbsp;Gi memory cap), its own network identity. If the agent trashes anything, it trashes
+        the pod and the PVC — <code>kubectl delete pod</code> is the reset button.</li>
+      <li><b>Inner sandbox = <code>terminal.backend</code>.</b> Set to <code>local</code>, so tool commands run
+        <i>inside the container</i>. The alternative backends: <code>docker</code> would mean Docker-in-Docker
+        inside k8s (avoided, deliberately), and <code>ssh</code> is the future path — point the agent at a chosen
+        "body" host when you actually want it to control a real machine.</li>
+    </ul>
+  </div>
+  <div class="myth">
+    <h3>Unlearn: "an agent container needs Docker for sandboxing" (and "AI needs a GPU")</h3>
+    <p style="margin:3px 0 0" class="small">On bare metal, Hermes' Docker backend is the sandbox. In Kubernetes the
+    <b>pod already is one</b> — adding Docker inside it buys you DinD complexity, privileged containers, and a second
+    image cache for nothing. And Hermes itself is a Python brain that calls remote LLMs: it never touches a GPU, which
+    is exactly why it lives on the cluster's first <b>CPU-only</b> node instead of taking up residence next to a 4090.</p>
+  </div>
+
+  <div class="note">
+    <h3>The a3 bare-metal Hermes was left alone</h3>
+    <p style="margin:3px 0 0" class="small">A pre-existing Hermes install on a3 (<code>~/.hermes</code>, gateway running)
+    is untouched — the k8s deployment is a parallel, separately-stated instance. Retire-or-keep is a listed follow-up,
+    decided after the cluster instance proves itself.</p>
+  </div>
+
+  <div class="foot"><span>Hermes Agent — in the cluster</span><span>1 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Anatomy: one pod, one container, two services</h2>
+  <p class="small mut">The official image uses <b>s6-overlay as PID&nbsp;1</b>: one container supervises both the gateway
+  (OpenAI-compatible API on <b>:8642</b>) and the dashboard (<b>:9119</b>, switched on with <code>HERMES_DASHBOARD=1</code>).
+  The container <b>starts as root on purpose</b> — the s6 stage2 hook chowns <code>/opt/data</code> and seeds config,
+  then drops every service to the internal <code>hermes</code> user (uid&nbsp;10000). Don't fight it with <code>runAsUser</code>.</p>
+
+  <div class="flow">
+    <div class="col">
+      <div class="node"><b>https://hermes.lan/</b><span>Traefik · mkcert hermes-tls</span></div>
+      <div class="node"><b>/&nbsp;→ dashboard :9119</b><span>basic auth (fails closed)</span></div>
+      <div class="node"><b>/v1 → API :8642</b><span>bearer API_SERVER_KEY</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col" style="flex:.95">
+      <div class="node hub">Hermes pod<br>on x1<br><span style="color:#0b1220;font-weight:700;font-size:10px">s6 · gateway + dashboard<br>tools run in-pod</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="node"><b>LiteLLM gateway</b><span>litellm.observability:4000 · virtual key</span></div>
+      <div class="node"><b>nvidia-nemotron-super</b><span>free NVIDIA endpoint · 131k ctx</span></div>
+      <div class="node"><b>Phoenix</b><span>OTLP traces · project hermes-agent</span></div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Piece</th><th>What / where</th><th>Why it's like that</th></tr>
+    <tr><td><b>Deployment</b></td><td>1 replica, <code>strategy: Recreate</code></td><td>Single writer over the sqlite-ish session/memory stores on the PVC — never two pods on one <code>/opt/data</code></td></tr>
+    <tr><td><b>PVC</b></td><td>30&nbsp;Gi <code>local-path</code> → <code>/opt/data</code></td><td>All agent state (config, skills, memory, sessions); the image stays stateless. Longhorn later for mobility</td></tr>
+    <tr><td><b>Seed ConfigMap</b></td><td><code>hermes-seed</code> → initContainer copy</td><td>Copied to <code>/opt/data/config.yaml</code> <b>only if absent</b> — after first boot the PVC copy is live (Hermes writes to it)</td></tr>
+    <tr><td><b>Resources</b></td><td>req 500m/1&nbsp;Gi, limit 5&nbsp;Gi mem</td><td>Headroom for in-pod tool runs (Chromium + ffmpeg renders); x1 has 7.6&nbsp;Gi total</td></tr>
+    <tr><td><b>Probes</b></td><td><code>/health</code> on :8642</td><td>Startup probe tolerates 5&nbsp;min of first-boot seeding before liveness takes over</td></tr>
+    <tr><td><b>Homepage / Gatus</b></td><td>AI group tile · 2 health checks</td><td>Auto-discovered via ingress annotations; Gatus probes both ports (page 4)</td></tr>
+  </table>
+
+  <h2><span class="bar"></span>Auth: both doors are locked</h2>
+  <div class="two">
+    <div class="box" style="margin:4px 0">
+      <h3>Dashboard — fails closed by design</h3>
+      <p class="small" style="margin:3px 0 0">Since the June 2026 hardening, the dashboard <b>refuses a non-loopback
+      bind without an auth provider</b> (<code>HERMES_DASHBOARD_INSECURE</code> is a deprecated no-op). The bundled
+      <code>basic</code> provider activates via env: username <code>brian</code>, password + HMAC session secret from
+      the <code>hermes-secrets</code> k8s secret.</p>
+    </div>
+    <div class="box" style="margin:4px 0">
+      <h3>API — treat it like root</h3>
+      <p class="small" style="margin:3px 0 0"><code>/v1</code> requires the bearer <code>API_SERVER_KEY</code>
+      (verified: unauthenticated request → <b>401</b>). Remember what this API <i>is</i>: a chat endpoint that can
+      <b>execute tools in the pod</b>. It stays LAN-only — no Tailscale ingress for this one.</p>
+    </div>
+  </div>
+  <p class="small mut">All four secret values (<code>hermes-api-server-key</code>, <code>litellm-key-hermes-agent</code>,
+  <code>hermes-dashboard</code>, <code>hermes-dashboard-session-secret</code>) live in the Vaultwarden <b>Automation</b>
+  collection and land in-cluster as <code>hermes-secrets</code> via <code>scripts/vault-secret.sh</code> — nothing in git
+  (public repo). The exact <code>kubectl create secret</code> incantation is in the Deployment's header comment.</p>
+
+  <div class="foot"><span>Hermes Agent — in the cluster</span><span>2 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Inference: everything through LiteLLM</h2>
+  <p class="small mut">Hermes never talks to a model provider directly. A <code>custom_providers</code> block points it
+  at the in-cluster LiteLLM gateway with a <b>dedicated virtual key</b> (alias <code>hermes-agent</code>, <b>$25 / 30-day
+  budget</b>) — so the agent gets one bill line, one kill switch, and its usage shows up in LiteLLM spend like any other
+  client. Default model is <b>nvidia-nemotron-super</b> (free NVIDIA endpoint, 131,072-token context); switch any time
+  with <code>/model custom:litellm:&lt;name&gt;</code>.</p>
+
+  <pre><span class="c"># seed config.yaml (clusters/home/hermes/configmap.yaml) — the interesting bits</span>
+<span class="k">custom_providers</span>:
+  - <span class="k">name</span>: litellm
+    <span class="k">base_url</span>: <span class="s">http://litellm.observability.svc.cluster.local:4000/v1</span>
+    <span class="k">key_env</span>: LITELLM_API_KEY          <span class="c"># from hermes-secrets, never in the file</span>
+    <span class="k">models</span>: { <span class="s">nvidia-nemotron-super</span>: {context_length: 131072}, <span class="s">groq-llama-3.3-70b</span>: {…} }
+<span class="k">model</span>:    { <span class="k">default</span>: <span class="s">nvidia-nemotron-super</span>, <span class="k">provider</span>: custom:litellm }
+<span class="k">terminal</span>: { <span class="k">backend</span>: <span class="s">local</span> }              <span class="c"># the pod IS the sandbox</span>
+<span class="k">plugins</span>:  { <span class="k">enabled</span>: [<span class="s">hermes_otel</span>] }</pre>
+
+  <h2><span class="bar"></span>Observability: hermes-otel → Phoenix</h2>
+  <p class="small mut">Traces come from Brian's own plugin, <b>hermes-otel</b>
+  (<code>github.com/briancaffey/hermes-otel</code>), installed with
+  <code>hermes plugins install briancaffey/hermes-otel --enable</code> into <code>/opt/data/plugins/hermes_otel</code>.
+  It exports OTLP/HTTP to Arize Phoenix (<code>phoenix-svc.observability:6006/v1/traces</code>) under a dedicated
+  Phoenix project — set by <code>OTEL_PHOENIX_ENDPOINT</code> + <code>OTEL_PROJECT_NAME</code>.</p>
+
+  <div class="two">
+    <div class="box" style="margin:4px 0">
+      <h3>Project <span class="tag p">hermes-agent</span></h3>
+      <p class="small" style="margin:3px 0 0">The agent's own view: verified span tree
+      <code>agent → llm.nvidia-nemotron-super → api.nvidia-nemotron-super</code>. This is where a future
+      "make me a video" run will show skill → terminal → render steps.</p>
+    </div>
+    <div class="box" style="margin:4px 0">
+      <h3>Project <span class="tag">default</span></h3>
+      <p class="small" style="margin:3px 0 0">LiteLLM's gateway-side traces, untouched. Same request shows up in both
+      projects at matching timestamps — agent view and gateway view of one call, cleanly separated.</p>
+    </div>
+  </div>
+
+  <div class="warnbox">
+    <h3>The wrinkle: the image's venv doesn't bundle OpenTelemetry</h3>
+    <p style="margin:3px 0 0" class="small"><code>/opt/hermes/.venv</code> is <b>root-owned and read-only at runtime</b>
+    (uv-managed, no pip, lazy installs disabled) — without the OTel SDK the plugin silently degrades to NoopSpan.
+    Two-stage fix:</p>
+    <ul style="margin:5px 0 0">
+      <li><b>Interim (running now):</b> an initContainer does
+        <code>uv pip install --target /opt/data/otel-libs</code> for the three OTel packages, and the main container
+        sets <code>PYTHONPATH=/opt/data/otel-libs</code>. Ugly, works, self-heals on PVC.</li>
+      <li><b>Final (built &amp; pushed):</b> a derived image — <code>clusters/home/hermes/image/Dockerfile</code>, already
+        at <code>harbor.lan/library/hermes-agent:v2026.6.19-otel</code> — bakes the libs into the venv with
+        <code>uv pip install --python /opt/hermes/.venv/bin/python</code>. Blocked only on x1 trusting the Harbor CA:
+        one-time <code>sudo scripts/trust-harbor-ca.sh</code> on x1, then swap the image and delete the initContainer.</li>
+    </ul>
+  </div>
+
+  <div class="foot"><span>Hermes Agent — in the cluster</span><span>3 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>The headline: HyperFrames already works in the sandbox</h2>
+  <div class="posture">
+    <p style="margin:0"><b>The end goal is agent-driven video generation</b> — prompt Hermes, get an mp4. The expected
+    hard part was the render toolchain… and it turned out to be <b>zero extra image work</b>: the official Hermes image
+    already ships <b>Node&nbsp;22</b>, <b>ffmpeg&nbsp;7.1</b>, and <b>Playwright headless Chromium</b>, which is exactly
+    the HyperFrames render stack. The agent's inner sandbox is a fully-equipped render box out of the box.</p>
+  </div>
+
+  <h3>Verified today, in-pod on x1</h3>
+  <pre><span class="c"># 1. install the skill through Hermes' own skill hub (lands on the PVC, survives restarts)</span>
+hermes skills install <span class="s">skills-sh/hyperframes</span>     <span class="c"># → ~/.hermes/skills/creative/hyperframes</span>
+
+<span class="c"># 2. smoke-test the raw toolchain inside the container</span>
+npx hyperframes init <span class="s">smoke</span>
+npx hyperframes render                            <span class="c"># → smoke.mp4</span>
+<span class="c">#    300 frames rendered in ~43 s on x1's CPU — Chromium capture + ffmpeg encode</span></pre>
+  <p class="small mut">Next experiment: prompt Hermes end-to-end ("make me a video about…") and watch the
+  skill&nbsp;→&nbsp;terminal&nbsp;→&nbsp;render pipeline appear as a span tree in Phoenix. The 5&nbsp;Gi memory limit
+  exists precisely for these Chromium+ffmpeg tool runs.</p>
+
+  <h2><span class="bar"></span>Test results — verified end-to-end</h2>
+  <table>
+    <tr><th>Check</th><th>What was done</th><th>Result</th></tr>
+    <tr><td><b>Full inference path</b></td><td><code>POST https://hermes.lan/v1/chat/completions</code> → Hermes → LiteLLM → nvidia-nemotron-super</td>
+        <td><span class="tag g">PASS</span> correct reply ("HERMES-ON-K3S-OK")</td></tr>
+    <tr><td><b>API auth</b></td><td>Same endpoint, no bearer token</td><td><span class="tag g">PASS</span> 401 rejected</td></tr>
+    <tr><td><b>Tracing, both sides</b></td><td>Phoenix project list + spans</td>
+        <td><span class="tag g">PASS</span> <code>hermes-agent</code> + <code>default</code>, spans at matching timestamps</td></tr>
+    <tr><td><b>Render stack</b></td><td>hyperframes init + render in-pod</td><td><span class="tag g">PASS</span> smoke.mp4, 300 frames / ~43&nbsp;s</td></tr>
+    <tr><td><b>Monitoring</b></td><td>Gatus: <code>http://hermes.hermes:8642/health</code> + <code>:9119/api/status</code></td>
+        <td><span class="tag g">PASS</span> both UP, email alerts wired</td></tr>
+    <tr><td><b>Dashboard tile</b></td><td>Homepage auto-discovery via ingress annotations</td><td><span class="tag g">PASS</span> tile in the AI group</td></tr>
+  </table>
+
+  <div class="note">
+    <h3>A fun datapoint: what an agent costs per "hello"</h3>
+    <p style="margin:3px 0 0" class="small">The verification chat consumed <b>~27,900 prompt tokens</b> — that's the
+    full Hermes agent system prompt (tool specs, skills, memory scaffolding) riding along on every turn. On the free
+    NVIDIA endpoint that's fine; it's also exactly why the agent got a <b>budgeted</b> LiteLLM key before it got access
+    to anything that bills per token.</p>
+  </div>
+
+  <div class="foot"><span>Hermes Agent — in the cluster</span><span>4 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Gotchas — future-you will hit these</h2>
+
+  <div class="rank"><div class="num">1</div><div><h3>A Service named <code>hermes</code> poisons the env <span class="tag r">breaks boot</span></h3>
+    <p>Kubernetes service links inject <code>HERMES_PORT=tcp://…</code> and friends into the pod — which collide with
+    the image's own <code>HERMES_*</code> config parsing. Fix: <code>enableServiceLinks: false</code> on the pod spec.
+    Applies to any app whose env-var prefix matches its Service name.</p></div></div>
+
+  <div class="rank"><div class="num">2</div><div><h3>Traefik v3 502s multi-GB pushes to harbor.lan <span class="tag o">registry</span></h3>
+    <p>Default <code>readTimeout=60s</code> kills any large layer upload through the ingress. Workaround used today:
+    <code>kubectl port-forward</code> to harbor-core and <code>crane push</code> to localhost. Long-term: raise the
+    entrypoint timeout for Harbor's route.</p></div></div>
+
+  <div class="rank"><div class="num">3</div><div><h3>vault-secret.sh substring matching vs prefix-named items <span class="tag o">secrets</span></h3>
+    <p><code>bw</code> matches item names by substring, so "hermes-dashboard" also matches
+    "hermes-dashboard-session-secret" → "More than one result" → an <b>empty string</b> inside <code>$(…)</code>, and you
+    create a secret with a blank value. Fetch by item ID, or never name one item as a prefix of another.</p></div></div>
+
+  <div class="rank"><div class="num">4</div><div><h3>The hermes venv has no pip <span class="tag p">images</span></h3>
+    <p>It's uv-managed. Derived images must install with
+    <code>uv pip install --python /opt/hermes/.venv/bin/python …</code> — a plain <code>pip install</code> layer fails.</p></div></div>
+
+  <div class="rank"><div class="num">5</div><div><h3>Skill installs go through Hermes' hub, not npm <span class="tag p">skills</span></h3>
+    <p>It's <code>hermes skills install &lt;source&gt;</code> (e.g. <code>skills-sh/hyperframes</code>), not
+    <code>npx skills add</code>. Installed skills land under <code>~/.hermes/skills/</code> on the PVC.</p></div></div>
+
+  <h2><span class="bar"></span>Operating it</h2>
+  <pre><span class="c"># deploy / update (kustomize service — the usual way)</span>
+kubectl apply -k clusters/home/hermes
+
+<span class="c"># runtime config lives on the PVC, not in git — edit via dashboard or:</span>
+kubectl -n hermes exec deploy/hermes -- cat /opt/data/config.yaml
+
+<span class="c"># logs (s6 multiplexes gateway + dashboard into the one container)</span>
+kubectl -n hermes logs deploy/hermes -f
+
+<span class="c"># nuke-and-repave the agent's world (config re-seeds from the ConfigMap)</span>
+kubectl -n hermes delete pvc hermes-data   <span class="c"># + delete pod</span></pre>
+  <p class="small mut">Remember the seeding rule: <code>configmap.yaml</code> only matters on <b>first boot</b> (or after
+  deleting the PVC copy). Day-2 model switches, plugin toggles and dashboard edits all mutate the live
+  <code>/opt/data/config.yaml</code> — the repo file is the birth certificate, not the passport.</p>
+
+  <div class="foot"><span>Hermes Agent — in the cluster</span><span>5 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Where this goes next</h2>
+  <div class="rank"><div class="num">1</div><div><h3>Cluster control — a scoped ServiceAccount + RBAC</h3>
+    <p>Let Hermes operate the cluster the way Claude does, starting <b>read-only</b> (get/list/watch) and widening
+    verb-by-verb as trust builds. The outer sandbox already contains the blast radius; RBAC defines the reach.</p></div></div>
+  <div class="rank"><div class="num b">2</div><div><h3>Swap to the Harbor <code>-otel</code> image</h3>
+    <p>One <code>sudo scripts/trust-harbor-ca.sh</code> on x1, then drop the initContainer + PYTHONPATH hack for the
+    already-pushed <code>harbor.lan/library/hermes-agent:v2026.6.19-otel</code>.</p></div></div>
+  <div class="rank"><div class="num b">3</div><div><h3>Harden the cage</h3>
+    <p>NetworkPolicy (egress allow-list: LiteLLM, Phoenix, DNS), <code>skills.write_approval</code> if the agent starts
+    authoring its own skills, and PVC backup once Longhorn lands (#13) — the 30&nbsp;Gi of memory/sessions is the one
+    thing that can't be re-seeded.</p></div></div>
+  <div class="rank"><div class="num b">4</div><div><h3>More surfaces, fewer duplicates</h3>
+    <p>Telegram gateway for chat-from-anywhere; a deliberate <code>ssh</code> terminal backend when the agent should
+    drive a real "body" host; and a retire-or-keep decision on the a3 bare-metal Hermes once the cluster one has a few
+    weeks of uptime.</p></div></div>
+
+  <div class="verdict">
+    <h3>Bottom line</h3>
+    <p style="margin:5px 0 0" class="small">Hermes went from a bare-metal experiment on a3 to a <b>properly caged,
+    budgeted, observable cluster citizen</b>: pod-as-sandbox on a CPU-only node, all inference metered through a $25/30d
+    LiteLLM key, every agent step traced into its own Phoenix project, both entry points authenticated, health-checked
+    by Gatus, state on a 30&nbsp;Gi PVC that survives any restart. And the thing that was supposed to be the hard part —
+    a video-render toolchain for HyperFrames — <b>shipped in the base image</b>. The next milestone isn't
+    infrastructure; it's a prompt: "make me a video about…", watched live in Phoenix.</p>
+  </div>
+
+  <h2><span class="bar"></span>Quick reference</h2>
+  <table>
+    <tr><th>Thing</th><th>Value</th></tr>
+    <tr><td>Dashboard / API</td><td><code>https://hermes.lan/</code> (basic auth) · <code>https://hermes.lan/v1</code> (bearer, LAN-only)</td></tr>
+    <tr><td>Manifests</td><td><code>clusters/home/hermes/</code> — <code>kubectl apply -k</code></td></tr>
+    <tr><td>Node</td><td><b>x1</b> · 192.168.5.174 · 8c / 7.6&nbsp;Gi · <code>inference-club.com/box=x1</code></td></tr>
+    <tr><td>Model default</td><td><code>nvidia-nemotron-super</code> via LiteLLM · switch: <code>/model custom:litellm:&lt;name&gt;</code></td></tr>
+    <tr><td>Secrets</td><td>Vaultwarden Automation → k8s secret <code>hermes-secrets</code> (4 keys)</td></tr>
+    <tr><td>Traces</td><td>Phoenix project <code>hermes-agent</code> (<code>phoenix-svc.observability:6006</code>)</td></tr>
+    <tr><td>State</td><td>PVC <code>hermes-data</code> 30&nbsp;Gi local-path → <code>/opt/data</code></td></tr>
+    <tr><td>Health</td><td>Gatus: <code>hermes.hermes:8642/health</code> + <code>:9119/api/status</code></td></tr>
+    <tr><td>Derived image</td><td><code>harbor.lan/library/hermes-agent:v2026.6.19-otel</code> (pending x1 CA trust)</td></tr>
+  </table>
+
+  <div class="foot"><span>Hermes Agent — in the cluster · home-cluster/docs/15</span><span>6 / 6</span></div>
+</div>
+
+</body></html>
