@@ -62,7 +62,8 @@ metadata:
   labels:
     app: lmstudio-headless
 spec:
-  replicas: 1
+  # Parked (experiment, may revisit). Scaled to 0 — bump to 1 to bring it back.
+  replicas: 0
   strategy:
     type: Recreate # one llmster owns ~/.lmstudio at a time
   selector:
