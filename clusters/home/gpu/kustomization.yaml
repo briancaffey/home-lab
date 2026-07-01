@@ -16,6 +16,12 @@ resources:
   - gb10-memory-rule.yaml
 patches:
   # Device plugin needs the nvidia RuntimeClass to see the GPU under k3s.
+  # It also carries runtimeClassName: nvidia, so it MUST only land on nodes that
+  # actually have the nvidia containerd runtime (GPU nodes). Without an affinity
+  # it schedules onto GPU-less nodes (e.g. x1) and the sandbox fails with
+  # "no runtime for nvidia is configured". Gate it on the same NFD PCI label GFD
+  # uses (NVIDIA display-class device present) so x1 and any future CPU/storage
+  # node are excluded.
   - target:
       kind: DaemonSet
       name: nvidia-device-plugin-daemonset
@@ -23,6 +29,16 @@ patches:
       - op: add
         path: /spec/template/spec/runtimeClassName
         value: nvidia
+      - op: add
+        path: /spec/template/spec/affinity
+        value:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: feature.node.kubernetes.io/pci-0300_10de.present
+                      operator: In
+                      values: ["true"]
   # nfd-master rejects label namespaces outside feature.node.kubernetes.io by
   # default; allow nvidia.com/* through so GFD's GPU labels are published.
   - target:
