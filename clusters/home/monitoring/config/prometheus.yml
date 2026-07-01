@@ -54,11 +54,11 @@ scrape_configs:
       - targets: ["192.168.6.19:9100"]    # spark
         labels: { node: spark }
 
-  # LiteLLM gateway metrics (observability ns; in-cluster scrape via cluster DNS).
-  - job_name: litellm
-    metrics_path: /metrics
-    static_configs:
-      - targets: ["litellm.observability.svc.cluster.local:4000"]
+  # NOTE: no LiteLLM /metrics scrape. LiteLLM's native Prometheus endpoint is an
+  # enterprise/premium feature — on the OSS image /metrics 404s, and because the
+  # scrape carries no API key each hit tripped user_api_key_auth ("No api key
+  # passed in.") and was traced to Phoenix as an exception (hundreds/min of noise).
+  # For gateway usage/spend, use the LiteLLM Admin UI (Postgres-backed) or Phoenix.
 
   # Speedtest Tracker — WAN/ISP speed (scheduled hourly). The /prometheus endpoint
   # must be enabled in the app (Settings → Data Integration → Prometheus). Scraped
