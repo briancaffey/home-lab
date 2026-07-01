@@ -63,12 +63,19 @@ config:
   kubernetes:
     mode: cluster
   docker: {}
+  # NOTE: `config.services` is owned by the gitignored values.local.yaml (the
+  # Tailnet group). Helm REPLACES lists, so anything set here would be clobbered
+  # by that overlay — put committed static links under `bookmarks` instead.
   services: []
   bookmarks:
     - Homelab:
         - GitHub:
             - abbr: GH
               href: https://github.com/briancaffey
+    - Dashboards:
+        - GPU Fleet Util:
+            - icon: grafana.png
+              href: https://grafana.lan/d/gpu-fleet
   widgets:
     - kubernetes:
         cluster:

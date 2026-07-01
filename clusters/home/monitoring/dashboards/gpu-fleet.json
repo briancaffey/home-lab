@@ -7,7 +7,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "refresh": "30s",
   "time": {
@@ -41,24 +41,9 @@
   },
   "panels": [
     {
-      "id": 1,
-      "type": "row",
-      "title": "$node",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "repeat": "node",
-      "repeatDirection": "v",
-      "panels": []
-    },
-    {
-      "id": 2,
-      "type": "timeseries",
-      "title": "VRAM by service \u2014 $node",
+      "id": 10,
+      "type": "table",
+      "title": "Active GPU processes \u2014 all machines",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -76,6 +61,219 @@
             "uid": "prometheus"
           },
           "refId": "A",
+          "format": "table",
+          "instant": true,
+          "expr": "sum by (node, namespace, pod, process_name) (vram_used_bytes)"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "node": "Machine",
+              "namespace": "Namespace",
+              "pod": "Pod",
+              "process_name": "Process",
+              "Value": "VRAM"
+            },
+            "indexByName": {
+              "node": 0,
+              "namespace": 1,
+              "pod": 2,
+              "process_name": 3,
+              "Value": 4
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": "",
+            "sort": [
+              {
+                "field": "Machine"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "VRAM"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 8000000000.0
+                    },
+                    {
+                      "color": "orange",
+                      "value": 16000000000.0
+                    },
+                    {
+                      "color": "red",
+                      "value": 22000000000.0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Machine"
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "description": "Every process holding GPU memory right now, by machine. Click a column header to re-sort (e.g. VRAM to see the biggest consumers)."
+    },
+    {
+      "id": 11,
+      "type": "bargauge",
+      "title": "GPU utilization \u2014 now",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "instant": true,
+          "expr": "gpu_util_percent",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "description": "Whole-device SM utilization per machine, current value."
+    },
+    {
+      "id": 1,
+      "type": "row",
+      "title": "$node \u2014 detail",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "repeat": "node",
+      "repeatDirection": "v",
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "VRAM by service \u2014 $node",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
           "expr": "sum by (namespace, pod) (vram_used_bytes{node=\"$node\"})",
           "legendFormat": "{{namespace}}/{{pod}}"
         }
@@ -83,6 +281,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "min": 0,
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
@@ -93,8 +292,7 @@
             },
             "showPoints": "never",
             "gradientMode": "opacity"
-          },
-          "min": 0
+          }
         },
         "overrides": []
       },
@@ -126,7 +324,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 0
+        "y": 10
       },
       "targets": [
         {
