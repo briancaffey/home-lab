@@ -36,6 +36,7 @@ configMapGenerator:
       - dashboards/nvidia-dcgm.json
       - dashboards/speedtest.json
       - dashboards/gpu-vram.json
+      - dashboards/gpu-fleet.json
 
 secretGenerator:
   - name: grafana-admin

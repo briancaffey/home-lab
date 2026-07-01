@@ -82,7 +82,10 @@ spec:
                     values: ["a1", "a2", "a3", "spark"]
       containers:
         - name: vram-reporter
-          image: ghcr.io/inference-club/inference-club-agent-vram-reporter:latest
+          # Pinned to an immutable sha tag (NOT :latest): a floating :latest let a
+          # broken CI build silently leave a stale image running that 404'd on
+          # /metrics. Bump this when the reporter changes and CI is green.
+          image: ghcr.io/inference-club/inference-club-agent-vram-reporter:sha-3b1946d0b6890fe946ed7cf0ca5f507f8582aa59
           env:
             # NVML/nvidia-smi via the NVIDIA runtime, no GPU slot claimed.
             - { name: NVIDIA_VISIBLE_DEVICES, value: "all" }
