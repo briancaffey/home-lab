@@ -7,7 +7,9 @@ metadata:
     gethomepage.dev/name: "Milvus"
     gethomepage.dev/description: "Vector database — standalone, GPU-shared (a2)"
     gethomepage.dev/group: "AI"
-    gethomepage.dev/icon: "milvus.png"
+    # Custom local icon served by Homepage from its homepage-icons configMap
+    # (clusters/home/homepage/icons/milvus.png), not the dashboard-icons CDN.
+    gethomepage.dev/icon: "/icons/milvus.png"
     # Milvus serves gRPC on 19530; the web UI lives at :9091/webui/.
     gethomepage.dev/href: "https://milvus.lan/webui/"
     gethomepage.dev/pod-selector: "component=standalone"

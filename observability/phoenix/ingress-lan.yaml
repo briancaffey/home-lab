@@ -11,9 +11,10 @@ metadata:
     gethomepage.dev/name: "Phoenix"
     gethomepage.dev/description: "LLM tracing & evals (OTLP from LiteLLM)"
     gethomepage.dev/group: "Observability"
-    # No Arize-Phoenix logo exists in dashboard-icons/selfh.st, so use a Material
-    # Design Icon (the "phoenix" firebird mnemonic), tinted orange.
-    gethomepage.dev/icon: "mdi-fire-#f97316"
+    # Custom local Arize-Phoenix logo served by Homepage from its homepage-icons
+    # configMap (clusters/home/homepage/icons/phoenix.png); no logo exists in
+    # dashboard-icons/selfh.st.
+    gethomepage.dev/icon: "/icons/phoenix.png"
     # Status indicator: chart pods are labeled app=phoenix (not the default
     # app.kubernetes.io/name=<svc>), so Homepage needs an explicit selector.
     gethomepage.dev/pod-selector: "app=phoenix"

@@ -39,6 +39,24 @@ ingress:
         hosts:
           - home.lan
 
+# Custom Homepage icons served at /icons/<file> (reference in a service's
+# gethomepage.dev/icon annotation as "/icons/milvus.png"). Icons live in
+# clusters/home/homepage/icons/ and are loaded into the `homepage-icons`
+# configMap (binary data). This configMap is created OUT OF BAND (Homepage is a
+# Helm release, not kustomize) — re-run after adding/updating an icon:
+#   kubectl -n homepage create configmap homepage-icons \
+#     --from-file=clusters/home/homepage/icons/ \
+#     --dry-run=client -o yaml | kubectl apply -f -
+persistence:
+  custom-icons:
+    enabled: "true"
+    type: custom
+    volumeSpec:
+      configMap:
+        name: homepage-icons
+    mountPath: /app/public/icons
+    readOnly: true
+
 config:
   # Kubernetes integration (uses the RBAC service account) for auto-discovery
   # of any Ingress labeled gethomepage.dev/enabled: "true".
