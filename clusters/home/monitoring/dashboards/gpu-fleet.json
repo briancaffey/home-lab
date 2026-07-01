@@ -379,6 +379,454 @@
         }
       },
       "description": "Whole-device SM utilization (from nvidia-smi). Read alongside the VRAM panel to see which resident service is driving the load."
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "collapsed": false,
+      "title": "Temperatures \u2014 GPU \u00b7 SoC \u00b7 CPU \u00b7 NVMe",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "gauge",
+      "title": "GPU \u2014 a1 (4090)",
+      "description": "dcgm-exporter core temp. 4090 throttles ~84\u00b0C.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 20,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 83
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "DCGM_FI_DEV_GPU_TEMP{instance=~\"192\\\\.168\\\\.5\\\\.253.*\"}",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "gauge",
+      "title": "GPU \u2014 a3 (4090)",
+      "description": "dcgm-exporter core temp. 4090 throttles ~84\u00b0C.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 4,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 20,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 83
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "DCGM_FI_DEV_GPU_TEMP{instance=~\"192\\\\.168\\\\.5\\\\.173.*\"}",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "gauge",
+      "title": "spark \u2014 SoC (hottest zone)",
+      "description": "Max of the GB10's acpitz thermal zones (unified SoC \u2014 CPU+GPU share the envelope). No per-GPU sensor: dcgm can't read GB10 and vram-reporter doesn't export temp (yet). This box wedged under acestep+vLLM memory pressure on 2026-07-01.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 8,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 20,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(node_thermal_zone_temp{instance=~\"192\\\\.168\\\\.6\\\\.19.*\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "bargauge",
+      "title": "CPU package \u2014 per node",
+      "description": "x86_pkg_temp per box. a2's 4090 has NO GPU temp source until its NVML/dcgm issue is fixed (or vram-reporter grows a temp gauge) \u2014 its CPU pkg + NVMe are the best proxies. x1 exposes no thermal sensors at all.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 20,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(node_thermal_zone_temp{type=\"x86_pkg_temp\"}, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\")",
+          "legendFormat": "{{node}}"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "bargauge",
+      "title": "NVMe \u2014 per drive",
+      "description": "node-exporter hwmon nvme composite temps (sensor temp1). Drives typically throttle ~70-80\u00b0C.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 20,
+          "max": 90,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 72
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "left"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "instant": true,
+          "refId": "A",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(node_hwmon_temp_celsius{chip=~\"nvme.*\", sensor=\"temp1\"}, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\")",
+          "legendFormat": "{{node}} {{chip}}"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Temperature history \u2014 all sensors",
+      "description": "GPU core+mem (dcgm: a1/a3), spark SoC hottest zone, CPU package per node. Spikes here = the early-warning for another spark-style thermal wedge.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 20,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "spanNulls": true,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 84
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "legendFormat": "{{node}} GPU",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(DCGM_FI_DEV_GPU_TEMP, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\")"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "legendFormat": "{{node}} GPU mem",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(DCGM_FI_DEV_MEMORY_TEMP, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\")"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "C",
+          "legendFormat": "spark SoC (max zone)",
+          "expr": "max(node_thermal_zone_temp{instance=~\"192\\\\.168\\\\.6\\\\.19.*\"})"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "D",
+          "legendFormat": "{{node}} CPU pkg",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(node_thermal_zone_temp{type=\"x86_pkg_temp\"}, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\")"
+        }
+      ]
     }
   ]
 }
