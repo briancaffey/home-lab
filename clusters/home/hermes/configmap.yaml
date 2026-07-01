@@ -1,0 +1,43 @@
+# Seed config for first boot. An initContainer copies this to
+# /opt/data/config.yaml ONLY if none exists yet — after that the PVC copy is
+# the live one (Hermes writes to it: /model switches, dashboard edits, schema
+# migrations). Edit runtime config via the dashboard or `kubectl exec`; change
+# this file only for fresh installs (or delete the PVC copy to re-seed).
+#
+# Secrets are NOT in here: keys arrive as env vars (key_env / basic-auth env)
+# from the out-of-band `hermes-secrets` secret. Safe for the public repo.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-seed
+data:
+  config.yaml: |
+    # Inference: everything goes through the LiteLLM gateway (one bill, one
+    # trace stream, cloud fallback). Switch models at runtime with
+    # /model custom:litellm:<model-name>.
+    custom_providers:
+      - name: litellm
+        base_url: http://litellm.observability.svc.cluster.local:4000/v1
+        key_env: LITELLM_API_KEY
+        api_mode: chat_completions
+        models:
+          nvidia-nemotron-super:
+            context_length: 131072
+          groq-llama-3.3-70b:
+            context_length: 131072
+
+    model:
+      default: nvidia-nemotron-super
+      provider: custom:litellm
+
+    # The pod IS the sandbox: tool commands run inside this container
+    # (blast radius = pod + PVC). docker backend would be DinD — avoid.
+    terminal:
+      backend: local
+
+    plugins:
+      enabled:
+        - hermes_otel
+
+    skills:
+      write_approval: false

@@ -1,0 +1,122 @@
+# Hermes Agent (Nous Research) — one container runs BOTH the gateway (OpenAI-
+# compatible API, :8642) and the dashboard (:9119): the image's s6-overlay
+# supervises the gateway service, and HERMES_DASHBOARD=1 turns on the
+# supervised dashboard service (binds 0.0.0.0:9119 by default in-container).
+#
+# The container must START as root: the s6 stage2 hook chowns /opt/data,
+# seeds config, then drops every service to the internal `hermes` user
+# (uid 10000) via s6-setuidgid. Don't set runAsUser.
+#
+# Out-of-band secret (values in Vaultwarden — Automation collection):
+#   kubectl -n hermes create secret generic hermes-secrets \
+#     --from-literal=api-server-key="$(scripts/vault-secret.sh hermes-api-server-key)" \
+#     --from-literal=litellm-api-key="$(scripts/vault-secret.sh litellm-key-hermes-agent)" \
+#     --from-literal=dashboard-password="$(scripts/vault-secret.sh hermes-dashboard)" \
+#     --from-literal=dashboard-session-secret="$(scripts/vault-secret.sh hermes-dashboard-session-secret)"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes
+spec:
+  replicas: 1
+  # Single writer over the sqlite-ish session/memory stores on the PVC —
+  # never two pods on the same /opt/data.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: hermes
+  template:
+    metadata:
+      labels:
+        app: hermes
+    spec:
+      # A Service named `hermes` would inject HERMES_PORT=tcp://... env vars,
+      # which collide with the image's HERMES_* config parsing.
+      enableServiceLinks: false
+      # x1: CPU-only box — Hermes is a Python brain, never needs a GPU.
+      nodeSelector:
+        inference-club.com/box: x1
+      initContainers:
+        # Seed config.yaml on first boot only; the PVC copy is live after that.
+        - name: seed-config
+          image: busybox:1.37
+          command: ["sh", "-c", "[ -f /opt/data/config.yaml ] && echo 'config exists, not seeding' || cp /seed/config.yaml /opt/data/config.yaml"]
+          volumeMounts:
+            - { name: data, mountPath: /opt/data }
+            - { name: seed, mountPath: /seed }
+        # hermes-otel needs the OTel SDK importable by the hermes venv, but
+        # /opt/hermes/.venv is root-owned/read-only at runtime. Until x1
+        # trusts the Harbor CA (sudo scripts/trust-harbor-ca.sh on x1) we
+        # can't pull the derived image (image/Dockerfile, already pushed as
+        # harbor.lan/library/hermes-agent:v2026.6.19-otel) — so install the
+        # libs onto the PVC once and expose them via PYTHONPATH below.
+        # TODO(x1-harbor-trust): swap image to the Harbor tag and drop this
+        # initContainer + the PYTHONPATH env.
+        - name: install-otel-libs
+          image: nousresearch/hermes-agent:v2026.6.19
+          command: ["sh", "-c", "[ -d /opt/data/otel-libs/opentelemetry ] && echo 'otel libs present' || uv pip install --no-cache --target /opt/data/otel-libs opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http"]
+          volumeMounts:
+            - { name: data, mountPath: /opt/data }
+      containers:
+        - name: hermes
+          image: nousresearch/hermes-agent:v2026.6.19
+          # Keep the image ENTRYPOINT (/init = s6 PID 1); this is the CMD.
+          args: ["gateway", "run"]
+          ports:
+            - { name: api, containerPort: 8642 }
+            - { name: dashboard, containerPort: 9119 }
+          env:
+            # See install-otel-libs above; only OTel packages live there.
+            - { name: PYTHONPATH, value: "/opt/data/otel-libs" }
+            - { name: HERMES_DASHBOARD, value: "1" }
+            # The API server is env-only config (not yet in config.yaml).
+            - { name: API_SERVER_ENABLED, value: "true" }
+            - { name: API_SERVER_HOST, value: "0.0.0.0" }
+            - name: API_SERVER_KEY
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: api-server-key }
+            # Consumed via custom_providers[].key_env in config.yaml.
+            - name: LITELLM_API_KEY
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: litellm-api-key }
+            # Dashboard auth: non-loopback bind fails closed without a
+            # provider; `basic` activates via these env vars.
+            - { name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME, value: "brian" }
+            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: dashboard-password }
+            - name: HERMES_DASHBOARD_BASIC_AUTH_SECRET
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: dashboard-session-secret }
+            # hermes-otel → Arize Phoenix, in its own Phoenix project so
+            # Hermes traces sit apart from the LiteLLM ones.
+            - { name: OTEL_PHOENIX_ENDPOINT, value: "http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces" }
+            - { name: OTEL_PROJECT_NAME, value: "hermes-agent" }
+          volumeMounts:
+            - { name: data, mountPath: /opt/data }
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              # headroom for in-pod tool runs (hyperframes render = headless
+              # chromium + ffmpeg); x1 has 7.6Gi total.
+              memory: 5Gi
+          startupProbe:
+            httpGet: { path: /health, port: api }
+            periodSeconds: 5
+            failureThreshold: 60   # first boot seeds state + starts s6 services
+          livenessProbe:
+            httpGet: { path: /health, port: api }
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /health, port: api }
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hermes-data
+        - name: seed
+          configMap:
+            name: hermes-seed

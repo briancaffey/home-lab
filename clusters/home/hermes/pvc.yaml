@@ -1,0 +1,16 @@
+# All Hermes state — config.yaml, .env, skills/, memory (MEMORY.md/USER.md),
+# sessions — lives under /opt/data (the container's ~/.hermes). This PVC is the
+# "grows with you" part of the agent; the image itself is stateless.
+#
+# local-path ⇒ the volume is pinned to whichever node first schedules the pod
+# (x1, via the Deployment nodeSelector). Move to Longhorn later for mobility.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 30Gi

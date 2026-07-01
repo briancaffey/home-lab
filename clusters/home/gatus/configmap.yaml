@@ -186,6 +186,20 @@ data:
         url: "http://milvus.milvus:9091/healthz"
         interval: 5m
         conditions: ["[STATUS] == 200"]
+      # Hermes agent (x1): gateway /health is unauthenticated by design;
+      # /api/status is the dashboard's documented public liveness probe.
+      - name: hermes-api
+        group: Apps
+        url: "http://hermes.hermes:8642/health"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
+      - name: hermes-dashboard
+        group: Apps
+        url: "http://hermes.hermes:9119/api/status"
+        interval: 1m
+        conditions: ["[STATUS] == 200"]
+        alerts: [{ type: email }]
 
       # ===== Inference (visibility only — GPU pods cycle, no alerts) =====
       # lmstudio-headless parked (scaled to 0) — monitor removed.

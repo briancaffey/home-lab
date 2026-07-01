@@ -1,0 +1,38 @@
+# https://hermes.lan/  → dashboard (9119)
+# https://hermes.lan/v1 → OpenAI-compatible API (8642) — bearer-auth'd by
+# API_SERVER_KEY; treat it like root (it executes tools) and keep it LAN-only.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hermes
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Hermes Agent"
+    gethomepage.dev/description: "Nous Research agent (x1)"
+    gethomepage.dev/group: "AI"
+    gethomepage.dev/icon: "mdi-robot"
+    gethomepage.dev/href: "https://hermes.lan/"
+    gethomepage.dev/pod-selector: "app=hermes"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["hermes.lan"]
+      secretName: hermes-tls
+  rules:
+    - host: hermes.lan
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: hermes
+                port:
+                  number: 8642
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hermes
+                port:
+                  number: 9119
