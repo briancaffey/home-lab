@@ -1,0 +1,73 @@
+# Milvus — standalone, GPU-shared, single-box (a2). Chart: zilliztech/milvus 5.0.23
+# (Milvus 2.6.19). Deployed via kustomize `helmCharts` + a patch; see kustomization.yaml.
+#
+# Topology chosen for this cluster (see CLAUDE.md):
+#   * standalone (not cluster) — a2 has the RAM/disk headroom; cluster mode's
+#     etcd-quorum + Pulsar footprint is overkill on one box.
+#   * bundled etcd (1 replica) + bundled MinIO (standalone) on a2 local-path —
+#     the platform MinIO lives on a3 (tight disk); keep Milvus storage local to a2.
+#   * GPU shared/unmanaged: every 4090 is already exclusively claimed by an
+#     inference workload, so Milvus co-tenants a2's 4090 with flux2-klein via
+#     NVIDIA_VISIBLE_DEVICES=all + runtimeClassName:nvidia and NO nvidia.com/gpu
+#     request. The scheduler is blind to VRAM contention here (by design).
+
+cluster:
+  enabled: false
+
+image:
+  all:
+    repository: milvusdb/milvus
+    tag: v2.6.19-gpu
+    pullPolicy: IfNotPresent
+
+# Global node selector — pins standalone + etcd + minio to a2.
+nodeSelector:
+  inference-club.com/box: a2
+
+standalone:
+  replicas: 1
+  # Embedded RocksMQ WAL: no extra MQ pods, no floating :latest image (the
+  # woodpecker subchart pins image tag `latest`, which we avoid).
+  messageQueue: rocksmq
+  # Shared/unmanaged GPU. runtimeClassName:nvidia is NOT exposed by the chart for
+  # the standalone workload, so it is injected via a kustomize patch.
+  extraEnv:
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: "all"
+  resources:
+    requests:
+      cpu: "1"
+      memory: 4Gi
+  persistence:
+    persistentVolumeClaim:
+      storageClass: local-path
+      size: 100Gi
+
+# --- Bundled dependencies (single-box sizing) ---
+etcd:
+  enabled: true
+  replicaCount: 1
+  nodeSelector:
+    inference-club.com/box: a2
+  persistence:
+    storageClass: local-path
+    size: 10Gi
+
+minio:
+  enabled: true
+  mode: standalone
+  nodeSelector:
+    inference-club.com/box: a2
+  persistence:
+    storageClass: local-path
+    size: 200Gi
+
+# Message queues are unused in standalone/rocksmq mode.
+pulsarv3:
+  enabled: false
+pulsar:
+  enabled: false
+kafka:
+  enabled: false
+woodpecker:
+  enabled: false

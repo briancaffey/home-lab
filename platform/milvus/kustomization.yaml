@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Milvus standalone (GPU-shared) — data-layer service, peer to platform/qdrant.
+#
+# Render + apply with the STANDALONE kustomize v5 binary (NOT `kubectl kustomize`,
+# which is broken with Helm v4 — see CLAUDE.md), and ALWAYS force the namespace on
+# apply, because the bundled minio subchart renders namespaceless objects:
+#
+#   kustomize build --enable-helm platform/milvus | kubectl apply -n milvus -f -
+#
+# `namespace: milvus` below stamps those namespaceless resources; the explicit
+# `-n milvus` on apply is belt-and-suspenders against the default-namespace
+# incident that hit homepage on 2026-06-29.
+
+namespace: milvus
+
+resources:
+  - namespace.yaml
+  - ingress.yaml
+
+helmCharts:
+  - name: milvus
+    repo: https://zilliztech.github.io/milvus-helm/
+    version: 5.0.23
+    releaseName: milvus
+    namespace: milvus
+    valuesFile: values.yaml
+
+# The chart exposes runtimeClassName for cluster-mode query/index nodes but NOT
+# for the standalone workload, so inject it here for shared/unmanaged GPU access.
+patches:
+  - target:
+      kind: Deployment
+      name: milvus-standalone
+    patch: |
+      - op: add
+        path: /spec/template/spec/runtimeClassName
+        value: nvidia

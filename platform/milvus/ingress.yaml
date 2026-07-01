@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: milvus
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Milvus"
+    gethomepage.dev/description: "Vector database — standalone, GPU-shared (a2)"
+    gethomepage.dev/group: "AI"
+    gethomepage.dev/icon: "milvus.png"
+    # Milvus serves gRPC on 19530; the web UI lives at :9091/webui/.
+    gethomepage.dev/href: "https://milvus.lan/webui/"
+    gethomepage.dev/pod-selector: "component=standalone"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["milvus.lan"]
+      secretName: milvus-tls
+  rules:
+    - host: milvus.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: milvus
+                port:
+                  number: 9091

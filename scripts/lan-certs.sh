@@ -9,7 +9,7 @@
 # whenever you add a new <name>.lan host (add it to HOSTS below).
 set -euo pipefail
 
-HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan invokeai.lan abs.lan jellyfin.lan vault.lan harbor.lan speedtest.lan netdata.lan forgejo.lan immich.lan music.lan paperless.lan models.lan phoenix.lan pihole.lan litellm.lan "*.lan")
+HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan invokeai.lan abs.lan jellyfin.lan vault.lan harbor.lan speedtest.lan netdata.lan forgejo.lan immich.lan music.lan paperless.lan models.lan phoenix.lan pihole.lan litellm.lan milvus.lan "*.lan")
 
 # secret-name : namespace
 SECRETS=(
@@ -33,6 +33,7 @@ SECRETS=(
   "phoenix-tls:observability"
   "pihole-tls:pihole"
   "litellm-tls:observability"
+  "milvus-tls:milvus"
 )
 
 command -v mkcert >/dev/null || { echo "mkcert not found (brew install mkcert nss)"; exit 1; }
