@@ -72,6 +72,7 @@ run `mkcert -install` once per client to trust the CA).
 |---|---|---|
 | Homepage | Service dashboard (auto-discovers ingresses) | https://home.lan/ |
 | Headlamp | Kubernetes dashboard | https://headlamp.lan/ |
+| Kube Ops View | Live node→pod resource map (bin-packing aid) | https://kube-ops-view.lan/ |
 | Open WebUI | Chat UI for local LLMs (via LiteLLM) | https://openwebui.lan/ |
 | Grafana | Dashboards (also NodePort 30030) | https://grafana.lan/ |
 | Jupyter | GPU JupyterLab (a2) | https://jupyter.lan/ |

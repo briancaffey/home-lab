@@ -1,0 +1,85 @@
+# kube-ops-view — live visual node→pod resource map (home-lab#13). Read-only:
+# it watches nodes + pods and draws the cluster as boxes, which is exactly the
+# "where is the headroom" view the bin-packing goal wants. Stateless, no
+# persistence, tiny footprint — parked on x1 (CPU box with the most room).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-ops-view
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-ops-view
+  namespace: kube-ops-view
+---
+# Read-only view of cluster topology; nothing else.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-ops-view
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-ops-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-ops-view
+subjects:
+  - kind: ServiceAccount
+    name: kube-ops-view
+    namespace: kube-ops-view
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-ops-view
+  namespace: kube-ops-view
+  labels: { app: kube-ops-view }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: kube-ops-view }
+  template:
+    metadata:
+      labels: { app: kube-ops-view }
+    spec:
+      serviceAccountName: kube-ops-view
+      nodeSelector:
+        inference-club.com/box: x1
+      containers:
+        - name: kube-ops-view
+          # amd64-only image — fine on x1/a1/a2/a3 (not spark).
+          image: hjacobs/kube-ops-view:23.5.0
+          ports:
+            - { name: http, containerPort: 8080 }
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-ops-view
+  namespace: kube-ops-view
+spec:
+  selector: { app: kube-ops-view }
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

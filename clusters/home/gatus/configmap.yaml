@@ -77,6 +77,11 @@ data:
         interval: 1m
         conditions: ["[STATUS] == 200"]
         alerts: [{ type: email }]
+      - name: kube-ops-view
+        group: Cluster
+        url: "http://kube-ops-view.kube-ops-view:80/health"
+        interval: 5m
+        conditions: ["[STATUS] == 200"]
       - name: harbor
         group: Cluster
         url: "http://harbor-core.harbor:80/api/v2.0/health"

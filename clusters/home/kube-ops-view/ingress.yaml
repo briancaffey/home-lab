@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kube-ops-view
+  namespace: kube-ops-view
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Kube Ops View"
+    gethomepage.dev/description: "Node→pod resource map (bin-packing)"
+    gethomepage.dev/group: "Cluster"
+    gethomepage.dev/icon: "mdi-view-dashboard-variant"
+    gethomepage.dev/href: "https://kube-ops-view.lan/"
+    gethomepage.dev/pod-selector: "app=kube-ops-view"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["kube-ops-view.lan"]
+      secretName: kube-ops-view-tls
+  rules:
+    - host: kube-ops-view.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-ops-view
+                port:
+                  number: 80

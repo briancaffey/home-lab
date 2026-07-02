@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# kube-ops-view — live node→pod resource map (home-lab#13). Apply with:
+#   kubectl apply -k clusters/home/kube-ops-view
+# Out-of-band prereq: kube-ops-view-tls secret (scripts/lan-certs.sh).
+resources:
+  - kube-ops-view.yaml
+  - ingress.yaml
