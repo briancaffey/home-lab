@@ -56,6 +56,12 @@ spec:
             - { name: FTLCONF_dns_upstreams, value: "1.1.1.1;1.0.0.1" }
             # answer queries arriving from other subnets (k8s DNAT / whole LAN)
             - { name: FTLCONF_dns_listeningMode, value: "all" }
+            # Authoritative wildcard for the homelab: every *.lan name resolves
+            # to Traefik on a3 (ingress front door). This is what lets browsers
+            # resolve .lan — Chromium's built-in DNS ignores macOS
+            # /etc/resolver entries, so per-host /etc/hosts hacks don't scale.
+            # Point clients (or the router's DHCP DNS) at Pi-hole to use it.
+            - { name: FTLCONF_misc_dnsmasq_lines, value: "address=/lan/192.168.5.173" }
             - { name: FTLCONF_webserver_port, value: "80,443s" }
             - name: FTLCONF_webserver_api_password
               valueFrom:
