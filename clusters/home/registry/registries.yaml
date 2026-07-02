@@ -1,7 +1,8 @@
-# k3s per-node registry config — install at /etc/rancher/k3s/registries.yaml on
-# every node that pulls from the in-cluster registry, then restart k3s:
-#   server (a3):  sudo systemctl restart k3s
-#   agents:       sudo systemctl restart k3s-agent
+# DEPRECATED — scripts/k3s-registries.sh is now the canonical per-node
+# registries.yaml (Harbor pull-through mirrors + this legacy 30500 block).
+# This file remains only as documentation of the old in-cluster registry:2;
+# delete it (and the 30500 blocks in the script) once rampart + nemotron-asr
+# images migrate to Harbor.
 #
 # Tells containerd the LAN registry on a3 speaks plain HTTP (no TLS), so pulls of
 # 192.168.5.173:30500/<repo>:<tag> don't fail with "server gave HTTP response to

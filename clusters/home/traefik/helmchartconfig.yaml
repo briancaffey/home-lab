@@ -1,0 +1,16 @@
+# Raise Traefik's entrypoint read timeout (home-lab#28 item 5).
+# Traefik v3 defaults respondingTimeouts.readTimeout to 60s, which 502s any
+# request body that takes longer than a minute to upload — i.e. every multi-GB
+# image push to harbor.lan over WiFi. 1h accommodates the largest model images.
+# HelmChartConfig merges into k3s's bundled traefik HelmChart; the helm
+# controller re-renders and rolls the deployment on apply (brief ingress blip).
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    additionalArguments:
+      - "--entryPoints.web.transport.respondingTimeouts.readTimeout=1h"
+      - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=1h"

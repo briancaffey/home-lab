@@ -37,8 +37,10 @@ if command -v update-ca-certificates >/dev/null; then
 fi
 
 # 3) restart the right k3s unit so containerd reloads
+# NB: not `list-unit-files | grep -q` — grep -q's early exit SIGPIPEs
+# systemctl and pipefail turns that into a bogus failure.
 UNIT=k3s
-systemctl list-unit-files | grep -q '^k3s-agent\.service' && UNIT=k3s-agent
+systemctl cat k3s-agent.service >/dev/null 2>&1 && UNIT=k3s-agent
 echo "restarting $UNIT ..."
 systemctl restart "$UNIT"; sleep 6
 echo "  $UNIT: $(systemctl is-active "$UNIT")"

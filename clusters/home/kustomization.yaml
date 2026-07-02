@@ -6,4 +6,5 @@ resources:
   - namespaces/observability.yaml
   - namespaces/mcp.yaml
   - gpu
+  - traefik
   - monitoring
