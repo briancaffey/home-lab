@@ -31,6 +31,101 @@ metadata:
   name: litellm-config
   namespace: observability
 data:
+  # Rampart PII guard (Forgejo issue #26): redacts user text via the in-cluster
+  # rampart service (clusters/home/rampart) before it reaches CLOUD providers.
+  # Two layers because LiteLLM routing has two leak paths:
+  #   1. pre_call guardrail  — attached per-model to the cloud entries below;
+  #      catches requests that name a cloud model directly.
+  #   2. pre-call DEPLOYMENT hook — runs after the router picks a deployment
+  #      (including silent fallbacks local→cloud) and redacts whenever the
+  #      target is not local. This is the one that guards the fallback path.
+  # Local targets (svc.cluster.local / 192.168.x / *.lan) are never redacted.
+  rampart_guardrail.py: |
+    """Rampart PII guardrail for the LiteLLM proxy.
+
+    Calls the in-cluster rampart service's /protect-messages endpoint, which
+    replaces PII with stable placeholders ([GIVEN_NAME_1], [SSN_1], ...) using
+    the nationaldesignstudio/rampart ONNX model + deterministic recognizers.
+
+    Fail-closed by default: if rampart is unreachable, cloud-bound requests
+    error rather than leak. Set on_error: "allow" in litellm_params to relax.
+    """
+    import os
+
+    import httpx
+    from litellm._logging import verbose_proxy_logger
+    from litellm.integrations.custom_guardrail import CustomGuardrail
+    from litellm.types.guardrails import GuardrailEventHooks
+
+    RAMPART_URL = os.environ.get(
+        "RAMPART_URL", "http://rampart.rampart.svc.cluster.local:8080"
+    )
+    # Anything whose api_base matches these is in-cluster/LAN → no redaction.
+    LOCAL_MARKERS = (".svc.cluster.local", "192.168.", ".lan", "localhost", "127.0.0.1")
+
+
+    def _is_local_target(api_base: str | None) -> bool:
+        if not api_base:
+            return False  # no api_base → SaaS SDK route (groq/, openrouter/) → cloud
+        return any(m in api_base for m in LOCAL_MARKERS)
+
+
+    async def _redact_messages(messages: list) -> list:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{RAMPART_URL}/protect-messages", json={"messages": messages}
+            )
+            resp.raise_for_status()
+            body = resp.json()
+        if body.get("placeholders"):
+            verbose_proxy_logger.info(
+                "rampart: redacted %s", ", ".join(body["placeholders"])
+            )
+        return body["messages"]
+
+
+    class RampartGuard(CustomGuardrail):
+        def __init__(self, **kwargs):
+            self.on_error = kwargs.pop("on_error", "block")
+            super().__init__(**kwargs)
+
+        async def _guard(self, data: dict, where: str) -> dict:
+            messages = data.get("messages")
+            if not messages:
+                return data
+            try:
+                data["messages"] = await _redact_messages(messages)
+            except Exception as err:
+                if self.on_error == "allow":
+                    verbose_proxy_logger.warning(
+                        "rampart unreachable (%s) — passing through UNREDACTED: %s",
+                        where, err,
+                    )
+                    return data
+                raise Exception(
+                    f"rampart PII guard failed ({where}): {err} — blocking "
+                    "cloud-bound request (fail-closed; set on_error: allow to relax)"
+                ) from err
+            return data
+
+        # Layer 1: requests that name a cloud model directly. Runs only when the
+        # guardrail is attached (per-model `guardrails:` below or per-request).
+        async def async_pre_call_hook(self, user_api_key_dict, cache, data, call_type):
+            if self.should_run_guardrail(data=data, event_type=GuardrailEventHooks.pre_call) is not True:
+                return data
+            return await self._guard(data, "pre_call")
+
+        # Layer 2: after the router picks a deployment — including fallback
+        # hops — redact whenever the destination is not local. This is what
+        # keeps a nemotron-omni request that falls back to Groq from leaking.
+        async def async_pre_call_deployment_hook(self, kwargs: dict, call_type=None):
+            litellm_params = kwargs.get("litellm_params") or {}
+            api_base = litellm_params.get("api_base") or kwargs.get("api_base")
+            model = kwargs.get("model") or ""
+            if _is_local_target(api_base):
+                return kwargs
+            return await self._guard(kwargs, f"deployment:{model}")
+
   config.yaml: |
     model_list:
       # ── In-cluster (primary, free, private) ───────────────────────────────
@@ -56,6 +151,7 @@ data:
         litellm_params:
           model: groq/llama-3.3-70b-versatile
           api_key: os.environ/GROQ_API_KEY
+          guardrails: ["rampart-pii"]
       # OpenRouter — broad catalogue; this points at a free model with a huge
       # (1M) context window, which is why it's the context-window fallback.
       # OpenRouter rotates free model ids — if it 404s, pick another :free model
@@ -64,12 +160,14 @@ data:
         litellm_params:
           model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
           api_key: os.environ/OPENROUTER_API_KEY
+          guardrails: ["rampart-pii"]
       # NVIDIA NIM (build.nvidia.com) — OpenAI-compatible at integrate.api.nvidia.com.
       - model_name: nvidia-nemotron-super
         litellm_params:
           model: openai/nvidia/llama-3.3-nemotron-super-49b-v1
           api_base: https://integrate.api.nvidia.com/v1
           api_key: os.environ/NVIDIA_API_KEY
+          guardrails: ["rampart-pii"]
 
     # Routing & fallbacks. The local nemotron is preferred; if it's down or scaled
     # to 0, requests transparently fall through to the free cloud backends in order.
@@ -83,6 +181,15 @@ data:
       # If a prompt exceeds the local 64k window, spill to a bigger-context backend.
       context_window_fallbacks:
         - nemotron-omni: ["openrouter-nemotron-ultra", "groq-llama-3.3-70b"]
+
+    # Rampart PII guard (see rampart_guardrail.py above). Attached per-model to
+    # the cloud entries; its deployment hook additionally guards fallback hops.
+    guardrails:
+      - guardrail_name: rampart-pii
+        litellm_params:
+          guardrail: rampart_guardrail.RampartGuard
+          mode: pre_call
+          on_error: block   # fail-closed: no rampart → no cloud call
 
     litellm_settings:
       # Export every request as an OTLP trace to Phoenix.
@@ -118,6 +225,9 @@ spec:
           image: ghcr.io/berriai/litellm:main-latest
           args: ["--config", "/etc/litellm/config.yaml", "--port", "4000"]
           env:
+            # Make the configmap-mounted rampart_guardrail.py importable.
+            - { name: PYTHONPATH, value: "/etc/litellm" }
+            - { name: RAMPART_URL, value: "http://rampart.rampart.svc.cluster.local:8080" }
             - name: LITELLM_MASTER_KEY
               valueFrom:
                 secretKeyRef: { name: litellm-secret, key: master-key }
