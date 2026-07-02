@@ -27,6 +27,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-brain"
     gethomepage.dev/href: "https://omni.lan/docs"
+    gethomepage.dev/pod-selector: "app=nemotron-omni"
     gethomepage.dev/siteMonitor: "http://nemotron-omni.inference-club:8000/health"
 spec:
   ingressClassName: traefik
@@ -51,6 +52,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-ear-hearing"
     gethomepage.dev/href: "https://asr.lan/docs"
+    gethomepage.dev/pod-selector: "app=nemotron-asr"
     gethomepage.dev/siteMonitor: "http://nemotron-asr.inference-club:8105/docs"
 spec:
   ingressClassName: traefik
@@ -75,6 +77,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-account-voice"
     gethomepage.dev/href: "https://magpie.lan/docs"
+    gethomepage.dev/pod-selector: "app=magpie-tts"
     gethomepage.dev/siteMonitor: "http://magpie-tts.inference-club:9000/v1/health/ready"
 spec:
   ingressClassName: traefik
@@ -99,6 +102,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-image-multiple"
     gethomepage.dev/href: "https://flux.lan/docs"
+    gethomepage.dev/pod-selector: "app=flux2-klein"
     gethomepage.dev/siteMonitor: "http://flux2-klein.inference-club:8000/docs"
 spec:
   ingressClassName: traefik
@@ -123,6 +127,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-movie-open"
     gethomepage.dev/href: "https://ltx.lan/docs"
+    gethomepage.dev/pod-selector: "app=ltx2"
     gethomepage.dev/siteMonitor: "http://ltx2.inference-club:8023/docs"
 spec:
   ingressClassName: traefik
@@ -147,6 +152,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-microphone-variant"
     gethomepage.dev/href: "https://studio-voice.lan/docs"
+    gethomepage.dev/pod-selector: "app=studio-voice"
     gethomepage.dev/siteMonitor: "http://studio-voice.inference-club:8080/docs"
 spec:
   ingressClassName: traefik
@@ -172,6 +178,7 @@ metadata:
     gethomepage.dev/icon: "mdi-fire"
     # BULL_AUTH_KEY is the self-host default "CHANGEME" (not a secret).
     gethomepage.dev/href: "https://firecrawl.lan/admin/CHANGEME/queues"
+    gethomepage.dev/pod-selector: "app=firecrawl-api"
     gethomepage.dev/siteMonitor: "http://firecrawl.inference-club:3002/"
 spec:
   ingressClassName: traefik
@@ -196,6 +203,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-music-clef-treble"
     gethomepage.dev/href: "https://acestep.lan/docs"
+    gethomepage.dev/pod-selector: "app=acestep"
     gethomepage.dev/siteMonitor: "http://acestep.inference-club:8015/health"
 spec:
   ingressClassName: traefik
@@ -220,6 +228,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-waveform"
     gethomepage.dev/href: "https://dia.lan/docs"
+    gethomepage.dev/pod-selector: "app=dia"
     gethomepage.dev/siteMonitor: "http://dia.inference-club:8491/docs"
 spec:
   ingressClassName: traefik
@@ -244,6 +253,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-cube-outline"
     gethomepage.dev/href: "https://trellis.lan/docs"
+    gethomepage.dev/pod-selector: "app=trellis2"
     gethomepage.dev/siteMonitor: "http://trellis2.inference-club:8000/docs"
 spec:
   ingressClassName: traefik
@@ -268,6 +278,7 @@ metadata:
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-desktop-classic"
     gethomepage.dev/href: "https://lmstudio.lan/v1/models"
+    gethomepage.dev/pod-selector: "app=lmstudio-headless"
     gethomepage.dev/siteMonitor: "http://lmstudio-headless.inference-club:1234/v1/models"
 spec:
   ingressClassName: traefik
