@@ -1,6 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: hermes
 
 # Hermes Agent (Nous Research) — cluster-hosted agent on x1. Forgejo issue #10.
 # Apply with:
@@ -11,8 +10,21 @@ namespace: hermes
 #   - image in Harbor              (see image/Dockerfile header)
 resources:
   - namespace.yaml
+  - rbac.yaml
   - pvc.yaml
   - configmap.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+
+# Like `namespace: hermes`, but unsetOnly — a plain `namespace:` field stomps
+# the cross-namespace RoleBinding (hermes-edit → inference-club) in rbac.yaml.
+# Resources without an explicit namespace still land in `hermes`.
+transformers:
+  - |-
+    apiVersion: builtin
+    kind: NamespaceTransformer
+    metadata:
+      name: hermes-ns
+      namespace: hermes
+    unsetOnly: true

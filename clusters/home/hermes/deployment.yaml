@@ -34,6 +34,9 @@ spec:
       # A Service named `hermes` would inject HERMES_PORT=tcp://... env vars,
       # which collide with the image's HERMES_* config parsing.
       enableServiceLinks: false
+      # kubectl "hand" (rbac.yaml): cluster-wide read + edit in inference-club.
+      # kubectl uses the auto-mounted SA token — no kubeconfig anywhere.
+      serviceAccountName: hermes
       # x1: CPU-only box — Hermes is a Python brain, never needs a GPU.
       nodeSelector:
         inference-club.com/box: x1
@@ -56,6 +59,16 @@ spec:
         - name: install-otel-libs
           image: nousresearch/hermes-agent:v2026.6.19
           command: ["sh", "-c", "[ -d /opt/data/otel-libs/opentelemetry ] && echo 'otel libs present' || uv pip install --no-cache --target /opt/data/otel-libs opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http"]
+          volumeMounts:
+            - { name: data, mountPath: /opt/data }
+        # kubectl onto the PVC — /opt/data/.local/bin is already on the image's
+        # PATH, so terminal tool calls find it with zero container changes.
+        # Pinned to the server version (k3s v1.35.5). Same interim-vs-derived-
+        # image story as install-otel-libs; fold into image/Dockerfile when
+        # x1 trusts Harbor (TODO(x1-harbor-trust)).
+        - name: install-kubectl
+          image: nousresearch/hermes-agent:v2026.6.19
+          command: ["sh", "-c", "[ -x /opt/data/.local/bin/kubectl ] && echo 'kubectl present' || (mkdir -p /opt/data/.local/bin && curl -fsSL -o /opt/data/.local/bin/kubectl https://dl.k8s.io/release/v1.35.5/bin/linux/amd64/kubectl && chmod +x /opt/data/.local/bin/kubectl)"]
           volumeMounts:
             - { name: data, mountPath: /opt/data }
       containers:

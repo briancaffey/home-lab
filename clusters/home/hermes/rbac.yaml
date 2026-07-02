@@ -1,0 +1,80 @@
+# Hermes's kubectl "hand" — Forgejo issue #10 ("Cluster control" follow-up).
+#
+# Scope philosophy: read (almost) everything, write only where inference
+# workloads live. A weak/confused model must not be able to break cluster
+# plumbing (kube-system, traefik, harbor, …).
+#
+#   READ  cluster-wide : built-in `view` (excludes Secrets by design) plus the
+#                        add-on below (nodes, PVs, metrics, CRDs — things
+#                        `view` doesn't cover but "what's in my cluster" needs)
+#   WRITE inference-club: built-in `edit` via RoleBinding — scale/patch/create
+#                        deployments, services, PVCs, etc. in that ns only
+#
+# To grant write in another namespace later: copy the RoleBinding, change
+# metadata.namespace. Grow deliberately.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hermes
+---
+# view excludes Secrets everywhere — deliberate: Hermes chats can flow through
+# cloud models; cluster-wide secret read is the one thing held back.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hermes-view
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: ServiceAccount
+    name: hermes
+    namespace: hermes
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hermes-cluster-read
+rules:
+  # cluster-scoped things `view` doesn't include
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+  # let it discover and read CRDs (traefik ingressroutes, longhorn volumes, …)
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["traefik.io", "longhorn.io", "helm.cattle.io", "tailscale.com"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hermes-cluster-read
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hermes-cluster-read
+subjects:
+  - kind: ServiceAccount
+    name: hermes
+    namespace: hermes
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hermes-edit
+  namespace: inference-club
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: edit
+subjects:
+  - kind: ServiceAccount
+    name: hermes
+    namespace: hermes
