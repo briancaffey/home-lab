@@ -41,7 +41,8 @@ and containers at these instead of IP:port. `/docs` on each = OpenAPI UI.
 
 | Service | What it does | Reach it |
 |---|---|---|
-| **LiteLLM** | One OpenAI-compatible URL for all LLMs — Admin UI, virtual keys, budgets, fallback (local→Groq/OpenRouter/NVIDIA), tracing | https://litellm.lan/ui · `http://192.168.5.173:30400` · `litellm.observability.svc:4000` |
+| **LiteLLM** | One OpenAI-compatible URL for all LLMs — Admin UI, virtual keys, budgets, fallback (local→Groq/OpenRouter/NVIDIA), tracing; cloud-bound traffic is PII-redacted via Rampart | https://litellm.lan/ui · `http://192.168.5.173:30400` · `litellm.observability.svc:4000` |
+| Rampart | Local PII redaction (nationaldesignstudio/rampart ONNX, a1) — playground UI + API; guards LiteLLM's cloud calls | https://rampart.lan/ · `rampart.rampart.svc:8080` |
 | Postgres + pgvector | Shared SQL + vector store | `a3:5432` / `postgres.platform.svc:5432` |
 | Redis | Shared cache / queue | `redis.platform.svc:6379` |
 | MinIO | S3-compatible object storage | console http://192.168.5.173:30901 · S3 `:30900` |
