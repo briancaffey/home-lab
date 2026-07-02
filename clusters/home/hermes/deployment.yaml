@@ -11,7 +11,7 @@
 #   kubectl -n hermes create secret generic hermes-secrets \
 #     --from-literal=api-server-key="$(scripts/vault-secret.sh hermes-api-server-key)" \
 #     --from-literal=litellm-api-key="$(scripts/vault-secret.sh litellm-key-hermes-agent)" \
-#     --from-literal=dashboard-password="$(scripts/vault-secret.sh hermes-dashboard)" \
+#     --from-literal=dashboard-password="$(scripts/vault-secret.sh hermes-dashboard-password)" \
 #     --from-literal=dashboard-session-secret="$(scripts/vault-secret.sh hermes-dashboard-session-secret)"
 apiVersion: apps/v1
 kind: Deployment

@@ -13,10 +13,13 @@
 #
 # Usage:
 #   printf '%s' '<secret-value>' | scripts/vault-put.sh <item-name> [field]
-#     field: password (default) | notes
+#     field: password (default) | notes | username
+#   Updates MERGE into the existing item (other fields are preserved), so a
+#   username+password item is two piped calls to the same item name.
 #
 #   # examples
 #   printf '%s' "$NEW_TOKEN"      | scripts/vault-put.sh forgejo-api
+#   printf '%s' 'admin'           | scripts/vault-put.sh harbor-admin username
 #   scripts/vault-secret.sh other | scripts/vault-put.sh copy-of-other   # piped in
 #
 set -euo pipefail
@@ -36,7 +39,15 @@ if [[ -z "${NODE_EXTRA_CA_CERTS:-}" ]]; then
   [[ -n "$caroot" && -f "$caroot/rootCA.pem" ]] && export NODE_EXTRA_CA_CERTS="$caroot/rootCA.pem"
 fi
 
-kc() { security find-generic-password -a claude -s "$1" -w 2>/dev/null; }
+# Keychain lookup: macOS `security`, else libsecret's `secret-tool` (Linux
+# desktop; see docs/10 "second machine bootstrap" for storing the bot creds).
+kc() {
+  if command -v security >/dev/null 2>&1; then
+    security find-generic-password -a claude -s "$1" -w 2>/dev/null
+  else
+    secret-tool lookup account claude service "$1" 2>/dev/null
+  fi
+}
 BW_CLIENTID="$(kc vaultwarden-bot-clientid)"         || { echo "missing keychain item: vaultwarden-bot-clientid" >&2; exit 1; }
 BW_CLIENTSECRET="$(kc vaultwarden-bot-clientsecret)" || { echo "missing keychain item: vaultwarden-bot-clientsecret" >&2; exit 1; }
 BW_PASSWORD="$(kc vaultwarden-bot-password)"         || { echo "missing keychain item: vaultwarden-bot-password" >&2; exit 1; }
@@ -63,30 +74,38 @@ EXISTING_ID="$(bw list items --search "$ITEM" --session "$SESSION" \
   | python3 -c "import sys,json;print(next((i['id'] for i in json.load(sys.stdin) if i.get('name')=='$ITEM'),''))")"
 
 # Build the item JSON in python; the secret arrives via env, never argv.
+# On update, start from the EXISTING item so other fields survive (setting a
+# username must not wipe the password, and vice versa).
 build_item() {
-  ITEM_NAME="$ITEM" FIELD="$FIELD" VALUE="$VALUE" ORG_ID="$ORG_ID" COLL_ID="$COLL_ID" python3 - <<'PY'
+  EXISTING_JSON="${1:-}" ITEM_NAME="$ITEM" FIELD="$FIELD" VALUE="$VALUE" ORG_ID="$ORG_ID" COLL_ID="$COLL_ID" python3 - <<'PY'
 import os, json
 field = os.environ["FIELD"]; value = os.environ["VALUE"]
-item = {
-    "type": 1,  # login
-    "name": os.environ["ITEM_NAME"],
-    "organizationId": os.environ["ORG_ID"],
-    "collectionIds": [os.environ["COLL_ID"]],
-    "notes": value if field == "notes" else None,
-    "login": {
-        "username": None,
-        "password": value if field != "notes" else None,
-        "totp": None,
-    },
-}
+existing = os.environ.get("EXISTING_JSON")
+if existing:
+    item = json.loads(existing)
+    item.setdefault("login", {})
+else:
+    item = {
+        "type": 1,  # login
+        "name": os.environ["ITEM_NAME"],
+        "organizationId": os.environ["ORG_ID"],
+        "collectionIds": [os.environ["COLL_ID"]],
+        "notes": None,
+        "login": {"username": None, "password": None, "totp": None},
+    }
+if field == "notes":
+    item["notes"] = value
+else:
+    item["login"][field] = value
 print(json.dumps(item))
 PY
 }
 
 if [[ -n "$EXISTING_ID" ]]; then
-  build_item | bw encode | bw edit item "$EXISTING_ID" --session "$SESSION" >/dev/null
-  echo "updated '$ITEM' in $ORG_NAME/$COLLECTION_NAME"
+  EXISTING_JSON="$(bw get item "$EXISTING_ID" --session "$SESSION")"
+  build_item "$EXISTING_JSON" | bw encode | bw edit item "$EXISTING_ID" --session "$SESSION" >/dev/null
+  echo "updated '$ITEM' ($FIELD) in $ORG_NAME/$COLLECTION_NAME"
 else
   build_item | bw encode | bw create item --session "$SESSION" >/dev/null
-  echo "created '$ITEM' in $ORG_NAME/$COLLECTION_NAME"
+  echo "created '$ITEM' ($FIELD) in $ORG_NAME/$COLLECTION_NAME"
 fi

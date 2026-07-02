@@ -52,7 +52,15 @@ if [[ -z "${NODE_EXTRA_CA_CERTS:-}" ]]; then
   [[ -n "$caroot" && -f "$caroot/rootCA.pem" ]] && export NODE_EXTRA_CA_CERTS="$caroot/rootCA.pem"
 fi
 
-kc() { security find-generic-password -a claude -s "$1" -w 2>/dev/null; }
+# Keychain lookup: macOS `security`, else libsecret's `secret-tool` (Linux
+# desktop; see docs/10 "second machine bootstrap" for storing the bot creds).
+kc() {
+  if command -v security >/dev/null 2>&1; then
+    security find-generic-password -a claude -s "$1" -w 2>/dev/null
+  else
+    secret-tool lookup account claude service "$1" 2>/dev/null
+  fi
+}
 
 BW_CLIENTID="$(kc vaultwarden-bot-clientid)"     || { echo "missing keychain item: vaultwarden-bot-clientid" >&2; exit 1; }
 BW_CLIENTSECRET="$(kc vaultwarden-bot-clientsecret)" || { echo "missing keychain item: vaultwarden-bot-clientsecret" >&2; exit 1; }

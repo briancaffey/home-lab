@@ -114,3 +114,29 @@ have **Can edit** on the `Automation` collection.
   flow can `scripts/vault-secret.sh forgejo-api` instead of `exec`-ing into the
   pod to mint one.
 ```
+
+## Bootstrap on a second machine (laptop must not be the only vault door)
+
+The scripts auto-detect the OS keystore: macOS `security` (login Keychain) or
+Linux `secret-tool` (libsecret/GNOME Keyring — needs a desktop/keyring session;
+`sudo apt install libsecret-tools`). To stand up a new operator machine:
+
+1. **Install tools:** `bw` CLI (`brew install bitwarden-cli` / `npm i -g
+   @bitwarden/cli`), `mkcert`, `kubectl`, and clone this repo.
+2. **Trust the LAN CA:** copy `rootCA.pem` + `rootCA-key.pem` from the primary
+   machine's `mkcert -CAROOT` to the new machine's, then `mkcert -install`.
+   (Red-tape item 2 will automate this as `trust-lan-ca.sh`; the CA also
+   belongs in the vault per red-tape item 4.)
+3. **Store the three bot credentials** (values from Brian's password manager /
+   the Vaultwarden web UI — this is the one manual, human step):
+   - macOS: the three `security add-generic-password -U -a claude -s
+     vaultwarden-bot-…` commands in the `vault-secret.sh` header.
+   - Linux: `printf '%s' '<value>' | secret-tool store --label='vaultwarden
+     bot' account claude service vaultwarden-bot-clientid` (repeat for
+     `-clientsecret` and `-password`).
+4. **Verify:** `scripts/vault-secret.sh forgejo-api | wc -c` → a 40-char token.
+
+Item-name convention: `<service>-api` (API tokens), `<service>-admin`
+(username+password logins — set both fields with two `vault-put.sh` calls),
+and NO item name may be a prefix of another (`bw get` matches by substring
+and errors on multiple hits — this bit us with `hermes-dashboard`).
