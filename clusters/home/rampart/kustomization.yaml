@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rampart
+
+# Rampart — local PII redaction (nationaldesignstudio/rampart, Q4 ONNX on CPU).
+# Playground + API at https://rampart.lan/; also guards cloud-bound traffic in
+# the LiteLLM gateway (observability/litellm/). Forgejo issue #26.
+# Apply with:
+#   kubectl apply -k clusters/home/rampart
+# Out-of-band prereqs:
+#   - rampart-tls secret   (scripts/lan-certs.sh — rampart.lan is in HOSTS)
+#   - image in Harbor      (see image/Dockerfile header for build + crane push)
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml

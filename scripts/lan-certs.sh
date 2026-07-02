@@ -13,7 +13,7 @@ set -euo pipefail
 # non-browser clients, but Chrome/Firefox reject wildcards directly under a
 # TLD (needs >= 2 dots, i.e. *.x.lan would work but *.lan does not) — relying
 # on it produces ERR_CERT_COMMON_NAME_INVALID.
-HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan invokeai.lan abs.lan jellyfin.lan vault.lan harbor.lan speedtest.lan netdata.lan forgejo.lan immich.lan music.lan paperless.lan models.lan phoenix.lan pihole.lan litellm.lan milvus.lan manyfold.lan gatus.lan hermes.lan omni.lan asr.lan magpie.lan flux.lan ltx.lan studio-voice.lan firecrawl.lan acestep.lan dia.lan trellis.lan lmstudio.lan kube-ops-view.lan "*.lan")
+HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan invokeai.lan abs.lan jellyfin.lan vault.lan harbor.lan speedtest.lan netdata.lan forgejo.lan immich.lan music.lan paperless.lan models.lan phoenix.lan pihole.lan litellm.lan milvus.lan manyfold.lan gatus.lan hermes.lan omni.lan asr.lan magpie.lan flux.lan ltx.lan studio-voice.lan firecrawl.lan acestep.lan dia.lan trellis.lan lmstudio.lan kube-ops-view.lan rampart.lan "*.lan")
 
 # secret-name : namespace
 SECRETS=(
@@ -46,6 +46,7 @@ SECRETS=(
   # above — browsers do not accept the *.lan wildcard (see NOTE there).
   "inference-tls:inference-club"
   "kube-ops-view-tls:kube-ops-view"
+  "rampart-tls:rampart"
 )
 
 command -v mkcert >/dev/null || { echo "mkcert not found (brew install mkcert nss)"; exit 1; }

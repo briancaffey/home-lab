@@ -1,0 +1,34 @@
+# https://rampart.lan/ (Traefik + mkcert rampart-tls). Playground UI at /,
+# JSON API at /protect, /reveal, /protect-messages. Grouped with Inference on
+# Homepage (custom icon from the homepage-icons configMap).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rampart
+  namespace: rampart
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "rampart"
+    gethomepage.dev/description: "PII redaction (playground + API)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "/icons/rampart.webp"
+    gethomepage.dev/href: "https://rampart.lan/"
+    gethomepage.dev/pod-selector: "app=rampart"
+    gethomepage.dev/siteMonitor: "http://rampart.rampart:8080/healthz"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: rampart.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rampart
+                port:
+                  number: 8080
+  tls:
+    - secretName: rampart-tls
+      hosts:
+        - rampart.lan

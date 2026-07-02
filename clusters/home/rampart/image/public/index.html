@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rampart — PII Redaction Playground</title>
+<style>
+  :root {
+    --bg: #0e1117; --panel: #161b26; --panel2: #1c2333; --border: #2a3247;
+    --text: #dfe6f3; --dim: #8b96ad; --accent: #5aa8ff; --good: #4ade80;
+    --tag: #223052;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  header {
+    padding: 20px 28px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .3px; }
+  header h1 .shield { margin-right: 8px; }
+  header .sub { color: var(--dim); font-size: 13px; }
+  header a { color: var(--accent); text-decoration: none; }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 22px 28px; max-width: 1280px; width: 100%; margin: 0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .card h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--dim); }
+  textarea {
+    width: 100%; min-height: 150px; resize: vertical; border-radius: 8px;
+    background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+    padding: 12px; font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  textarea:focus { outline: 1px solid var(--accent); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button {
+    background: var(--accent); color: #0b1220; font-weight: 600; border: 0;
+    border-radius: 8px; padding: 9px 18px; font-size: 14px; cursor: pointer;
+  }
+  button.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  button:disabled { opacity: .5; cursor: default; }
+  .out {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; min-height: 76px; white-space: pre-wrap; word-break: break-word;
+    font: 14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .out .ph { background: var(--tag); color: #9ec1ff; border: 1px solid #33518b; border-radius: 5px; padding: 0 5px; }
+  .meta { color: var(--dim); font-size: 12.5px; }
+  .meta b { color: var(--good); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips span { background: var(--tag); border: 1px solid #33518b; color: #9ec1ff; border-radius: 6px; padding: 2px 8px; font: 12px ui-monospace, Menlo, monospace; }
+  footer { padding: 14px 28px 22px; color: var(--dim); font-size: 12.5px; border-top: 1px solid var(--border); }
+  footer code { background: var(--panel2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="shield">🛡️</span>Rampart</h1>
+  <span class="sub">local PII redaction —
+    <a href="https://huggingface.co/nationaldesignstudio/rampart" target="_blank" rel="noreferrer">nationaldesignstudio/rampart</a>
+    (MiniLM Q4 ONNX, CPU) · placeholders stay stable per session · nothing leaves the cluster</span>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1 · Protect — user text in</h2>
+    <textarea id="input" spellcheck="false"></textarea>
+    <div class="row">
+      <button id="protect">Protect →</button>
+      <button id="sample" class="secondary">Load sample</button>
+      <button id="reset" class="secondary" title="Forget this session's placeholder table">New session</button>
+      <span class="meta" id="protectMeta"></span>
+    </div>
+    <div class="out" id="protectOut">Redacted text appears here — this is what would be sent to a cloud LLM.</div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="card">
+    <h2>2 · Reveal — assistant reply out</h2>
+    <p class="meta" style="margin:0">Paste (or auto-fill) a model reply containing placeholders; <b>reveal</b> restores the real values from this session's table — locally.</p>
+    <textarea id="reply" spellcheck="false"></textarea>
+    <div class="row">
+      <button id="reveal">Reveal ←</button>
+      <button id="fillReply" class="secondary">Auto-fill from placeholders</button>
+      <span class="meta" id="revealMeta"></span>
+    </div>
+    <div class="out" id="revealOut">Restored text appears here — this is what the user would see.</div>
+  </section>
+</main>
+
+<footer>
+  API: <code>POST /protect {text, session?}</code> · <code>POST /reveal {text, session}</code> ·
+  <code>POST /protect-messages {messages, session?}</code> · <code>GET /healthz</code>
+  — the same <code>/protect-messages</code> endpoint guards cloud-bound traffic in the LiteLLM gateway.
+</footer>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let session = null;
+  let lastPlaceholders = [];
+
+  const SAMPLE = "Hi, I'm Alex Rivera. My SSN is 472-81-0094 and my card is 4111 1111 1111 1111.\nEmail me at alex.rivera@example.com — I live at 42 Maple Street, Springfield, IL 62704.";
+
+  function esc(s) { return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+  function highlight(s) { return esc(s).replace(/\[([A-Z0-9_]+)\]/g, '<span class="ph">[$1]</span>'); }
+
+  async function api(path, body) {
+    const t0 = performance.now();
+    const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    return { data, ms: Math.round(performance.now() - t0) };
+  }
+
+  $("sample").onclick = () => { $("input").value = SAMPLE; };
+  $("reset").onclick = () => { session = null; lastPlaceholders = []; $("chips").innerHTML = ""; $("protectMeta").textContent = "session cleared"; };
+
+  $("protect").onclick = async () => {
+    const text = $("input").value.trim();
+    if (!text) return;
+    $("protect").disabled = true;
+    try {
+      const { data, ms } = await api("/protect", { text, session });
+      session = data.session;
+      lastPlaceholders = data.placeholders;
+      $("protectOut").innerHTML = highlight(data.text);
+      $("chips").innerHTML = data.placeholders.map((p) => `<span>${esc(p)}</span>`).join("");
+      $("protectMeta").innerHTML = `<b>${ms} ms</b> · ${data.placeholders.length} placeholder(s) · session ${session.slice(0, 8)}…`;
+    } catch (e) { $("protectOut").textContent = "error: " + e.message; }
+    $("protect").disabled = false;
+  };
+
+  $("fillReply").onclick = () => {
+    if (!lastPlaceholders.length) { $("reply").value = "Protect something first — then I can write a reply that uses its placeholders."; return; }
+    $("reply").value = "Thanks " + (lastPlaceholders.find(p => p.includes("GIVEN_NAME")) || lastPlaceholders[0]) +
+      "! I've noted your details: " + lastPlaceholders.join(", ") + ". We'll follow up shortly.";
+  };
+
+  $("reveal").onclick = async () => {
+    const text = $("reply").value.trim();
+    if (!text || !session) { $("revealOut").textContent = session ? "" : "no session yet — protect something first."; return; }
+    $("reveal").disabled = true;
+    try {
+      const { data, ms } = await api("/reveal", { text, session });
+      $("revealOut").textContent = data.text;
+      $("revealMeta").innerHTML = `<b>${ms} ms</b>${data.known ? "" : " · unknown session"}`;
+    } catch (e) { $("revealOut").textContent = "error: " + e.message; }
+    $("reveal").disabled = false;
+  };
+</script>
+</body>
+</html>

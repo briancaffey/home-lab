@@ -1,0 +1,16 @@
+{
+  "name": "rampart-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LAN PII-redaction service wrapping @nationaldesignstudio/rampart (API + playground)",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "warmup": "node warmup.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
+    "@nationaldesignstudio/rampart": "^0.1.3"
+  }
+}
