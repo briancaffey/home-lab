@@ -3,10 +3,9 @@
 # ~2-3 GiB, and spark already had it cached from the original docker copy).
 # Image: ghcr.io/inference-club/nemotron-asr:latest-spark-arm64 (built on spark,
 # private; pulls via Secret ghcr-pull, same as acestep).
-# NB: an amd64 build also exists in the in-cluster registry on a3
-# (192.168.5.173:30500/inference-club/nemotron-asr:latest-amd64, see
-# clusters/home/registry/) for running on the amd64 boxes — but a1's USB-WiFi
-# corrupts multi-GB layer pulls, so this lives on spark for now.
+# NB: an amd64 build is archived at harbor.lan/inference-club/nemotron-asr:
+# latest-amd64 (private project — pods pulling it need an imagePullSecret) for
+# running on the amd64 boxes if ever needed; it lives on spark for now.
 # Reached via the cluster-DNS Service (:8105) — discovery routes stt here. The 0.6b
 # model warm-loads from spark's HF cache.
 apiVersion: apps/v1

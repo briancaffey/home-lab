@@ -14,17 +14,14 @@ spec:
     spec:
       # CPU-only and tiny (~19M-param ONNX model). No PVC: weights are baked
       # into the image; session tables are in-memory by design (Rampart's
-      # entity table is meant to be ephemeral). Pinned to a1 because it's the
-      # only amd64 node whose containerd trusts the 30500 registry — move to
-      # a2 alongside TODO(a2-harbor-trust) below.
+      # entity table is meant to be ephemeral). Image is amd64-only, hence the
+      # arch selector; beyond that the scheduler picks (all nodes trust
+      # harbor.lan since home-lab#28).
       nodeSelector:
-        kubernetes.io/hostname: a1
+        kubernetes.io/arch: amd64
       containers:
         - name: rampart
-          # Also pushed to harbor.lan/library/rampart:v0.1.3 — switch back once
-          # a2 trusts the Harbor CA (sudo scripts/trust-harbor-ca.sh on a2).
-          # TODO(a2-harbor-trust)
-          image: 192.168.5.173:30500/rampart:v0.1.3
+          image: harbor.lan/library/rampart:v0.1.3
           ports:
             - { name: http, containerPort: 8080 }
           env:

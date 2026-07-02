@@ -7,8 +7,9 @@
 #     containerd falls through to the upstream registry: cache only, no new SPOF.
 #   - harbor.lan TLS is pinned to the mkcert CA (also OK via OS store, but
 #     explicit survives base-image trust quirks).
-#   - legacy in-cluster registry:2 (192.168.5.173:30500) block is preserved
-#     until rampart + nemotron-asr images migrate to Harbor, then delete it.
+# (The legacy in-cluster registry:2 at 192.168.5.173:30500 was decommissioned
+# 2026-07-02 — its images live in Harbor now: library/rampart,
+# inference-club/nemotron-asr.)
 #
 # Run ON each node (agents first, a3/server last):
 #   scp "$(mkcert -CAROOT)/rootCA.pem" <node>:/tmp/lan-rootCA.pem
@@ -39,16 +40,10 @@ mirrors:
       - "https://harbor.lan"
     rewrite:
       "^(.*)\$": "ghcr/\$1"
-  "192.168.5.173:30500":
-    endpoint:
-      - "http://192.168.5.173:30500"
 configs:
   "harbor.lan":
     tls:
       ca_file: $DEST_CA
-  "192.168.5.173:30500":
-    tls:
-      insecure_skip_verify: true
 EOF
 echo "wrote $REG"
 

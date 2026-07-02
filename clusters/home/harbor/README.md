@@ -68,13 +68,9 @@ re-`apply` rotates them and briefly restarts those pods — harmless. To elimina
 even that churn, pin `core.secret`, `core.xsrfKey`, `registry.secret`,
 `jobservice.secret` (and `database.internal.password`) to fixed values too.
 
-## Migration off the built-in registry
-1. Copy the one existing image over (run where docker can reach both):
-   ```bash
-   skopeo copy --src-tls-verify=false \
-     docker://192.168.5.173:30500/inference-club/nemotron-asr:<tag> \
-     docker://harbor.lan/inference-club/nemotron-asr:<tag>
-   ```
-2. Repoint the nemotron-asr manifest image to `harbor.lan/...`.
-3. Decommission `clusters/home/registry/` and remove the old `30500` block from
-   each node's `registries.yaml`.
+## Migration off the built-in registry — DONE (2026-07-02, home-lab#28)
+The legacy registry:2 is decommissioned. Its images moved here:
+`library/rampart:v0.1.3` (rampart deployment repointed) and
+`inference-club/nemotron-asr:latest-amd64` (archival; the live service pulls
+the arm64 tag from ghcr). Per-node registry config is
+`scripts/k3s-registries.sh` (Harbor pull-through mirrors, no 30500 block).

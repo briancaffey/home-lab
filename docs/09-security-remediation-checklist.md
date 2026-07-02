@@ -14,9 +14,9 @@ check items off as you go. Immediate fixes (🔴/🟠 + M5) have **Forgejo issue
 - [ ] **H2 — Vaultwarden signups off.** `SIGNUPS_ALLOWED: "false"` in
   `clusters/home/vaultwarden/vaultwarden.yaml`; `kubectl apply`. _Verify:_ the
   register page is gone.
-- [ ] **H1 — Registry auth.** Create an htpasswd Secret, mount it, set the registry
-  `auth.htpasswd` block in `clusters/home/registry/registry.yaml`. _Verify:_
-  `docker pull <node>:30500/...` fails without `docker login`.
+- [x] **H1 — Registry auth.** Resolved by decommissioning (2026-07-02,
+  home-lab#28): the unauthenticated registry:2 is gone; images live in Harbor
+  (push requires auth). _Verify:_ `curl 192.168.5.173:30500` refuses.
 - [ ] **M5 — Scrub tailnet IPs.** Replace the `100.x` IPs in
   `docs/07-remote-desktop-vnc.md:19-22` with node names / `<tailnet>` placeholders.
 
