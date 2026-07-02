@@ -9,7 +9,11 @@
 # whenever you add a new <name>.lan host (add it to HOSTS below).
 set -euo pipefail
 
-HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan invokeai.lan abs.lan jellyfin.lan vault.lan harbor.lan speedtest.lan netdata.lan forgejo.lan immich.lan music.lan paperless.lan models.lan phoenix.lan pihole.lan litellm.lan milvus.lan manyfold.lan gatus.lan hermes.lan "*.lan")
+# NOTE: every hostname must be listed EXPLICITLY. The "*.lan" SAN is kept for
+# non-browser clients, but Chrome/Firefox reject wildcards directly under a
+# TLD (needs >= 2 dots, i.e. *.x.lan would work but *.lan does not) — relying
+# on it produces ERR_CERT_COMMON_NAME_INVALID.
+HOSTS=(headlamp.lan home.lan grafana.lan openwebui.lan jupyter.lan invokeai.lan abs.lan jellyfin.lan vault.lan harbor.lan speedtest.lan netdata.lan forgejo.lan immich.lan music.lan paperless.lan models.lan phoenix.lan pihole.lan litellm.lan milvus.lan manyfold.lan gatus.lan hermes.lan omni.lan asr.lan magpie.lan flux.lan ltx.lan studio-voice.lan firecrawl.lan acestep.lan dia.lan trellis.lan lmstudio.lan "*.lan")
 
 # secret-name : namespace
 SECRETS=(
@@ -38,8 +42,8 @@ SECRETS=(
   "gatus-tls:gatus"
   "hermes-tls:hermes"
   # One shared secret for ALL inference .lan ingresses (omni.lan, asr.lan,
-  # magpie.lan, flux.lan, ltx.lan, …) — covered by the cert's *.lan wildcard
-  # SAN, so new inference hostnames need no HOSTS entry.
+  # magpie.lan, flux.lan, ltx.lan, …). Each hostname must also be in HOSTS
+  # above — browsers do not accept the *.lan wildcard (see NOTE there).
   "inference-tls:inference-club"
 )
 
