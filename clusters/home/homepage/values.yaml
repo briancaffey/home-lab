@@ -148,9 +148,22 @@ config:
     title: Brian's Homelab
     headerStyle: boxed
     # Pin the Inference group (auto-discovered from clusters/home/inference-lan
-    # ingress annotations) to the top as a compact indicator row; every other
-    # group keeps its default order below.
+    # ingress annotations) to the top as a compact indicator row. Tailnet (the
+    # static group from values.local.yaml) renders as a compact 4-column row —
+    # listing it here alone would hoist it to position #2, so the full current
+    # group order is spelled out to keep everything where it is.
     layout:
       Inference:
+        style: row
+        columns: 4
+      Media: {}
+      Infra: {}
+      Cluster: {}
+      AI: {}
+      Observability: {}
+      Network: {}
+      Monitoring: {}
+      Security: {}
+      Tailnet:
         style: row
         columns: 4
