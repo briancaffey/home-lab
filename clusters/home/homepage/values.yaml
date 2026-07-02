@@ -108,7 +108,7 @@ config:
               href: https://trellis.lan/docs
         - firecrawl:
             - abbr: FC
-              href: https://firecrawl.lan/
+              href: https://firecrawl.lan/admin/CHANGEME/queues
         - lmstudio:
             - abbr: LMS
               href: https://lmstudio.lan/v1/models

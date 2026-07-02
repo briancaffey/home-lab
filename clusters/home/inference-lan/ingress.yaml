@@ -167,10 +167,11 @@ metadata:
   annotations:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "firecrawl"
-    gethomepage.dev/description: "Web scraping API (no /docs)"
+    gethomepage.dev/description: "Web scraping API (Bull queues UI)"
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-fire"
-    gethomepage.dev/href: "https://firecrawl.lan/"
+    # BULL_AUTH_KEY is the self-host default "CHANGEME" (not a secret).
+    gethomepage.dev/href: "https://firecrawl.lan/admin/CHANGEME/queues"
     gethomepage.dev/siteMonitor: "http://firecrawl.inference-club:3002/"
 spec:
   ingressClassName: traefik
