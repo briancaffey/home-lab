@@ -1,0 +1,46 @@
+# One-time populate of the dia-models PVC: download nari-labs/Dia-1.6B-0626
+# (~7 GB) ONCE, into the replicated volume — both dia pods then start with a
+# warm cache and never re-download. Pinned to a2 (Longhorn replica + good link).
+# NOTE: the write mirrors live to a3's replica over WiFi — expect the job to
+# run tens of minutes total. Run: kubectl apply -f services/dia/download-job.yaml
+# Re-run: delete the Job first (kubectl -n inference-club delete job dia-download).
+# GOTCHA (2026-07-02): if a run is killed mid-download it leaves stale HF lock
+# files on the shared volume and the next run waits on them FOREVER
+# ("Still waiting to acquire lock..."). Clear with:
+#   kubectl -n inference-club exec <pod> -- bash -c 'rm -f /models/hub/.locks/**/*.lock'
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dia-download
+  namespace: inference-club
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: dia-download
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: fetch
+          image: python:3.12-slim
+          env:
+            - name: HF_HOME
+              value: /models
+          command: ["bash", "-lc"]
+          args:
+            - |
+              set -euo pipefail
+              pip install --quiet -U 'huggingface_hub[cli]'
+              hf download nari-labs/Dia-1.6B-0626
+              echo "--- cache contents:"
+              du -sh /models/hub/* || true
+          volumeMounts:
+            - name: models
+              mountPath: /models
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: dia-models

@@ -1,0 +1,23 @@
+# Dia model weights on replicated storage — the cluster's first Longhorn
+# volume (toe-dip: docs/16, brian/home-lab#27).
+#
+# ReadWriteMany (NOT unix rwx): the volume mounts on MANY nodes at once via
+# Longhorn's share-manager (an internal NFS server), so dia-a2 and dia-a3 read
+# the same downloaded weights simultaneously. Data lives as 2 replicas on the
+# a2+a3 CMR HDDs (longhorn-hdd SC pins everything to tag "storage").
+# Populate once with download-job.yaml before scaling the deployments up.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dia-models
+  namespace: inference-club
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: longhorn-hdd
+  resources:
+    requests:
+      # The 0626 repo is 19.3 GB — it ships MULTIPLE weight formats and
+      # `hf download` fetches all of them (20Gi overflowed; expanded live
+      # 2026-07-02). Trim with --include in download-job.yaml someday.
+      storage: 30Gi

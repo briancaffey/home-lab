@@ -4,15 +4,20 @@
 # service repo and pushed to ghcr.io/inference-club/dia (PRIVATE — pulls need
 # Secret ghcr-pull, same as acestep).
 #
-# NODE PLACEMENT: Dia needs an NVIDIA GPU with ~10 GB free VRAM and claims it
-# via `nvidia.com/gpu: 1`. a1's GPU (the 4090) is currently claimed by
-# magpie-tts, so Dia will NOT schedule onto a1 until magpie is scaled to 0
-# (`kubectl -n inference-club scale deploy/magpie-tts --replicas=0`). Pick
-# whichever of a1/a2/a3 has a free GPU and set `inference-club.com/box` below.
+# STORAGE (Longhorn toe-dip, docs/16 · brian/home-lab#27): weights live on the
+# replicated RWX `dia-models` volume (pvc.yaml) — downloaded ONCE by
+# download-job.yaml, then mounted simultaneously by BOTH deployments below.
+# Two single-replica deployments (one per pinned node) instead of replicas: 2,
+# because each pod must claim its own node's GPU. The shared `app: dia` label
+# means the Service round-robins across whichever pods are up.
+#
+# GPU: each pod claims the node's 4090 exclusively (`nvidia.com/gpu: 1`).
+# a2/a3's GPUs are freed by scaling down flux2-klein / ltx2; scale dia-a2 or
+# dia-a3 to 0 to hand a GPU back.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dia
+  name: dia-a2
   namespace: inference-club
   labels:
     app: dia
@@ -23,13 +28,15 @@ spec:
   selector:
     matchLabels:
       app: dia
+      box: a2
   template:
     metadata:
       labels:
         app: dia
+        box: a2
     spec:
       nodeSelector:
-        inference-club.com/box: a1 # <-- set to the node with a free GPU (see header)
+        inference-club.com/box: a2
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ghcr-pull
@@ -43,8 +50,8 @@ spec:
               value: "8491"
             - name: DIA_MODEL
               value: nari-labs/Dia-1.6B-0626
-            # Persist HF weights on the node so they survive pod restarts
-            # (first pull is several GB).
+            # HF cache on the shared replicated volume (pre-warmed by the
+            # download Job — pods only read weights + write lock files).
             - name: HF_HOME
               value: /cache
           ports:
@@ -58,31 +65,95 @@ spec:
             limits:
               nvidia.com/gpu: 1
           volumeMounts:
-            - name: hf-cache
+            - name: models
               mountPath: /cache
           startupProbe:
-            # First run downloads the model, then loads it on startup — budget
-            # generously (≈30 min) before failing.
+            # Weights are pre-downloaded; loading them streams over the RWX
+            # NFS mount (WiFi LAN) — budget minutes, not seconds.
             httpGet:
               path: /health
               port: http
             periodSeconds: 10
-            failureThreshold: 180
+            failureThreshold: 90
           readinessProbe:
             httpGet:
               path: /health
               port: http
             periodSeconds: 15
       volumes:
-        - name: hf-cache
-          hostPath:
-            path: /home/brian/.cache/dia-huggingface
-            type: DirectoryOrCreate
+        - name: models
+          persistentVolumeClaim:
+            claimName: dia-models
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dia-a3
+  namespace: inference-club
+  labels:
+    app: dia
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: dia
+      box: a3
+  template:
+    metadata:
+      labels:
+        app: dia
+        box: a3
+    spec:
+      nodeSelector:
+        inference-club.com/box: a3
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: dia
+          image: ghcr.io/inference-club/dia:latest
+          env:
+            - name: HOST
+              value: 0.0.0.0
+            - name: PORT
+              value: "8491"
+            - name: DIA_MODEL
+              value: nari-labs/Dia-1.6B-0626
+            - name: HF_HOME
+              value: /cache
+          ports:
+            - name: http
+              containerPort: 8491
+              hostPort: 8491
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: models
+              mountPath: /cache
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 90
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: dia-models
 ---
 # Discovery: type=tts + features=voice-cloning routes /v1/voice/generations
 # here (the agent indexes a voice-cloning tts service under a synthetic "voice"
 # type, so Dia is chosen over a plain Riva tts service). Dia serves a single
 # POST /generate at the BASE url — so no base-path annotation, like ACE-Step.
+# Selector matches app=dia on BOTH deployments → round-robins a2/a3.
 apiVersion: v1
 kind: Service
 metadata:
