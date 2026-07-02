@@ -1,0 +1,52 @@
+# Longhorn Helm values — replicated block storage, deliberately scoped.
+# Deploy: see README.md (Helm release — NEVER `kubectl apply`, same rule as homepage).
+# Plan of record: docs/16-longhorn-toe-dip.pdf · Forgejo brian/home-lab#27 · theory: docs/13.
+#
+# Scoping story:
+#   - Longhorn components run ONLY on nodes labeled inference-club.com/longhorn=member
+#     (a2, a3, x1 — applied by scripts/longhorn-nodes.sh). a1 (flaky USB WiFi) and
+#     spark (arm64, other subnet) never see a Longhorn pod.
+#   - Replica DISKS exist only on a2 + a3, and never on a root partition: the
+#     node.longhorn.io/create-default-disk=config label + default-disks-config
+#     annotation (also in scripts/longhorn-nodes.sh) point Longhorn at the big
+#     ext4 CMR HDDs (a2:/home/brian/e/longhorn, a3:/mnt/d/longhorn) instead of
+#     the /var/lib/longhorn default on /.
+#   - x1 is "components, no disk": it can attach/mount volumes but holds no data
+#     (its only drive is the LUKS NVMe root).
+
+defaultSettings:
+  # 2 live copies per volume — one on a2's HDD, one on a3's (deterministic with
+  # exactly two disk-bearing nodes).
+  defaultReplicaCount: 2
+  # Only nodes carrying the create-default-disk label get disks; everything else
+  # (incl. x1) participates without storing replicas.
+  createDefaultDiskLabeledNodes: true
+  # Fence instance-managers, share-managers (RWX NFS), CSI pods etc. onto the
+  # STORAGE nodes only (narrower than membership): the share-manager is a
+  # volume's NFS server and must never land on spark (other subnet, often
+  # offline) or a1 (USB WiFi) — learned 2026-07-02 when the first RWX volume's
+  # share-manager scheduled onto spark. Volume nodeSelector tags pin replicas
+  # but NOT these pods. NOTE: a node needs this label to MOUNT Longhorn
+  # volumes (CSI plugin) — add it to x1 if a pod there ever needs one.
+  # KNOWN TAX: Longhorn still tries to start an instance-manager on every
+  # member node, so a1/x1/spark emit recurring (harmless) "NodeAffinity
+  # failed" scheduling events — the price of keeping them dashboard-visible
+  # without letting engines/share-managers run there. Goes away per-node by
+  # adding the longhorn-system label when a node becomes a real storage member.
+  systemManagedComponentsNodeSelector: "inference-club.com/longhorn-system:true"
+
+persistence:
+  # local-path stays the cluster default StorageClass — nothing lands on
+  # Longhorn by accident (toe-dip guardrail, docs/16 p.2).
+  defaultClass: false
+  defaultClassReplicaCount: 2
+
+longhornManager:
+  nodeSelector:
+    inference-club.com/longhorn: member
+longhornUI:
+  nodeSelector:
+    inference-club.com/longhorn: member
+longhornDriver:
+  nodeSelector:
+    inference-club.com/longhorn: member

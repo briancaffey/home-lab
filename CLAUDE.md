@@ -114,7 +114,9 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
   `home.lan` on 2026-06-29). **homepage** specifically is a Helm release in the
   `homepage` ns — change it via `helm upgrade homepage homepage --repo
   https://jameswynn.github.io/helm-charts --version 2.1.0 -n homepage
-  -f values.yaml -f values.local.yaml`.
+  -f values.yaml -f values.local.yaml`. **longhorn** is likewise a Helm release
+  (`longhorn-system` ns) — deploy per `clusters/home/longhorn/README.md`; node
+  membership/disk placement live in `scripts/longhorn-nodes.sh`, never ad-hoc.
 - **Homepage host validation:** any host serving Homepage must be in
   `HOMEPAGE_ALLOWED_HOSTS` or it returns "Host validation failed".
 - **Monitoring is hand-rolled** (`clusters/home/monitoring/`): plain Prometheus

@@ -1,0 +1,19 @@
+# longhorn-hdd — the StorageClass services should actually use (the chart's
+# default `longhorn` SC has no node pinning). Pins volumes to Longhorn nodes
+# tagged "storage" (a2 + a3, set by scripts/longhorn-nodes.sh), so replicas,
+# the engine, and the RWX share-manager (NFS server) never land on a1/spark/x1.
+# Apply: kubectl apply -f clusters/home/longhorn/storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-hdd
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "2"
+  staleReplicaTimeout: "2880"
+  nodeSelector: "storage"
+  # Keep one replica on the node serving the volume (local-speed reads there).
+  dataLocality: "best-effort"

@@ -1,0 +1,35 @@
+# Longhorn admin UI at https://longhorn.lan (LAN only).
+# ⚠️ The Longhorn UI has NO authentication and can detach/delete volumes.
+# Keep it .lan-only — do NOT add a Tailscale ingress for it. Basic-auth
+# middleware is a tracked follow-up on brian/home-lab#27.
+# Apply: kubectl apply -f clusters/home/longhorn/ingress.yaml
+# (TLS secret longhorn-tls is minted by scripts/lan-certs.sh.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: longhorn
+  namespace: longhorn-system
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Longhorn"
+    gethomepage.dev/description: "Replicated storage — volumes, replicas, rebuilds"
+    gethomepage.dev/group: "Cluster"
+    gethomepage.dev/icon: "longhorn.png"
+    gethomepage.dev/href: "https://longhorn.lan/"
+    gethomepage.dev/pod-selector: "app=longhorn-ui"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["longhorn.lan"]
+      secretName: longhorn-tls
+  rules:
+    - host: longhorn.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: longhorn-frontend
+                port:
+                  number: 80
