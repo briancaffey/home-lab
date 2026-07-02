@@ -10,7 +10,7 @@ metadata:
     gethomepage.dev/name: "Hermes Agent"
     gethomepage.dev/description: "Nous Research agent (x1)"
     gethomepage.dev/group: "AI"
-    gethomepage.dev/icon: "mdi-robot"
+    gethomepage.dev/icon: "/icons/hermes.webp"
     gethomepage.dev/href: "https://hermes.lan/"
     gethomepage.dev/pod-selector: "app=hermes"
 spec:
