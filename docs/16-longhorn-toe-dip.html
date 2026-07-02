@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:12.8px;line-height:1.46;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;height:297mm;overflow:hidden;padding:11mm 13mm 12mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:5px 0 4px}
+  h2{font-size:18px;font-weight:900;margin:13px 0 7px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14px;color:#c7d0e4;max-width:172mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:9px 0 3px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:25px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .stat .d{font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)} .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 14px;margin:9px 0;break-inside:avoid}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);border-radius:0 13px 13px 0;padding:12px 15px;margin:11px 0}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .note h3{color:var(--ok)}
+  .warnbox{border:1px solid rgba(255,159,67,.38);background:rgba(255,159,67,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .warnbox h3{color:var(--high)}
+  .myth{border:1px solid rgba(255,93,108,.38);background:rgba(255,93,108,.09);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .myth h3{color:var(--crit)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.6px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  td b{color:var(--ink)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);border:1px solid var(--line);color:var(--blue)}
+  .tag.g{color:var(--ok)} .tag.o{color:var(--high)} .tag.p{color:var(--purple)} .tag.r{color:var(--crit)}
+  pre{background:#11151f;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:8px 0;overflow:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;color:#cdd6ea}
+  pre .c{color:var(--dim)} pre .k{color:var(--blue)} pre .s{color:var(--ok)}
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0;font-size:11px}
+  .col{flex:1;display:flex;flex-direction:column;gap:7px}
+  .node{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;text-align:center}
+  .node.hub{background:var(--grad);color:#0b1220;font-weight:900;border:none;display:flex;align-items:center;justify-content:center;min-height:100%}
+  .node b{display:block;font-size:11.5px} .node span{font-size:10px;color:var(--mut)}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 9px;color:var(--dim);font-size:20px;font-weight:900}
+  ul{margin:3px 0 7px 17px} li{margin:3px 0;font-size:12.2px;color:#cbd4e8}
+  ol{margin:3px 0 7px 18px} ol li{margin:5px 0;font-size:12.3px}
+  .rank{display:flex;gap:11px;align-items:flex-start;margin:7px 0;break-inside:avoid}
+  .rank .num{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:14px;color:#0b1220;background:var(--grad);border-radius:9px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank .num.b{background:var(--soft);color:var(--mut);border:1px solid var(--line)}
+  .rank h3{font-size:13px} .rank p{font-size:11.8px;color:#c2cbe0;margin:2px 0 0}
+  .foot{position:absolute;bottom:9mm;left:13mm;right:13mm;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--line);padding-top:6px}
+  .verdict{border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(55,182,230,.10),rgba(168,116,216,.10));padding:13px 16px;margin:9px 0}
+  .verdict h3{font-size:15px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style></head><body>
+
+<!-- ============ PAGE 1 · Section 0: goal & one-sentence answer ============ -->
+<div class="page">
+  <div class="kick">Storage · Home Cluster · k3s</div>
+  <h1>Longhorn Toe-Dip<br><span class="grad">install → one replicated model volume → serve from two GPUs → host access → teardown</span></h1>
+  <p class="lead">A full-lifecycle plan to try Longhorn <b>without migrating anything</b>. One model —
+  <b>Qwen3.6-27B NVFP4</b> (~15&nbsp;GB, NVIDIA's repo on Hugging Face; exact repo id confirmed at download time) —
+  downloaded <b>once</b>, served by vLLM on <b>a2 and a3 at the same time</b>, and visible on the host filesystem
+  for vanilla Docker / venv vLLM. Then we break it a little, and tear it down. Nothing is installed yet — this is
+  the plan to review before executing. Companion theory: <span class="mono">docs/13</span>. Tracked as Forgejo
+  <b>brian/home-lab#27</b>; feeds benchmark issue <b>#7</b>.</p>
+
+  <div class="meta">
+    <div class="chip"><b>Status</b> plan only — nothing installed</div>
+    <div class="chip"><b>Replica disks</b> a2 + a3 — CMR 6 TB HDDs, never a root</div>
+    <div class="chip"><b>Untouched</b> a1 · spark · every existing PVC</div>
+    <div class="chip"><b>Issues</b> #27 (this) → #7 (benchmark)</div>
+  </div>
+
+  <div class="cards">
+    <div class="stat b"><div class="n blue">1×</div><div class="l">Download</div><div class="d">~15 GB pulled once into one PVC — never again per node</div></div>
+    <div class="stat p"><div class="n purp">2</div><div class="l">GPUs at once</div><div class="d">vLLM on a2 and a3 mount the same volume simultaneously</div></div>
+    <div class="stat g"><div class="n okc">2</div><div class="l">Replicas</div><div class="d">Live copies on 2 nodes — survives a dead disk</div></div>
+    <div class="stat o"><div class="n orng">0</div><div class="l">Migrations</div><div class="d">Grafana, Prometheus, everything else stays exactly where it is</div></div>
+  </div>
+
+  <h2><span class="bar"></span>The big question, answered up front</h2>
+  <div class="posture">
+    <p style="margin:0"><b>"Can two GPUs serve one downloaded copy, and can I still reach the files from plain
+    Docker or a venv on the host?" — <span class="grad">YES.</span></b></p>
+    <p class="small" style="margin:6px 0 0">A Longhorn <b>RWX volume</b> (backed by Longhorn's internal NFS
+    <i>share-manager</i>) lets multiple pods on different nodes mount the same filesystem at the same time — and
+    because it's just NFS behind a ClusterIP, the <b>host can mount it too</b>, at
+    <span class="mono">/mnt/models</span>, and point <span class="mono">HF_HOME</span> there. Same bytes for
+    k8s pods, vanilla Docker, and venv vLLM. Zero re-downloads.</p>
+  </div>
+
+  <div class="myth">
+    <h3>Honest nuance — read before you fall in love</h3>
+    <p style="margin:3px 0 0" class="small">The files are <b>not physically copied to every node's disk</b>. They live
+    on <b>2 replicas</b> and are <b>served over the LAN</b> to everyone else. Two different mechanisms working together
+    here: <b>replication</b> = durability + mobility (2 live copies, docs/13 p.1–2); <b>RWX-NFS</b> = simultaneous
+    access (one NFS server in front of the volume). This plan deliberately uses both.</p>
+  </div>
+
+  <div class="note">
+    <h3>Speed check (so nothing surprises you)</h3>
+    <p style="margin:3px 0 0" class="small">The replicas live on <b>spinning HDDs</b> (p.2) — and that costs nothing
+    here: these WD Blues read sequentially at ~150–180&nbsp;MB/s, while real-world WiFi moves ~25–50&nbsp;MB/s — and
+    tonight <b>every node is on WiFi</b> (p.3). So the network is the bottleneck either way: loading 15&nbsp;GB ≈
+    <b>5–10 min</b> vs ~30&nbsp;s from local NVMe. Fine for this test; docs/13 p.3 explains when <i>not</i> to use
+    RWX for weights. Model load time ≠ inference speed — once weights are in VRAM, tokens/sec is identical.</p>
+  </div>
+
+  <div class="foot"><span>Longhorn Toe-Dip — install → verify → teardown</span><span>1 / 7</span></div>
+</div>
+
+<!-- ============ PAGE 2 · Section 1: guardrails + the real drives ============ -->
+<div class="page">
+  <div class="kick">Scope · the drives</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Guardrails — what this is <span class="grad">NOT</span></h2>
+  <ul>
+    <li><b>Not a migration.</b> Grafana, Prometheus, Harbor, Forgejo, Paperless — every existing PVC stays on <span class="mono">local-path</span>, untouched.</li>
+    <li><b><span class="mono">longhorn</span> is NOT made the default StorageClass.</b> Nothing new lands on it by accident.</li>
+    <li><b>No backups yet.</b> Backup target + schedules are issues <b>#18/#21</b>, after this experiment.</li>
+    <li><b>a1 sits out the toe-dip</b> — fewer variables. But it's no longer "excluded, period": its 6 TB ext4 drive makes it a plausible <i>later</i> bulk member (p.3).</li>
+    <li><b>Nothing touches spark</b> — arm64, other subnet (192.168.6.x), often offline. Pure compute, as decided in docs/13 p.2.</li>
+  </ul>
+
+  <h2><span class="bar"></span>The real drive inventory — audited over SSH</h2>
+  <p class="small mut" style="margin:0 0 4px">Models verified via <span class="mono">lsblk</span> (MODEL + rotational
+  flag). The headline: the cluster's bulk storage is <b>spinning HDDs</b> — and the two this plan uses are the right
+  kind (<b>CMR</b>, see below).</p>
+  <table>
+    <tr><th>Node</th><th>Drive</th><th>Kind</th><th>FS / mount</th><th>Free</th><th>Longhorn role</th></tr>
+    <tr><td><b>a2</b></td><td>Samsung 980 PRO 2 TB</td><td><span class="tag">NVMe</span></td><td>ext4 · root</td><td>463 G</td><td>root — protected · later NVMe pool (p.7)</td></tr>
+    <tr><td><b>a2</b></td><td>WD Blue 6 TB <span class="mono">WD60EZAX</span></td><td><span class="tag g">HDD · CMR</span></td><td>ext4 · <span class="mono">/home/brian/e</span></td><td><b>5.3 T</b></td><td><span class="tag g">Longhorn disk</span></td></tr>
+    <tr><td><b>a2</b></td><td>WD Blue 4 TB <span class="mono">WD40EZAZ</span></td><td><span class="tag o">HDD · SMR</span></td><td>NTFS · "d"</td><td>—</td><td>future capacity (reformat ext4, p.7)</td></tr>
+    <tr><td><b>a2</b></td><td>WD_BLACK SN850X 2 TB</td><td><span class="tag">NVMe</span></td><td>NTFS</td><td>—</td><td>future capacity (reformat ext4, p.7)</td></tr>
+    <tr><td><b>a3</b></td><td>Samsung 850 EVO 250 GB</td><td><span class="tag">SATA SSD</span></td><td>ext4 · root</td><td>70 G</td><td><span class="tag r">never</span> tiny root — permanently out</td></tr>
+    <tr><td><b>a3</b></td><td>WD Blue 6 TB <span class="mono">WD60EZAX</span></td><td><span class="tag g">HDD · CMR</span></td><td>ext4 · <span class="mono">/mnt/d</span> (2.6 T part.)</td><td><b>1.8 T</b></td><td><span class="tag g">Longhorn disk</span> (2.9 T NTFS part. = future)</td></tr>
+    <tr><td><b>x1</b></td><td>476 G NVMe (LUKS)</td><td><span class="tag">NVMe</span></td><td>encrypted root</td><td>242 G</td><td>no disk — components only (p.3)</td></tr>
+    <tr><td><b>a1</b></td><td>Kingston A400 120 G</td><td><span class="tag">SATA SSD</span></td><td>root</td><td>46 G</td><td><span class="tag r">never</span> tiny root</td></tr>
+    <tr><td><b>a1</b></td><td>WD Blue 6 TB <span class="mono">WD60EZAZ</span></td><td><span class="tag o">HDD · SMR</span></td><td>ext4 · <span class="mono">/mnt/d</span></td><td><b>4.8 T</b></td><td>optional bulk member, later (p.3)</td></tr>
+    <tr><td><b>a1</b></td><td>WD Black 1 TB <span class="mono">WD1003FZEX</span></td><td><span class="tag g">HDD · CMR 7200</span></td><td>unmounted</td><td>—</td><td>unused today</td></tr>
+  </table>
+
+  <div class="warnbox">
+    <h3>SMR vs CMR — the one thing to check on any spinning drive</h3>
+    <p class="small" style="margin:3px 0 0"><b>CMR</b> (conventional) writes every track independently — sustained
+    random writes and full-replica rebuilds are fine. <b>SMR</b> (shingled) overlaps tracks like roof tiles:
+    sequential writes are OK, but sustained random writes — and exactly the <b>full-replica rebuilds</b> Longhorn
+    does — collapse to a crawl once the drive's CMR-style cache zone fills. This is the infamous WD Red NAS debacle.
+    Decoder for this fleet: <b><span class="mono">WD60EZAX</span> = CMR</b> — luckily <b>both</b> drives the plan uses
+    (the a2 + a3 6 TB) are this one; <b><span class="mono">WD60EZAZ</span> / <span class="mono">WD40EZAZ</span> =
+    SMR</b> (a1's big drive, a2's NTFS 4 TB) — fine for read-mostly bulk, last pick for anything write-hot.</p>
+  </div>
+
+  <div class="foot"><span>Longhorn Toe-Dip — install → verify → teardown</span><span>2 / 7</span></div>
+</div>
+
+<!-- ============ PAGE 3 · Section 2: disk placement + prereqs ============ -->
+<div class="page">
+  <div class="kick">Disk placement · prereqs</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Where Longhorn's disks live — never on a root partition</h2>
+  <div class="posture">
+    <p style="margin:0" class="small"><b>Principle: <span class="grad">Longhorn never touches a root partition in this
+    plan.</span></b> Left alone, it puts its disk at <span class="mono">/var/lib/longhorn</span> — on the root
+    filesystem. We override that with per-node disk config pointing at the big ext4 CMR HDDs:</p>
+  </div>
+<pre><span class="c"># disk config comes from an annotation instead of the /var/lib/longhorn default:</span>
+kubectl label node a2 a3 <span class="k">node.longhorn.io/create-default-disk</span>=<span class="s">config</span>
+kubectl annotate node a2 <span class="k">node.longhorn.io/default-disks-config</span>=\
+  <span class="s">'[{"path":"/home/brian/e/longhorn","allowScheduling":true}]'</span>
+kubectl annotate node a3 <span class="k">node.longhorn.io/default-disks-config</span>=\
+  <span class="s">'[{"path":"/mnt/d/longhorn","allowScheduling":true}]'</span></pre>
+  <div class="note">
+    <h3>ext4 is all it needs — no reformat, no dedicated partition</h3>
+    <p style="margin:3px 0 0" class="small">A Longhorn "disk" is just a directory: replicas are plain <b>sparse files
+    on the existing ext4 filesystem</b>, coexisting with whatever already lives on the drive (Docker data, downloads).
+    Only the NTFS drives are unusable until reformatted.</p>
+  </div>
+
+  <h2><span class="bar"></span>Member roles — a deterministic replica-2 layout</h2>
+  <table>
+    <tr><th>Node</th><th>Longhorn role</th><th>Detail</th></tr>
+    <tr><td><b>a2</b></td><td><span class="tag g">disk + components</span></td><td>Replica home #1 — 5.3 T free CMR HDD. Runs one vLLM pod.</td></tr>
+    <tr><td><b>a3</b></td><td><span class="tag g">disk + components</span></td><td>Replica home #2 — 1.8 T free CMR HDD. Runs the other vLLM pod.</td></tr>
+    <tr><td><b>x1</b></td><td><span class="tag p">components, NO disk</span></td><td>Can attach/mount volumes; holds no data. Its only drive is the LUKS NVMe <b>root</b> — protected.</td></tr>
+    <tr><td><b>a1</b> / <b>spark</b></td><td><span class="tag r">out</span></td><td>a1: out of the toe-dip, optional later (below). spark: never — arch/subnet/uptime.</td></tr>
+  </table>
+  <p class="small dim">Disks on exactly two nodes ⇒ every replica-2 volume lands <b>one copy on a2's HDD, one on
+  a3's</b>. Deterministic — no scheduler surprises, no "which node got the replica?"</p>
+
+  <div class="box">
+    <h3>a1, revisited — optional bulk member, last in line</h3>
+    <p class="small mut" style="margin:3px 0 0">For <b>write-once/read-many bulk volumes</b> (model files — exactly what
+    its 4.8 T-free ext4 drive could hold), a1 is plausible later: no real-time write path to wait on, and if a replica
+    there rots, Longhorn rebuilds elsewhere and the workload moves. Honest caveats: its USB WiFi makes it the most
+    likely node to <i>trigger</i> rebuild churn, and its HDD is <b>SMR</b> — rebuilds to and from it are slow.
+    Verdict: <b>after the pattern is proven, not during it.</b></p>
+  </div>
+
+  <p class="small dim"><b>Network audit note:</b> nobody is wired — a2 <span class="mono">eno2</span>, a3
+  <span class="mono">eno2</span>, x1 <span class="mono">enp0s31f6</span> are all NO-CARRIER; every member rides WiFi.
+  Fine here: the one heavy event is the ~15 GB download mirroring to replica 2 — tens of minutes, once. Ethernet stays
+  the biggest replication-<i>performance</i> lever (p.7) — a lever, not a gate.</p>
+
+  <h2><span class="bar"></span>Prereqs on a2, a3, x1 (run on each host)</h2>
+  <p class="small mut" style="margin:0 0 4px"><b>What we do:</b> install the iSCSI initiator (volumes attach as iSCSI
+  block devices) + NFS client (RWX mounts). The audit confirmed both are <b>missing on all three</b> — required
+  everywhere, not a maybe.</p>
+<pre>sudo apt-get update &amp;&amp; sudo apt-get install -y <span class="k">open-iscsi nfs-common</span>
+sudo systemctl enable --now iscsid
+<span class="c"># preflight check (version must match the chart you install):</span>
+curl -sSfL https://raw.githubusercontent.com/longhorn/\
+longhorn/<span class="s">v1.9.0</span>/scripts/environment_check.sh | bash
+<span class="c"># multipathd (the usual Ubuntu gotcha): verified inactive on all three — nothing to do.</span></pre>
+
+  <div class="foot"><span>Longhorn Toe-Dip — install → verify → teardown</span><span>3 / 7</span></div>
+</div>
+
+<!-- ============ PAGE 4 · Section 3: install via Helm ============ -->
+<div class="page">
+  <div class="kick">Install · helm release</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Install Longhorn — a Helm release, not kubectl</h2>
+  <p class="small mut" style="margin:0 0 4px"><b>What we do:</b> label the 3 members, then
+  <span class="mono">helm install</span> latest stable 1.x into <span class="mono">longhorn-system</span>, with
+  committed values that fence every Longhorn component onto a2/a3/x1. <b>Why Helm:</b> same rule as Homepage in
+  CLAUDE.md — the chart is a managed release; applying rendered YAML with kubectl creates namespace drift and fights
+  future upgrades.</p>
+<pre><span class="c"># components fence — a2/a3/x1. (Disk placement was configured on p.3: a2 + a3 only.)</span>
+kubectl label node a2 a3 x1 <span class="k">inference-club.com/longhorn</span>=<span class="s">member</span>
+
+helm repo add longhorn https://charts.longhorn.io &amp;&amp; helm repo update
+helm install longhorn longhorn/longhorn \
+  -n <span class="k">longhorn-system</span> --create-namespace \
+  -f clusters/home/longhorn/values.yaml     <span class="c"># values are committed to the repo</span></pre>
+
+  <div class="box">
+    <h3><span class="mono">clusters/home/longhorn/values.yaml</span> — the four decisions</h3>
+<pre>defaultSettings:
+  <span class="k">defaultReplicaCount</span>: <span class="s">2</span>                       <span class="c"># 2 live copies per volume</span>
+  <span class="k">createDefaultDiskLabeledNodes</span>: <span class="s">true</span>          <span class="c"># honor p.3's labels — never /var/lib/longhorn</span>
+  <span class="k">systemManagedComponentsNodeSelector</span>: <span class="s">"inference-club.com/longhorn:member"</span>
+persistence:
+  <span class="k">defaultClass</span>: <span class="s">false</span>                          <span class="c"># longhorn SC exists but is NOT default</span>
+longhornManager:
+  nodeSelector: { <span class="k">inference-club.com/longhorn</span>: <span class="s">member</span> }
+longhornUI:
+  nodeSelector: { <span class="k">inference-club.com/longhorn</span>: <span class="s">member</span> }</pre>
+    <p class="small mut" style="margin:2px 0 0">Both selectors matter: <span class="mono">longhornManager</span> covers the
+    DaemonSet, <span class="mono">systemManagedComponentsNodeSelector</span> covers everything Longhorn spawns itself
+    (instance-managers, share-managers, CSI pods). Result: <b>nothing lands on a1 or spark</b>.</p>
+  </div>
+
+  <h2><span class="bar"></span>UI at <span class="mono" style="font-size:15px">https://longhorn.lan</span></h2>
+  <p class="small mut" style="margin:0 0 4px">Standard pattern: Traefik ingress + <span class="mono">home-tls</span>
+  wildcard cert + <span class="mono">gethomepage.dev/*</span> annotations so it appears on Homepage — same as every
+  other <span class="mono">.lan</span> service. Ingress manifest lives next to the values file.</p>
+  <div class="warnbox">
+    <h3>The Longhorn UI ships with NO auth — and it can delete volumes</h3>
+    <p class="small" style="margin:3px 0 0">Anyone who can reach <span class="mono">longhorn.lan</span> can detach or
+    delete volumes with two clicks. Acceptable on the LAN for a toe-dip; <b>☐ follow-up: Traefik basic-auth
+    middleware</b> before anything precious lives on Longhorn. Do not expose over Tailscale.</p>
+  </div>
+
+  <div class="note">
+    <h3>Verify the install before moving on</h3>
+    <ul style="margin:3px 0 0">
+      <li>UI → <b>Node</b> tab: 3 nodes running components; <b>disks only on a2 + a3</b>, at
+      <span class="mono">/home/brian/e/longhorn</span> and <span class="mono">/mnt/d/longhorn</span> — and <b>nothing
+      at <span class="mono">/var/lib/longhorn</span></b>. x1 shows diskless (attach-only).</li>
+      <li><span class="mono">kubectl -n longhorn-system get pods -o wide | grep -E 'a1|spark'</span> → <b>empty</b>.</li>
+      <li><span class="mono">kubectl get sc</span> → <span class="mono">longhorn</span> exists, <span class="mono">local-path</span> still marked <span class="mono">(default)</span>.</li>
+    </ul>
+  </div>
+
+  <div class="foot"><span>Longhorn Toe-Dip — install → verify → teardown</span><span>4 / 7</span></div>
+</div>
+
+<!-- ============ PAGE 5 · Section 4: first volume + the model ============ -->
+<div class="page">
+  <div class="kick">First volume · the model</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>One RWX volume, one download, two vLLM servers</h2>
+  <p class="small mut" style="margin:0 0 4px"><b>What we do:</b> a new service dir
+  <span class="mono">services/qwen36-nvfp4/</span> with three pieces — a PVC, a one-shot download Job, and two vLLM
+  Deployments. <b>Why:</b> the PVC's <span class="mono">ReadWriteMany</span> mode is the whole trick — creating it
+  makes Longhorn spin up a <b>share-manager pod (the NFS server) automatically</b>. No NFS to configure by hand.</p>
+
+  <div class="two">
+    <div><h3 style="margin-top:2px">(a) The PVC</h3>
+<pre>apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: <span class="k">models</span>
+spec:
+  accessModes: [<span class="s">ReadWriteMany</span>]  <span class="c"># ← RWX</span>
+  storageClassName: <span class="s">longhorn</span>
+  resources:
+    requests: { storage: <span class="s">40Gi</span> }</pre></div>
+    <div><h3 style="margin-top:2px">(b) The download Job — once, on a2</h3>
+<pre>spec:
+  template:
+    spec:
+      <span class="c"># a2 = the 5.3 T HDD; never a1</span>
+      nodeSelector:
+        <span class="k">inference-club.com/box</span>: <span class="s">a2</span>
+      containers:
+      - name: fetch
+        image: python:3.12-slim
+        env: [{ name: <span class="k">HF_HOME</span>, value: <span class="s">/models</span> }]
+        command: [<span class="s">"bash"</span>,<span class="s">"-lc"</span>,
+          <span class="s">"pip install -U 'huggingface_hub[cli]' &amp;&amp;
+           hf download nvidia/Qwen3.6-27B-NVFP4"</span>]
+          <span class="c"># ↑ confirm exact repo id at download time</span></pre></div>
+  </div>
+
+  <h3>(c) Two vLLM Deployments — same volume, different GPUs</h3>
+  <table>
+    <tr><th>Field</th><th><span class="mono">qwen-a2</span></th><th><span class="mono">qwen-a3</span></th></tr>
+    <tr><td><span class="mono">nodeSelector</span></td><td><span class="mono">inference-club.com/box: a2</span></td><td><span class="mono">inference-club.com/box: a3</span></td></tr>
+    <tr><td>GPU</td><td colspan="2"><span class="mono">runtimeClassName: nvidia</span> · <span class="mono">nvidia.com/gpu: 1</span> (exclusive, per GPU conventions)</td></tr>
+    <tr><td>Volume</td><td colspan="2">PVC <span class="mono">models</span> at <span class="mono">/models</span>, <b><span class="mono">readOnly: true</span></b> · <span class="mono">HF_HOME=/models</span></td></tr>
+    <tr><td>API</td><td colspan="2">OpenAI-compatible on <span class="mono">:8000</span> behind ClusterIP Services <span class="mono">qwen-a2</span> / <span class="mono">qwen-a3</span></td></tr>
+  </table>
+
+  <div class="flow">
+    <div class="col"><div class="node hub"><div>PVC "models"<br><span style="color:#0b1220">RWX · replica on each HDD</span></div></div></div>
+    <div class="arrow">→</div>
+    <div class="col"><div class="node" style="border-color:var(--blue)"><b>share-manager</b><span>NFS server, auto-created</span></div></div>
+    <div class="arrow">⇉</div>
+    <div class="col">
+      <div class="node" style="border-color:var(--ok)"><b>vLLM @ a2</b><span>4090 · reads /models</span></div>
+      <div class="node" style="border-color:var(--ok)"><b>vLLM @ a3</b><span>4090 · reads /models</span></div>
+      <div class="node" style="border-color:var(--purple)"><b>host mount</b><span>/mnt/models (p.5)</span></div>
+    </div>
+  </div>
+
+  <div class="warnbox">
+    <h3>NVFP4-on-Ada caveat (docs/13 p.4 · issue #7)</h3>
+    <p class="small" style="margin:3px 0 0">The 4090 is <b>Ada</b>; NVFP4 kernels prefer <b>Blackwell</b>. If vLLM
+    refuses the format on the 4090s, <b>the storage pattern is still proven</b> — swap in any FP8/AWQ model and the
+    plan is unchanged. Either way, register both endpoints behind <b>LiteLLM</b> later for the #7 A/B benchmark.</p>
+  </div>
+
+  <div class="foot"><span>Longhorn Toe-Dip — install → verify → teardown</span><span>5 / 7</span></div>
+</div>
+
+<!-- ============ PAGE 6 · Section 5: host access ============ -->
+<div class="page">
+  <div class="kick">Host access · the big question</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Mount the same volume on the host — step by step</h2>
+  <p class="small mut" style="margin:0 0 4px"><b>What we do:</b> find the NFS endpoint Longhorn created for the RWX
+  volume, then NFS-mount it on a2's host at <span class="mono">/mnt/models</span>. <b>Why it works:</b> the
+  share-manager Service is a ClusterIP, and <b>kube-proxy makes ClusterIPs reachable from every cluster node's
+  host</b> — no NodePort, no ingress, no credentials.</p>
+
+<pre><span class="c"># 1 · find the share-manager Service for the volume (one per RWX PVC):</span>
+kubectl -n longhorn-system get svc | grep <span class="k">pvc-</span>
+<span class="c">#   pvc-1a2b3c…   ClusterIP   10.43.x.x   2049/TCP</span>
+
+<span class="c"># 2 · on a2's host — mount it:</span>
+sudo mkdir -p /mnt/models
+sudo mount -t nfs4 -o vers=4.1 <span class="k">&lt;cluster-ip&gt;</span>:/<span class="k">&lt;pvc-name&gt;</span> /mnt/models
+
+<span class="c"># 3 · same files the pods see:</span>
+ls /mnt/models/hub/</pre>
+
+  <h2><span class="bar"></span>The two vanilla flows — zero re-download</h2>
+  <div class="two">
+    <div class="box" style="margin:6px 0"><h3>venv vLLM on the host</h3>
+<pre style="margin:6px 0 2px"><span class="k">HF_HOME</span>=<span class="s">/mnt/models</span> vllm serve \
+  nvidia/Qwen3.6-27B-NVFP4 \
+  --port 8001</pre>
+      <p class="small mut" style="margin:4px 0 0">vLLM finds the weights already cached under
+      <span class="mono">$HF_HOME/hub</span> and skips the download entirely.</p></div>
+    <div class="box" style="margin:6px 0"><h3>plain Docker on the host</h3>
+<pre style="margin:6px 0 2px">docker run --gpus all -p 8001:8000 \
+  -v <span class="s">/mnt/models</span>:<span class="k">/root/.cache/huggingface</span> \
+  vllm/vllm-openai:latest \
+  --model nvidia/Qwen3.6-27B-NVFP4</pre>
+      <p class="small mut" style="margin:4px 0 0"><span class="mono">/root/.cache/huggingface</span> is the default
+      <span class="mono">HF_HOME</span> inside the image — the bind-mount lands the cache exactly where it looks.</p></div>
+  </div>
+
+  <div class="warnbox">
+    <h3>Caveats — know these before you rely on the mount</h3>
+    <ul style="margin:3px 0 0">
+      <li><b>umount before deleting the volume.</b> If the PVC goes away under a live mount, the mount hangs hard.</li>
+      <li><b>The ClusterIP changes</b> if the PVC is ever recreated — re-run step 1, don't hardcode it in fstab.</li>
+      <li><b>Reads are network-speed</b> — today that means WiFi (p.3), which is slower than the HDDs themselves (p.1). Fine for weight loading.</li>
+      <li><b>Only works ON cluster nodes</b> (kube-proxy routes ClusterIPs there) — which is where the GPUs are anyway.</li>
+    </ul>
+  </div>
+
+  <div class="note">
+    <h3>Why this matters</h3>
+    <p style="margin:3px 0 0" class="small">This closes the gap between "cluster storage" and "my normal tools." The
+    same 15&nbsp;GB serves: two k8s vLLM pods, a venv experiment, and a throwaway Docker container — downloaded once,
+    replicated twice, mountable anywhere on the cluster's hosts.</p>
+  </div>
+
+  <div class="foot"><span>Longhorn Toe-Dip — install → verify → teardown</span><span>6 / 7</span></div>
+</div>
+
+<!-- ============ PAGE 7 · Sections 6–7: verify, chaos, teardown, staging ============ -->
+<div class="page">
+  <div class="kick">Verify · chaos · teardown</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Verify — three checks, then one brave one</h2>
+<pre><span class="c"># 1 · both GPUs serving the same volume, simultaneously (run from any cluster node):</span>
+curl -s http://<span class="k">qwen-a2.qwen36-nvfp4.svc</span>:8000/v1/completions -H <span class="s">'Content-Type: application/json'</span> \
+  -d <span class="s">'{"model":"nvidia/Qwen3.6-27B-NVFP4","prompt":"hello","max_tokens":16}'</span> &amp;
+curl -s http://<span class="k">qwen-a3.qwen36-nvfp4.svc</span>:8000/v1/completions -H <span class="s">'Content-Type: application/json'</span> \
+  -d <span class="s">'{"model":"nvidia/Qwen3.6-27B-NVFP4","prompt":"hello","max_tokens":16}'</span> &amp; wait
+<span class="c"># 2 · Longhorn UI: volume Healthy, 2 replicas — one on a2's HDD, one on a3's.</span>
+<span class="c"># 3 · same bytes, pod vs host mount — hashes must match:</span>
+F=<span class="s">'hub/models--nvidia--*/snapshots/*/model-00001*.safetensors'</span>
+kubectl -n qwen36-nvfp4 exec deploy/qwen-a3 -- sh -c <span class="s">"sha256sum /models/$F"</span>
+sha256sum /mnt/models/$F                    <span class="c"># on a2's host — hashes must be identical</span></pre>
+
+  <div class="box">
+    <h3>Optional 5-minute chaos drill — the whole point of Longhorn</h3>
+    <p class="small mut" style="margin:3px 0 0">In the UI, open the volume and <b>delete one replica</b>. Watch Longhorn
+    auto-rebuild it on a healthy node while both vLLM pods keep serving. That's the durability story from docs/13 p.2,
+    demonstrated instead of believed.</p>
+  </div>
+
+  <h2><span class="bar"></span>Teardown — in this exact order</h2>
+<pre><span class="c"># 1 · host mount FIRST (see p.5 caveat):</span>
+sudo umount /mnt/models
+<span class="c"># 2 · the servers:</span>
+kubectl -n qwen36-nvfp4 delete deploy qwen-a2 qwen-a3</pre>
+  <div class="posture">
+    <p style="margin:0" class="small"><b>Decision point — the PVC.</b> If <b>#7 benchmarking continues</b>, keep it:
+    the weights stay downloaded, replicated, and remountable in seconds. If done, delete it —
+    <span class="mono">kubectl -n qwen36-nvfp4 delete pvc models</span> — which <b>reclaims the space on both
+    replicas at once</b>. Longhorn itself stays installed either way; it costs little idle.</p>
+  </div>
+
+  <h2><span class="bar"></span>Staging the rollout — where this goes</h2>
+  <table>
+    <tr><th>Stage</th><th>Move</th></tr>
+    <tr><td><span class="tag g">1·NOW</span></td><td><b>This doc:</b> toe-dip on the two CMR HDDs (a2 + a3), full lifecycle, nothing else moves.</td></tr>
+    <tr><td><span class="tag g">2·NEXT</span></td><td>The bulk-HDD pool becomes the home for big <b>read-mostly</b> data — models, media.</td></tr>
+    <tr><td><span class="tag">3·LATER</span></td><td>Small-fast <b>NVMe pool</b>: a2 980 PRO (463 G free) + x1 NVMe (242 G free), hard <span class="mono">storageReserved</span> caps so roots never fill. a3's 70-G-free root SSD stays permanently out.</td></tr>
+    <tr><td><span class="tag o">4·OPT</span></td><td>a1's 4.8 T-free SMR drive joins the bulk pool — read-mostly replicas only, last in line (p.3).</td></tr>
+    <tr><td><span class="tag o">5·OPT</span></td><td>Capacity: reformat the NTFS drives to ext4 — a2's 4 TB SMR + SN850X 2 TB, a3's 2.9 T partition.</td></tr>
+    <tr><td><span class="tag p">6·EXP</span></td><td>Small <b>Postgres</b> on Longhorn, <b>measured</b> — every write waits for WiFi RTT + a remote HDD seek. An experiment, not a fear: <b>backups (#18/#21) stay the databases' real safety net</b>.</td></tr>
+    <tr><td><span class="tag">7·ANY</span></td><td>Ethernet for a2/a3/x1 — the biggest single replication-performance lever, whenever convenient.</td></tr>
+  </table>
+
+  <div class="verdict">
+    <h3>Bottom line</h3>
+    <p class="small" style="margin:5px 0 0">Components fenced to a2/a3/x1, <b>replicas on the two CMR 6&nbsp;TB HDDs —
+    never a root partition</b>. One 40&nbsp;Gi RWX volume, one 15&nbsp;GB download → served by two 4090s at once
+    <i>and</i> mounted on the host — then torn down cleanly, every mechanism of the wider rollout proven. Nothing
+    existing moves, nothing becomes default, a1 and spark never notice.</p>
+  </div>
+  <div class="foot"><span>Longhorn Toe-Dip — Home Cluster · #27 → #7 · theory: docs/13</span><span>7 / 7</span></div>
+</div>
+
+</body></html>
