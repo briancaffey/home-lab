@@ -86,6 +86,7 @@ run `mkcert -install` once per client to trust the CA).
 | Paperless | PDF & document library, OCR + search (a2) | https://paperless.lan/ (user `admin`) |
 | Vaultwarden | Passwords & secrets (Bitwarden-compatible, a3) | https://vault.lan/ |
 | Harbor | Private container registry + UI (a2) | https://harbor.lan/ · `docker/crane … harbor.lan/<project>/<repo>` |
+| Mailpit | SMTP sink + inbox for test/alert email | https://mailpit.lan/ · SMTP `mailpit-smtp.mailpit.svc.cluster.local:1025` |
 | Speedtest | WAN/ISP speed tracker (a2) → Grafana | https://speedtest.lan/ · dash "Speedtest — WAN/ISP" |
 | Pi-hole | Network-wide DNS ad-blocker (a2) | https://pihole.lan/admin · **DNS → `192.168.5.96:53`** (hostPort) |
 | Hermes Agent | Nous Research agent — dashboard + OpenAI-compatible API, LiteLLM-driven (x1) | https://hermes.lan/ · API `https://hermes.lan/v1` (bearer key) |

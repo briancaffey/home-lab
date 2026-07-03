@@ -1,0 +1,84 @@
+# Mailpit — SMTP sink + web UI (https://mailpit.lan/), for testing and cluster
+# alert email until a real outbound provider exists. Messages persist in a small
+# SQLite db on a local-path PVC (survives restarts; capped at 5000 messages).
+# No node pin: local-path's WaitForFirstConsumer binds the volume wherever the
+# scheduler first places the pod, and the pod follows it thereafter.
+#
+# In-cluster SMTP endpoint: mailpit-smtp.mailpit.svc.cluster.local:1025
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mailpit-data
+  namespace: mailpit
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailpit
+  namespace: mailpit
+  labels: { app: mailpit }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO PVC — old pod must release it before the new one mounts
+  selector:
+    matchLabels: { app: mailpit }
+  template:
+    metadata:
+      labels: { app: mailpit }
+    spec:
+      containers:
+        - name: mailpit
+          image: axllent/mailpit:v1.30.3
+          env:
+            - { name: MP_DATABASE, value: /data/mailpit.db }
+            - { name: MP_MAX_MESSAGES, value: "5000" }
+          ports:
+            - { name: http, containerPort: 8025 }
+            - { name: smtp, containerPort: 1025 }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /livez, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /livez, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: mailpit-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailpit
+  namespace: mailpit
+  labels: { app: mailpit }
+spec:
+  selector: { app: mailpit }
+  ports:
+    - { name: http, port: 8025, targetPort: http }
+---
+# Separate Service for SMTP so the endpoint reads as what it is:
+# mailpit-smtp.mailpit.svc.cluster.local:1025
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailpit-smtp
+  namespace: mailpit
+  labels: { app: mailpit }
+spec:
+  selector: { app: mailpit }
+  ports:
+    - { name: smtp, port: 1025, targetPort: smtp }

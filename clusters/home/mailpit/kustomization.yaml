@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: mailpit
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/mailpit
+#
+# Mailpit — SMTP sink + web UI for testing and cluster alert email, at
+# https://mailpit.lan/. Anything in the cluster can send mail to
+#   mailpit-smtp.mailpit.svc.cluster.local:1025   (no auth, no TLS required)
+# and it lands in the UI instead of the real internet — stand-in until a real
+# outbound provider (Gmail/SES/…) is wired up.
+#
+# TLS secret comes from scripts/lan-certs.sh (mailpit.lan is in HOSTS/SECRETS).
+
+resources:
+  - namespace.yaml
+  - mailpit.yaml
+  - ingress.yaml

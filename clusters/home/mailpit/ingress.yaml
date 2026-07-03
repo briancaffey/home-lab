@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mailpit
+  namespace: mailpit
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Mailpit"
+    gethomepage.dev/description: "SMTP sink + inbox for test/alert email"
+    gethomepage.dev/group: "Infra"
+    gethomepage.dev/icon: "mailpit.png"
+    gethomepage.dev/href: "https://mailpit.lan/"
+    gethomepage.dev/pod-selector: "app=mailpit"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["mailpit.lan"]
+      secretName: mailpit-tls
+  rules:
+    - host: mailpit.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mailpit
+                port:
+                  number: 8025
