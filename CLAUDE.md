@@ -125,7 +125,21 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
   `grafana-dashboards` configMapGenerator, then rollout restart). dcgm-exporter
   (a1+a3) + node-exporter (all) + a custom `vram-reporter` (per-pod GPU VRAM).
 - **Image builds** go through the `inference-club-agent` repo's CI → GHCR (push to
-  its `main` triggers a multi-arch build). Don't build on a1.
+  its `main` triggers a multi-arch build). Don't build on a1. App images
+  (GitOps loop) are built by the in-cluster Forgejo Actions runner
+  (`clusters/home/forgejo/runner/`, dind on a2) and pushed to `harbor.lan/apps/`
+  — these are **amd64-only**, so pin consumers off spark
+  (`kubernetes.io/arch: amd64`).
+- **Argo CD** (`clusters/home/argocd/`, https://argocd.lan): apply with
+  `kubectl apply -k --server-side` (CRDs too big for client-side), then re-run
+  `scripts/lan-certs.sh` — every apply **resets `argocd-tls-certs-cm`** (the
+  mkcert CA for cloning forgejo.lan) to upstream's empty version. Application
+  CRs live in `clusters/home/argocd/apps/` (applied separately). Webhook:
+  Forgejo → `http://argocd-server.argocd.svc.cluster.local/api/webhook`
+  (needs `FORGEJO__webhook__ALLOWED_HOST_LIST=private`).
+- **In-cluster `*.lan` DNS** comes from `clusters/home/coredns/` (coredns-custom
+  forwards the `lan` zone to Pi-hole). Pods could NOT resolve `.lan` before
+  that existed — remember it when a pod can't reach forgejo.lan/harbor.lan.
 
 ## Working style / preferences
 - **Goal: bin-packing** — maximize service density; move workloads to nodes with
