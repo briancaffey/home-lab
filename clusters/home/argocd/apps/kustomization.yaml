@@ -6,3 +6,4 @@ namespace: argocd
 
 resources:
   - hello-gitops.yaml
+  - clusterscape.yaml

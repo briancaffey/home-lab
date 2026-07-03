@@ -1,0 +1,23 @@
+# clusterscape (home-lab#33): the 3D cluster explorer, deployed by the GitOps
+# loop it visualizes. CI builds harbor.lan/apps/clusterscape and bumps
+# deploy/kustomization.yaml; Argo CD rolls clusterscape.lan.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: clusterscape
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/clusterscape.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: clusterscape
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
