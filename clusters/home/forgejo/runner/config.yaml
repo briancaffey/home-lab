@@ -1,0 +1,38 @@
+# forgejo-runner daemon config, mounted at /config/config.yml.
+# Jobs run as containers on the pod-local dind daemon (see deployment.yaml);
+# `network: host` puts them in the pod netns so localhost:2376 (dind) and
+# cluster DNS both work.
+log:
+  level: info
+
+runner:
+  file: /data/.runner
+  capacity: 2
+  timeout: 1h
+  # runs-on label -> job container image. catthehacker act image has node,
+  # git and the docker CLI — one image covers checkout, build and push steps.
+  labels:
+    - "docker:docker://ghcr.io/catthehacker/ubuntu:act-22.04"
+    - "ubuntu-latest:docker://ghcr.io/catthehacker/ubuntu:act-22.04"
+  # Injected into every job: docker CLI -> dind, and mkcert CA trust for
+  # git (checkout from forgejo.lan) and node tooling.
+  envs:
+    DOCKER_HOST: tcp://localhost:2376
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: /certs/client
+    GIT_SSL_CAINFO: /lan-ca/rootCA.pem
+    NODE_EXTRA_CA_CERTS: /lan-ca/rootCA.pem
+
+cache:
+  enabled: false
+
+container:
+  network: host
+  privileged: false
+  # Bind dind's TLS client certs + the mkcert CA into every job container.
+  # Paths are on the dind container's filesystem (it is the "host" here).
+  options: "-v /certs/client:/certs/client:ro -v /lan-ca:/lan-ca:ro"
+  valid_volumes:
+    - /certs/client
+    - /lan-ca
+  force_pull: false

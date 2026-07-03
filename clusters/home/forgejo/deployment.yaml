@@ -29,6 +29,10 @@ spec:
             - { name: FORGEJO__server__HTTP_PORT, value: "3000" }
             - { name: FORGEJO__server__START_SSH_SERVER, value: "false" }  # push over HTTPS
             - { name: FORGEJO__service__DISABLE_REGISTRATION, value: "true" }  # no open signups
+            # Webhooks target in-cluster/LAN addresses (e.g. Argo CD's
+            # argocd-server svc for instant GitOps syncs); default allowlist
+            # only permits public hosts.
+            - { name: FORGEJO__webhook__ALLOWED_HOST_LIST, value: "private" }
           ports:
             - { name: http, containerPort: 3000 }
           volumeMounts:

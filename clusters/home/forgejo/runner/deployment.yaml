@@ -1,0 +1,110 @@
+# Forgejo Actions runner (home-lab#29): runner + privileged dind sidecar,
+# adapted from the upstream examples/kubernetes/dind-docker.yaml.
+# Prereqs (in-cluster secrets, never committed — see runner/README.md):
+#   forgejo-runner-token  (one-time registration token)
+#   lan-ca                (mkcert rootCA.pem — forgejo.lan/harbor.lan trust)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forgejo-runner
+  namespace: forgejo
+  labels: { app: forgejo-runner }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }      # RWO volumes
+  selector:
+    matchLabels: { app: forgejo-runner }
+  template:
+    metadata:
+      labels: { app: forgejo-runner }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2   # disk headroom; never build on a1
+      automountServiceAccountToken: false
+      initContainers:
+        - name: register
+          image: code.forgejo.org/forgejo/runner:12.12.0
+          workingDir: /data
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -f /data/.runner ]; then
+                echo "already registered"; exit 0
+              fi
+              forgejo-runner register --no-interactive \
+                --config /config/config.yml \
+                --instance https://forgejo.lan \
+                --token "$RUNNER_TOKEN" \
+                --name k8s-a2 \
+                --labels "docker:docker://ghcr.io/catthehacker/ubuntu:act-22.04,ubuntu-latest:docker://ghcr.io/catthehacker/ubuntu:act-22.04"
+          env:
+            - name: RUNNER_TOKEN
+              valueFrom:
+                secretKeyRef: { name: forgejo-runner-token, key: token }
+            # mkcert CA for the https://forgejo.lan registration call (Go also
+            # keeps loading the system dir, so public CAs still work).
+            - name: SSL_CERT_FILE
+              value: /lan-ca/rootCA.pem
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: config, mountPath: /config, readOnly: true }
+            - { name: lan-ca, mountPath: /lan-ca, readOnly: true }
+      containers:
+        - name: runner
+          image: code.forgejo.org/forgejo/runner:12.12.0
+          workingDir: /data
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while ! nc -z localhost 2376 </dev/null; do
+                echo 'waiting for docker daemon...'; sleep 2
+              done
+              exec forgejo-runner --config /config/config.yml daemon
+          env:
+            - name: DOCKER_HOST
+              value: tcp://localhost:2376
+            - name: DOCKER_CERT_PATH
+              value: /certs/client
+            - name: DOCKER_TLS_VERIFY
+              value: "1"
+            - name: SSL_CERT_FILE
+              value: /lan-ca/rootCA.pem
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 2Gi }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: config, mountPath: /config, readOnly: true }
+            - { name: docker-certs, mountPath: /certs }
+            - { name: lan-ca, mountPath: /lan-ca, readOnly: true }
+        - name: daemon
+          image: docker:28-dind
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: /certs
+          securityContext:
+            privileged: true
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 6Gi }
+          volumeMounts:
+            - { name: docker-certs, mountPath: /certs }
+            - { name: dind-data, mountPath: /var/lib/docker }
+            # CA for pushes to harbor.lan (daemon does the registry TLS)…
+            - name: lan-ca
+              mountPath: /etc/docker/certs.d/harbor.lan/ca.crt
+              subPath: rootCA.pem
+              readOnly: true
+            # …and at /lan-ca so config.yaml can bind it into job containers.
+            - { name: lan-ca, mountPath: /lan-ca, readOnly: true }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: forgejo-runner-data }
+        - name: dind-data
+          persistentVolumeClaim: { claimName: forgejo-runner-dind }
+        - name: docker-certs
+          emptyDir: {}
+        - name: config
+          configMap: { name: forgejo-runner-config }
+        - name: lan-ca
+          secret: { secretName: lan-ca }

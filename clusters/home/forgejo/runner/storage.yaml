@@ -1,0 +1,27 @@
+# local-path PVCs — bind to a2 via the pod's nodeSelector (WaitForFirstConsumer).
+# runner-data keeps the registration (.runner) across restarts so Forgejo
+# doesn't accumulate zombie runner entries; dind-data keeps the docker layer
+# cache so image builds stay fast.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forgejo-runner-data
+  namespace: forgejo
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: forgejo-runner-dind
+  namespace: forgejo
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 40Gi
