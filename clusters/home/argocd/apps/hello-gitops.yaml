@@ -1,0 +1,22 @@
+# GitOps pilot app (home-lab#29): Argo CD watches deploy/ in the
+# hello-gitops repo; CI bumps the image tag there, Argo rolls it out.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hello-gitops
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/hello-gitops.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hello-gitops
+  syncPolicy:
+    automated:
+      prune: true      # delete cluster objects removed from git
+      selfHeal: true   # revert manual kubectl drift back to git state
+    syncOptions:
+      - CreateNamespace=true

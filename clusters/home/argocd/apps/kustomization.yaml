@@ -1,0 +1,8 @@
+# Application CRs — applied separately from ../ so the Argo CD CRDs exist
+# first:  kubectl apply -k clusters/home/argocd/apps
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+
+resources:
+  - hello-gitops.yaml

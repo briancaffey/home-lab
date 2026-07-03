@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+
+resources:
+  - namespace.yaml
+  # Upstream non-HA install, pinned. Bump the tag to upgrade Argo CD.
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.4/manifests/install.yaml
+  - ingress.yaml
+
+patches:
+  # Keep the CD control plane off spark (often offline, other subnet) and off
+  # a1 (flaky WiFi). a2 has the most headroom and already hosts Forgejo.
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value: { inference-club.com/box: a2 }
+    target:
+      kind: Deployment
+  - patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value: { inference-club.com/box: a2 }
+    target:
+      kind: StatefulSet
+  # Traefik terminates TLS at argocd.lan; serve the API/UI over plain HTTP
+  # inside the cluster so the ingress backend works without TLS passthrough.
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cmd-params-cm
+      data:
+        server.insecure: "true"
