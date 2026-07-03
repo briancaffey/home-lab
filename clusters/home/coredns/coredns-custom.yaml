@@ -1,0 +1,16 @@
+# In-cluster *.lan resolution (home-lab#29). k3s CoreDNS imports
+# /etc/coredns/custom/*.server from this ConfigMap; without it, pods can't
+# resolve forgejo.lan/harbor.lan/etc. (CoreDNS forwards to the node's
+# resolv.conf, which bypasses Pi-hole). Forward the lan zone to Pi-hole.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  lan.server: |
+    lan:53 {
+        errors
+        cache 30
+        forward . 192.168.5.96
+    }
