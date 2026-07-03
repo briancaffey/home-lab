@@ -1,0 +1,32 @@
+# https://prometheus.lan/ (Traefik + mkcert prometheus-tls). Consumed by
+# clusterscape's snapshot/bridge for hardware metrics (home-lab#33) and handy
+# for ad-hoc PromQL.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus
+  namespace: monitoring
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Prometheus"
+    gethomepage.dev/description: "Metrics TSDB"
+    gethomepage.dev/group: "Monitoring"
+    gethomepage.dev/icon: "prometheus.png"
+    gethomepage.dev/pod-selector: "app=prometheus"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: prometheus.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
+  tls:
+    - secretName: prometheus-tls
+      hosts:
+        - prometheus.lan

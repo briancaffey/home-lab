@@ -53,6 +53,8 @@ scrape_configs:
         labels: { node: a3 }
       - targets: ["192.168.6.19:9100"]    # spark
         labels: { node: spark }
+      - targets: ["192.168.5.174:9100"]   # x1
+        labels: { node: x1 }
 
   # NOTE: no LiteLLM /metrics scrape. LiteLLM's native Prometheus endpoint is an
   # enterprise/premium feature — on the OSS image /metrics 404s, and because the

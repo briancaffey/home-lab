@@ -7,6 +7,7 @@ resources:
   - prometheus.yaml
   - grafana.yaml
   - grafana-ingress.yaml
+  - prometheus-ingress.yaml
   - dcgm-exporter.yaml
   - vram-reporter.yaml
   - node-exporter.yaml
