@@ -1,0 +1,49 @@
+# In-pod Vaultwarden access for the Hermes agent (red-tape follow-on, #28/#10).
+# `vault-secret` mirrors scripts/vault-secret.sh but reads the bot creds from
+# files mounted out of the `hermes-vault-bot` Secret (see deployment.yaml
+# header) instead of a keychain, and talks to https://vault.lan (bw >= 2026
+# refuses plain-HTTP servers; pods resolve .lan via coredns-custom, and the
+# mkcert CA arrives via the `mkcert-ca` ConfigMap that scripts/lan-certs.sh
+# maintains). An initContainer copies it onto the PVC bin dir every boot, so
+# edits here roll out with a pod restart.
+#
+# The script itself holds no secrets — safe for the public repo.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-vault-tools
+data:
+  vault-secret: |
+    #!/bin/sh
+    # vault-secret <item-name> [field] — fetch a secret from Vaultwarden.
+    # field defaults to "password"; password|username|totp|notes|uri are
+    # built-ins, anything else reads a custom field on the item.
+    set -eu
+    ITEM="${1:?usage: vault-secret <item-name> [field]}"
+    FIELD="${2:-password}"
+
+    CRED_DIR=/etc/vault-bot
+    export BITWARDENCLI_APPDATA_DIR=/opt/data/.bw
+    export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-/etc/mkcert/rootCA.pem}"
+    export BW_CLIENTID="$(cat $CRED_DIR/clientid)"
+    export BW_CLIENTSECRET="$(cat $CRED_DIR/clientsecret)"
+    SERVER="${BW_SERVER:-https://vault.lan}"
+
+    STATUS="$(bw status 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin).get("status","unauthenticated"))' 2>/dev/null || echo unauthenticated)"
+    if [ "$STATUS" = "unauthenticated" ]; then
+      bw config server "$SERVER" >/dev/null
+      bw login --apikey >/dev/null
+    fi
+
+    SESSION="$(BW_PASSWORD="$(cat $CRED_DIR/password)" bw unlock --passwordenv BW_PASSWORD --raw)"
+    bw sync --session "$SESSION" >/dev/null
+
+    case "$FIELD" in
+      password|username|totp|notes|uri)
+        bw get "$FIELD" "$ITEM" --session "$SESSION"
+        ;;
+      *)
+        bw get item "$ITEM" --session "$SESSION" \
+          | python3 -c "import sys,json;d=json.load(sys.stdin);print(next((f['value'] for f in d.get('fields') or [] if f.get('name')=='$FIELD'),''),end='')"
+        ;;
+    esac

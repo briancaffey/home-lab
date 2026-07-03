@@ -13,6 +13,17 @@
 #     --from-literal=litellm-api-key="$(scripts/vault-secret.sh litellm-key-hermes-agent)" \
 #     --from-literal=dashboard-password="$(scripts/vault-secret.sh hermes-dashboard-password)" \
 #     --from-literal=dashboard-session-secret="$(scripts/vault-secret.sh hermes-dashboard-session-secret)"
+#
+# Out-of-band secret #2 — Vaultwarden bot creds so the agent's `vault-secret`
+# tool works (see vault-tools.yaml + skills/vaultwarden). Same bot account the
+# laptop uses; values come FROM the local keychain, never disk/repo:
+#   kubectl -n hermes create secret generic hermes-vault-bot \
+#     --from-literal=clientid="$(security find-generic-password -a claude -s vaultwarden-bot-clientid -w)" \
+#     --from-literal=clientsecret="$(security find-generic-password -a claude -s vaultwarden-bot-clientsecret -w)" \
+#     --from-literal=password="$(security find-generic-password -a claude -s vaultwarden-bot-password -w)"
+# ⚠ This gives the agent (and anything that can prompt it) read access to the
+# WHOLE homelab vault — acceptable per home-lab#28 discussion; revisit with a
+# scoped collection/second bot if Hermes ever faces untrusted input.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -71,6 +82,30 @@ spec:
           command: ["sh", "-c", "[ -x /opt/data/.local/bin/kubectl ] && echo 'kubectl present' || (mkdir -p /opt/data/.local/bin && curl -fsSL -o /opt/data/.local/bin/kubectl https://dl.k8s.io/release/v1.35.5/bin/linux/amd64/kubectl && chmod +x /opt/data/.local/bin/kubectl)"]
           volumeMounts:
             - { name: data, mountPath: /opt/data }
+        # Bitwarden CLI onto the PVC (same story as kubectl above) + the
+        # vault-secret wrapper from the hermes-vault-tools ConfigMap. The
+        # wrapper copies unconditionally so ConfigMap edits land on restart;
+        # bw (a ~100 MB pkg'd Node binary, no unzip in image → python zipfile)
+        # only downloads once. TODO(x1-harbor-trust): fold into image/Dockerfile.
+        - name: install-vault-tools
+          image: nousresearch/hermes-agent:v2026.6.19
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /opt/data/.local/bin
+              if [ ! -x /opt/data/.local/bin/bw ]; then
+                curl -fsSL -o /tmp/bw.zip https://github.com/bitwarden/clients/releases/download/cli-v2026.6.0/bw-linux-2026.6.0.zip
+                python3 -m zipfile -e /tmp/bw.zip /opt/data/.local/bin/
+                chmod +x /opt/data/.local/bin/bw
+              fi
+              cp /vault-tools/vault-secret /opt/data/.local/bin/vault-secret
+              chmod +x /opt/data/.local/bin/vault-secret
+              echo "vault tools ready: $(/opt/data/.local/bin/bw --version)"
+          volumeMounts:
+            - { name: data, mountPath: /opt/data }
+            - { name: vault-tools, mountPath: /vault-tools }
       containers:
         - name: hermes
           image: nousresearch/hermes-agent:v2026.6.19
@@ -108,6 +143,12 @@ spec:
             - { name: OTEL_PROJECT_NAME, value: "hermes-agent" }
           volumeMounts:
             - { name: data, mountPath: /opt/data }
+            # Bot creds as files (not env) so a stray `env` in a terminal tool
+            # run doesn't dump them; vault-secret reads them from here.
+            - { name: vault-bot, mountPath: /etc/vault-bot, readOnly: true }
+            # mkcert root CA (public cert) — bw validates https://vault.lan
+            # via NODE_EXTRA_CA_CERTS. ConfigMap kept fresh by lan-certs.sh.
+            - { name: mkcert-ca, mountPath: /etc/mkcert, readOnly: true }
           resources:
             requests:
               cpu: "500m"
@@ -133,3 +174,12 @@ spec:
         - name: seed
           configMap:
             name: hermes-seed
+        - name: vault-tools
+          configMap:
+            name: hermes-vault-tools
+        - name: vault-bot
+          secret:
+            secretName: hermes-vault-bot
+        - name: mkcert-ca
+          configMap:
+            name: mkcert-ca
