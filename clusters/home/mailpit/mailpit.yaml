@@ -64,7 +64,7 @@ kind: Service
 metadata:
   name: mailpit
   namespace: mailpit
-  labels: { app: mailpit }
+  labels: { app: mailpit, home-lab/delivered-by: gitops }
 spec:
   selector: { app: mailpit }
   ports:

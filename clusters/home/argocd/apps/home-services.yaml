@@ -1,0 +1,105 @@
+# GitOps for home-cluster's OWN services (home-lab#29) — starter tranche.
+# Each Application watches one clusters/home/<svc> dir in THIS repo (the
+# Forgejo copy — push there, or `git push origin` which is set up to push
+# both remotes). Workflow: edit manifests → commit → push → Argo syncs;
+# no more ad-hoc `kubectl apply -k` for migrated services.
+#
+# Deliberately conservative sync policy while we build trust:
+#   - selfHeal: true  → manual kubectl drift is reverted to git state
+#   - prune:   FALSE  → removing a file from git does NOT delete the object;
+#     deletions stay a manual, eyes-open act. Flip per-app once comfortable.
+#
+# Out-of-band prereq (private repo): the `repo-home-lab` Secret in argocd ns
+# (argocd.argoproj.io/secret-type=repository; username brian + token from
+# Vaultwarden `forgejo-api`).
+#
+# Migration path for the REST of clusters/home: copy one of these blocks,
+# point `path` at the service dir, apply apps/. Keep out (for now): argocd
+# itself, traefik (cluster-critical), helm-release services (homepage,
+# longhorn — need Argo-native helm treatment), monitoring (configMapGenerator
+# churn — verify hash behavior first).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-mailpit
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/mailpit
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: mailpit
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-qbittorrent
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/qbittorrent
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qbittorrent
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-rampart
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/rampart
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rampart
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Renovate itself under GitOps — the updater gets updated through its own
+# PRs: Renovate PR bumps its image tag → merge → Argo rolls the CronJob.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-renovate
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/renovate
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: renovate
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
