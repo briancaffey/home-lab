@@ -82,13 +82,15 @@ if kubectl get ns argocd >/dev/null 2>&1; then
   echo "ok: mkcert CA -> argocd-tls-certs-cm (forgejo.lan)"
 fi
 
-# Hermes' in-pod `vault-secret` (bw CLI) validates https://vault.lan via this
-# CA (mounted at /etc/mkcert, NODE_EXTRA_CA_CERTS). Public cert, not a secret.
-if kubectl get ns hermes >/dev/null 2>&1; then
-  kubectl -n hermes create configmap mkcert-ca \
+# Namespaces whose pods need the mkcert root CA as a file (mounted at
+# /etc/mkcert): hermes (bw -> vault.lan), renovate (git/API -> forgejo.lan).
+# Public cert, not a secret.
+for ns in hermes renovate; do
+  kubectl get ns "$ns" >/dev/null 2>&1 || continue
+  kubectl -n "$ns" create configmap mkcert-ca \
     --from-file=rootCA.pem="$(mkcert -CAROOT)/rootCA.pem" \
     --dry-run=client -o yaml | kubectl apply -f -
-  echo "ok: mkcert CA -> configmap/mkcert-ca (hermes)"
-fi
+  echo "ok: mkcert CA -> configmap/mkcert-ca ($ns)"
+done
 
 echo "Done. Run 'mkcert -install' once on each client machine to trust the CA."

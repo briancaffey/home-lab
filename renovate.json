@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "timezone": "America/New_York",
+  "labels": ["renovate"],
+  "prHourlyLimit": 5,
+  "prConcurrentLimit": 10,
+  "kubernetes": {
+    "managerFilePatterns": ["/^clusters\\/.+\\.ya?ml$/", "/^services\\/.+\\.ya?ml$/"]
+  },
+  "packageRules": [
+    {
+      "description": "Group all linuxserver.io images into one PR",
+      "matchPackageNames": ["linuxserver/**", "lscr.io/linuxserver/**"],
+      "groupName": "linuxserver images"
+    },
+    {
+      "description": "Majors get their own label so they stand out",
+      "matchUpdateTypes": ["major"],
+      "labels": ["renovate", "major"]
+    }
+  ]
+}
