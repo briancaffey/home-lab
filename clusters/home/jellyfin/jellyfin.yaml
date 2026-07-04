@@ -64,6 +64,9 @@ spec:
             - name: captures
               mountPath: /captures
               readOnly: true
+            - name: downloads
+              mountPath: /downloads
+              readOnly: true
       volumes:
         - name: config
           persistentVolumeClaim:
@@ -79,6 +82,13 @@ spec:
         - name: captures
           hostPath:
             path: /home/brian/e/Videos
+            type: Directory
+        # qBittorrent's landing dir (clusters/home/qbittorrent) — read-only;
+        # the scanner ignores non-media files, and in-progress downloads live
+        # in .incomplete/ (dot-dir, skipped by Jellyfin) until complete.
+        - name: downloads
+          hostPath:
+            path: /home/brian/e/downloads
             type: Directory
 ---
 apiVersion: v1
