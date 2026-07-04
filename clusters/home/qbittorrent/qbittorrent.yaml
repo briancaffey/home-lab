@@ -1,0 +1,99 @@
+# qBittorrent — pinned to a2 for the 5.5 TB "e" disk. Two storage layers, on
+# purpose:
+#   - /config  → small local-path PVC (settings, torrent state, categories)
+#   - /downloads → hostPath /home/brian/e/downloads — downloads are NORMAL
+#     FILES owned by brian (PUID/PGID 1000), not buried in a PV: `ssh a2` and
+#     they're in ~/e/downloads, ready for Jellyfin/Samba/the media pipeline.
+#
+# NodePort 30881 exposes the BitTorrent peer port — without it, peers can't
+# reach us for incoming connections and download speed suffers badly (k8s has
+# no UPnP). Same fixed port is set in qBittorrent's connection settings.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qbittorrent-config
+  namespace: qbittorrent
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent
+  namespace: qbittorrent
+  labels: { app: qbittorrent }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO config PVC + single torrent session
+  selector:
+    matchLabels: { app: qbittorrent }
+  template:
+    metadata:
+      labels: { app: qbittorrent }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: qbittorrent
+          image: linuxserver/qbittorrent:5.2.2
+          env:
+            - { name: PUID, value: "1000" }   # brian on a2 — files land owned by brian
+            - { name: PGID, value: "1000" }
+            - { name: TZ, value: "America/New_York" }
+            - { name: WEBUI_PORT, value: "8080" }
+            - { name: TORRENTING_PORT, value: "30881" }
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: bt-tcp, containerPort: 30881, protocol: TCP }
+            - { name: bt-udp, containerPort: 30881, protocol: UDP }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: downloads, mountPath: /downloads }
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 2Gi }
+      volumes:
+        - name: config
+          persistentVolumeClaim: { claimName: qbittorrent-config }
+        - name: downloads
+          hostPath:
+            path: /home/brian/e/downloads
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: qbittorrent
+  labels: { app: qbittorrent }
+spec:
+  selector: { app: qbittorrent }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
+---
+# Peer port — NodePort so external peers can connect in (better speeds).
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent-peer
+  namespace: qbittorrent
+  labels: { app: qbittorrent }
+spec:
+  type: NodePort
+  selector: { app: qbittorrent }
+  ports:
+    - { name: bt-tcp, port: 30881, targetPort: bt-tcp, nodePort: 30881, protocol: TCP }
+    - { name: bt-udp, port: 30881, targetPort: bt-udp, nodePort: 30881, protocol: UDP }

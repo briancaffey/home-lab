@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qbittorrent
+  namespace: qbittorrent
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "qBittorrent"
+    gethomepage.dev/description: "BitTorrent client (download-only) → a2 ~/e/downloads"
+    gethomepage.dev/group: "Media"
+    gethomepage.dev/icon: "qbittorrent.png"
+    gethomepage.dev/href: "https://qbittorrent.lan/"
+    gethomepage.dev/pod-selector: "app=qbittorrent"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["qbittorrent.lan"]
+      secretName: qbittorrent-tls
+  rules:
+    - host: qbittorrent.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qbittorrent
+                port:
+                  number: 8080

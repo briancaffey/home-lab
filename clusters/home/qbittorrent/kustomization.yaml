@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: qbittorrent
+
+# Raw manifests (no Helm). Apply with:
+#   kubectl apply -k clusters/home/qbittorrent
+#
+# qBittorrent (web UI at https://qbittorrent.lan/) — download-only ("leech")
+# BitTorrent client. Downloads land as PLAIN FILES on a2's 5.5 TB disk at
+# /home/brian/e/downloads (hostPath) — browseable over SSH, future
+# Samba/Filebrowser, and mountable into Jellyfin/the media pipeline (docs/08).
+#
+# Out-of-band prereqs:
+#   - qbittorrent-tls secret       (scripts/lan-certs.sh — qbittorrent.lan wired in)
+#   - admin password               (in Vaultwarden: `qbittorrent-web`; the
+#     container logs a temp password on first boot, changed via the UI/API)
+#
+# Leech mode is runtime config (persisted in the config PVC): share ratio
+# limit 0 + pause on reaching it, set via Options → BitTorrent → Seeding
+# Limits (or the Web API app/setPreferences).
+
+resources:
+  - namespace.yaml
+  - qbittorrent.yaml
+  - ingress.yaml
