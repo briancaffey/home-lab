@@ -24,16 +24,16 @@ notes | uri`; any other name reads a custom field on the item.
 ## Examples
 
 ```sh
-TOKEN=$(vault-secret forgejo)                  # Forgejo API token
+TOKEN=$(vault-secret forgejo-api)              # Forgejo API token
 HF=$(vault-secret huggingface-api)             # HuggingFace token
 U=$(vault-secret harbor-admin username)        # a username field
-curl -s -H "Authorization: token $(vault-secret forgejo)" \
+curl -s -H "Authorization: token $(vault-secret forgejo-api)" \
   https://forgejo.lan/api/v1/repos/brian/home-lab/issues
 ```
 
 ## Known items (2026-07; the vault is the source of truth)
 
-`forgejo`, `paperless-api`, `grafana-admin`, `harbor-admin`, `pihole-web`,
+`forgejo-api`, `forgejo-gitops`, `paperless-api`, `grafana-admin`, `harbor-admin`, `pihole-web`,
 `ghcr-pull`, `litellm-master`, `huggingface-api`, `hermes-api-server-key`,
 `hermes-dashboard-password`, and others. If an item name doesn't match,
 report the failure — do NOT guess names by brute force.
