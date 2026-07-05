@@ -37,7 +37,7 @@ spec:
         fsGroup: 472
       containers:
         - name: grafana
-          image: grafana/grafana-oss:11.4.0
+          image: grafana/grafana-oss:11.6.5
           env:
             - name: GF_SECURITY_ADMIN_USER
               valueFrom:
