@@ -126,3 +126,29 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# Hand-rolled monitoring stack (prometheus, grafana, exporters). Safe under
+# GitOps: disableNameSuffixHash keeps ConfigMap names stable (no churn), and
+# a zero-drift kubectl diff was verified before onboarding (2026-07-06).
+# Caveat unchanged from manual days: config-only CM edits still need a
+# `kubectl rollout restart` — Argo updates the CM but nothing bounces pods.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-monitoring
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
