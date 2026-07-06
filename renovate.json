@@ -42,5 +42,10 @@
       ],
       "enabled": false
     }
-  ]
+  ],
+  "argocd": {
+    "managerFilePatterns": [
+      "/^clusters\\/home\\/argocd\\/apps\\/.+\\.ya?ml$/"
+    ]
+  }
 }

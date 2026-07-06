@@ -1,8 +1,8 @@
 # Netdata — live per-node hardware/system monitoring with a single pane over all
-# nodes. Deployed as a HELM RELEASE (chart netdata/netdata):
-#   helm repo add netdata https://netdata.github.io/helmchart/
-#   helm upgrade --install netdata netdata/netdata -n netdata --create-namespace \
-#     -f clusters/home/netdata/values.yaml --wait
+# nodes. MANAGED BY ARGO CD since 2026-07-06 (Application home-netdata, a
+# multi-source app: upstream chart 3.7.168 + this values file + ingress.yaml).
+# Do NOT `helm upgrade` — edit this file / bump targetRevision in
+# clusters/home/argocd/apps/home-services.yaml and push.
 #
 # Architecture: one `parent` (dashboard + metrics DB, pinned to a2 for disk) and
 # a `child` DaemonSet on every node that streams to the parent. The parent's
