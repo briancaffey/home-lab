@@ -1,0 +1,81 @@
+# code-server (linuxserver.io build) — see kustomization.yaml header for the
+# namespace/node co-location rationale. DEFAULT_WORKSPACE opens the browser
+# straight into the Hermes data dir. Remember: after editing config.yaml,
+# restart Hermes to pick it up (kubectl -n hermes rollout restart deploy/hermes);
+# SOUL.md is re-read per session, no restart needed.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: code-server-config
+  namespace: hermes
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-server
+  namespace: hermes
+  labels: { app: code-server }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO config PVC
+  selector:
+    matchLabels: { app: code-server }
+  template:
+    metadata:
+      labels: { app: code-server }
+    spec:
+      # Must share x1 with hermes to co-mount the RWO hermes-data PVC.
+      nodeSelector:
+        inference-club.com/box: x1
+      containers:
+        - name: code-server
+          image: linuxserver/code-server:4.127.0
+          env:
+            # hermes files on the PVC are uid 10000 with 600/700 modes —
+            # run as that user or nothing is editable.
+            - { name: PUID, value: "10000" }
+            - { name: PGID, value: "10000" }
+            - { name: TZ, value: "America/New_York" }
+            - { name: DEFAULT_WORKSPACE, value: /hermes-data }
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef: { name: code-server-secrets, key: password }
+          ports:
+            - { name: http, containerPort: 8443 }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: hermes-data, mountPath: /hermes-data }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1536Mi }
+      volumes:
+        - name: config
+          persistentVolumeClaim: { claimName: code-server-config }
+        - name: hermes-data
+          persistentVolumeClaim: { claimName: hermes-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server
+  namespace: hermes
+  labels: { app: code-server }
+spec:
+  selector: { app: code-server }
+  ports:
+    - { name: http, port: 8443, targetPort: http }

@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Browser VS Code at https://code.lan/ for editing Hermes' live files
+# (SOUL.md, config.yaml, skills/, plugins/) directly on the hermes-data PVC.
+#
+# Lives in the HERMES namespace on purpose: PVCs are namespace-scoped, so
+# mounting hermes-data requires being in `hermes`; RWO + local-path means it
+# must also share Hermes' node (x1) — two pods on one node may share an RWO
+# volume. Runs as uid/gid 10000 (the in-container hermes user) so its
+# mode-600 files are editable.
+#
+# Apply with: kubectl apply -k clusters/home/code-server
+# Out-of-band prereqs:
+#   - code-tls secret in hermes ns   (scripts/lan-certs.sh — code.lan wired in)
+#   - web password:
+#       kubectl -n hermes create secret generic code-server-secrets \
+#         --from-literal=password="$(scripts/vault-secret.sh code-server-web)"
+#
+# ⚠ Anyone with the code.lan password can read/edit everything on the hermes
+# PVC (including its .env). LAN-only + vault-strength password; acceptable.
+resources:
+  - code-server.yaml
+  - ingress.yaml

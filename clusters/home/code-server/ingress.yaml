@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: code-server
+  namespace: hermes
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "code-server"
+    gethomepage.dev/description: "VS Code in the browser — edits Hermes' live files (x1)"
+    gethomepage.dev/group: "Infra"
+    gethomepage.dev/icon: "code-server.png"
+    gethomepage.dev/href: "https://code.lan/"
+    gethomepage.dev/pod-selector: "app=code-server"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["code.lan"]
+      secretName: code-tls
+  rules:
+    - host: code.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: code-server
+                port:
+                  number: 8443

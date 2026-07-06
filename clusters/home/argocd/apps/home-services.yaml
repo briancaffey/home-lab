@@ -152,3 +152,24 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# code-server lives in the HERMES namespace (co-mounts the hermes-data PVC
+# on x1) — destination ns is hermes, not its own.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-code-server
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/code-server
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hermes
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
