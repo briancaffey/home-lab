@@ -194,3 +194,68 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-gatus
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/gatus
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gatus
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Helm-inflating dir (like open-webui) — relies on the argocd-cm
+# kustomize.buildOptions: --enable-helm patch.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-headlamp
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/headlamp
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: headlamp
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-kube-ops-view
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/kube-ops-view
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-ops-view
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
