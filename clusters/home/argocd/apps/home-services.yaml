@@ -34,7 +34,7 @@ spec:
     namespace: mailpit
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -55,7 +55,7 @@ spec:
     namespace: qbittorrent
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -76,7 +76,7 @@ spec:
     namespace: rampart
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -99,7 +99,7 @@ spec:
     namespace: renovate
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
