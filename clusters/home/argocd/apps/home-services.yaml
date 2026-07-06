@@ -259,3 +259,41 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# First TRUE HELM RELEASE under Argo (the homepage/longhorn class). Three
+# sources: the upstream chart, our values.yaml from git ($values ref), and
+# the .lan ingress file from the same dir. releaseName MUST stay `netdata`
+# or every rendered object gets renamed. Verified pre-merge: helm template
+# at 3.7.168 + these values == live release, zero drift. After merge the
+# helm CLI bookkeeping is retired (helm release secrets deleted) — from
+# then on `helm upgrade` is WRONG for netdata; git is the only path.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-netdata
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://netdata.github.io/helmchart/
+      chart: netdata
+      targetRevision: 3.7.168
+      helm:
+        releaseName: netdata
+        valueFiles:
+          - $values/clusters/home/netdata/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      path: clusters/home/netdata
+      directory:
+        include: ingress.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: netdata
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
