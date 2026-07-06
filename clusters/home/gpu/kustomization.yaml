@@ -8,7 +8,7 @@ resources:
   # Node Feature Discovery (master + worker + CRDs). GPU-feature-discovery
   # writes feature files that nfd-worker reads and nfd-master turns into node
   # labels — the mechanism that surfaces nvidia.com/gpu.product + .memory.
-  - https://github.com/kubernetes-sigs/node-feature-discovery/deployment/overlays/default?ref=v0.16.6
+  - https://github.com/kubernetes-sigs/node-feature-discovery/deployment/overlays/default?ref=v0.18.3
   # GPU-feature-discovery (vendored from device-plugin v0.17.4 with local edits:
   # kube-system ns, nvidia RuntimeClass, corrected pci-0300_10de affinity).
   - gpu-feature-discovery.yaml
