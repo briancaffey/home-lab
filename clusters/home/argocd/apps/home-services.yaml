@@ -103,3 +103,26 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# First helm-inflating kustomization under GitOps — depends on the
+# kustomize.buildOptions: --enable-helm patch in ../kustomization.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-open-webui
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/open-webui
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: open-webui
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
