@@ -41,7 +41,7 @@ spec:
     spec:
       runtimeClassName: nvidia
       containers:
-        - image: nvcr.io/nvidia/k8s-device-plugin:v0.17.4
+        - image: nvcr.io/nvidia/k8s-device-plugin:v0.19.3
           name: gpu-feature-discovery
           command: ["/usr/bin/gpu-feature-discovery"]
           volumeMounts:
