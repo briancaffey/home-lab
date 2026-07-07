@@ -1,23 +1,100 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":dependencyDashboard"],
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
   "timezone": "America/New_York",
-  "labels": ["renovate"],
+  "labels": [
+    "renovate"
+  ],
   "prHourlyLimit": 5,
   "prConcurrentLimit": 10,
   "kubernetes": {
-    "managerFilePatterns": ["/^clusters\\/.+\\.ya?ml$/", "/^services\\/.+\\.ya?ml$/"]
+    "managerFilePatterns": [
+      "/^clusters\\/.+\\.ya?ml$/",
+      "/^services\\/.+\\.ya?ml$/"
+    ]
   },
   "packageRules": [
     {
       "description": "Group all linuxserver.io images into one PR",
-      "matchPackageNames": ["linuxserver/**", "lscr.io/linuxserver/**"],
+      "matchPackageNames": [
+        "linuxserver/**",
+        "lscr.io/linuxserver/**"
+      ],
       "groupName": "linuxserver images"
     },
     {
       "description": "Majors get their own label so they stand out",
-      "matchUpdateTypes": ["major"],
-      "labels": ["renovate", "major"]
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "labels": [
+        "renovate",
+        "major"
+      ]
+    },
+    {
+      "description": "Self-built images (inference-club CI -> ghcr, private): not Renovate's job \u2014 CI moves these, and anonymous lookups fail with no-result noise",
+      "matchPackageNames": [
+        "ghcr.io/inference-club/**"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "jellyfin: pinned to a daily (see jellyfin.yaml); daily tags would spam PRs. Re-enable when back on stable 10.11.12+",
+      "matchPackageNames": [
+        "jellyfin/jellyfin"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "longhorn chart: STORAGE CEREMONY \u2014 upgrades are ordered/one-way and touch the volume substrate. PRs only via explicit dashboard approval; read release notes; verify volume health before+after.",
+      "matchPackageNames": [
+        "longhorn"
+      ],
+      "matchDatasources": [
+        "helm"
+      ],
+      "dependencyDashboardApproval": true,
+      "labels": [
+        "renovate",
+        "storage-ceremony"
+      ]
+    },
+    {
+      "description": "nvidia GPU plumbing (device-plugin/GFD/dcgm): version bumps have shipped breaking manifest changes (v0.19: NODE_NAME + NodeFeature-API default \u2014 see #45 saga, d4ba050). gpu/ is outside the tranche, so these need a human apply anyway \u2014 gate PRs behind dashboard approval.",
+      "matchPackageNames": [
+        "nvcr.io/nvidia/**"
+      ],
+      "dependencyDashboardApproval": true,
+      "labels": [
+        "renovate",
+        "gpu-ceremony"
+      ]
+    }
+  ],
+  "argocd": {
+    "managerFilePatterns": [
+      "/^clusters\\/home\\/argocd\\/apps\\/.+\\.ya?ml$/"
+    ]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Bitwarden CLI pinned by URL in hermes' install-vault-tools initContainer",
+      "managerFilePatterns": [
+        "/^clusters\\/home\\/hermes\\/deployment\\.yaml$/"
+      ],
+      "matchStrings": [
+        "download/cli-v(?<currentValue>\\d+\\.\\d+\\.\\d+)/",
+        "bw-linux-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\.zip"
+      ],
+      "depNameTemplate": "bitwarden-cli",
+      "packageNameTemplate": "bitwarden/clients",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^cli-v(?<version>.*)$"
     }
   ]
 }

@@ -1,0 +1,123 @@
+# Nightly paperless backup — original documents + archive (media PVC), app
+# data, and the Postgres DB (pg_dump, same image family as the server).
+# Deliberately NOT backed up: consume (transient inbox), holding (staging),
+# redis (cache).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-paperless
+  namespace: paperless
+spec:
+  schedule: "0 4 * * *"
+  timeZone: America/New_York
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            inference-club.com/box: a2
+          initContainers:
+            - name: pgdump
+              image: postgres:16-alpine
+              command: ["sh","-c","pg_dump -h paperless-postgres -U paperless -d paperless -F c -f /snap/paperless.pgdump && ls -la /snap/"]
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: paperless-secret, key: DBPASS }
+              volumeMounts:
+                - { name: snap, mountPath: /snap }
+            - name: snapshot
+              image: python:3.12-alpine
+              env:
+                - { name: SRCS, value: "/pvc-data:/snap/data,/pvc-media:/snap/media" }
+                - { name: SKIP, value: "" }
+              command:
+                - python3
+                - -c
+                - |
+                  import os, shutil, sqlite3, stat
+                  pairs = [p.split(':') for p in os.environ['SRCS'].split(',')]
+                  skip = set(filter(None, os.environ.get('SKIP','').split(',')))
+                  DBEXT = ('.sqlite3', '.db')
+                  SIDE = ('.sqlite3-wal','.sqlite3-shm','.db-wal','.db-shm')
+                  def mk_ig(src_root):
+                      def ig(d, names):
+                          out = []
+                          rel = os.path.relpath(d, src_root)
+                          for n in names:
+                              if rel == '.' and n in skip: out.append(n); continue
+                              if n.endswith(DBEXT) or n.endswith(SIDE): out.append(n); continue
+                              try: m = os.lstat(os.path.join(d, n)).st_mode
+                              except OSError: out.append(n); continue
+                              if not (stat.S_ISREG(m) or stat.S_ISDIR(m) or stat.S_ISLNK(m)):
+                                  out.append(n)
+                          return out
+                      return ig
+                  for src, dst in pairs:
+                      shutil.copytree(src, dst, ignore=mk_ig(src), symlinks=True, dirs_exist_ok=True)
+                      for root, dirs, files in os.walk(src):
+                          rel = os.path.relpath(root, src)
+                          if rel != '.' and rel.split(os.sep)[0] in skip: continue
+                          for f in files:
+                              if f.endswith(DBEXT):
+                                  s = os.path.join(root, f); d = os.path.join(dst, os.path.relpath(s, src))
+                                  os.makedirs(os.path.dirname(d), exist_ok=True)
+                                  try:
+                                      a = sqlite3.connect(f'file:{s}?mode=ro', uri=True); b = sqlite3.connect(d)
+                                      a.backup(b); b.close(); a.close()
+                                      print('sqlite copy:', os.path.relpath(s, src))
+                                  except sqlite3.Error as e:
+                                      # not sqlite, or WAL db on a RO mount: raw
+                                      # crash-consistent copy of db(+wal+shm)
+                                      for ext in ('', '-wal', '-shm'):
+                                          if os.path.exists(s + ext):
+                                              shutil.copy2(s + ext, d + ext)
+                                      print('raw copy (%s):' % e, os.path.relpath(s, src))
+                  print('snapshot done')
+              volumeMounts:
+                - { name: pvc-data, mountPath: /pvc-data, readOnly: true }
+                - { name: pvc-media, mountPath: /pvc-media, readOnly: true }
+                - { name: snap, mountPath: /snap }
+          containers:
+            - name: restic
+              image: restic/restic:0.19.1
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  restic snapshots -q >/dev/null 2>&1 || restic init
+                  restic backup /snap --tag nightly --host paperless
+                  restic forget --prune --keep-daily 14 --keep-weekly 8
+                  restic check --read-data-subset=10%
+              env:
+                - { name: RESTIC_REPOSITORY, value: "s3:http://minio-backups.minio-backups.svc.cluster.local:9000/restic/paperless" }
+                - name: RESTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: restic-password }
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: s3-access-key }
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: s3-secret-key }
+              volumeMounts:
+                - { name: snap, mountPath: /snap, readOnly: true }
+              resources:
+                requests: { cpu: 200m, memory: 256Mi }
+                limits: { memory: 1Gi }
+          volumes:
+            - name: pvc-data
+              persistentVolumeClaim:
+                claimName: paperless-data
+            - name: pvc-media
+              persistentVolumeClaim:
+                claimName: paperless-media
+            - name: snap
+              emptyDir: {}
