@@ -449,3 +449,31 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# Hermes agent. Two things to know: (1) the dir's kustomization uses an
+# unsetOnly NamespaceTransformer to protect a cross-namespace RoleBinding
+# (hermes-edit -> inference-club) — Argo manages that object in ITS
+# namespace, which is correct; (2) the agent's mutable brain (SOUL.md,
+# skills, self-edited config) lives on the hermes-data PVC, NOT in git —
+# git owns the workload shape only. code-server shares this namespace but
+# is its own Application (home-code-server).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-hermes
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/hermes
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hermes
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
