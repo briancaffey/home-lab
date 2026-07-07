@@ -17,8 +17,11 @@ check items off as you go. Immediate fixes (🔴/🟠 + M5) have **Forgejo issue
 - [x] **H1 — Registry auth.** Resolved by decommissioning (2026-07-02,
   home-lab#28): the unauthenticated registry:2 is gone; images live in Harbor
   (push requires auth). _Verify:_ `curl 192.168.5.173:30500` refuses.
-- [ ] **M5 — Scrub tailnet IPs.** Replace the `100.x` IPs in
-  `docs/07-remote-desktop-vnc.md:19-22` with node names / `<tailnet>` placeholders.
+- [x] **M5 — Scrub tailnet IPs.** Done 2026-07-07: docs/07 now uses
+  `<node>.<tailnet>.ts.net` placeholders; repo-wide grep for CGNAT 100.x clean.
+  History NOT rewritten (public-repo force-push breaks mirror/clones); the IPs
+  are CGNAT-unroutable + tailnet ACL is default-deny — rotate the nodes'
+  tailnet IPs if paranoia warrants, cheaper than history surgery.
 
 ## Soon (projects — fold into the roadmap)
 

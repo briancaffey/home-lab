@@ -16,13 +16,13 @@ address is plaintext (fine on the trusted home LAN only).
 
 | node  | Tailscale (encrypted) | LAN          | display |
 |-------|-----------------------|--------------|---------|
-| a1    | `100.80.2.53:5901`    | `a1:5901`    | :1 |
-| a2    | `100.69.6.58:5902`    | `a2:5902`    | :2 (physical X11 desktop owns :1) |
-| a3    | `100.109.147.26:5901` | `a3:5901`    | :1 |
-| spark | `100.118.123.3:5901`  | `spark:5901` | :1 |
+| a1    | `a1.<tailnet>.ts.net:5901`    | `a1:5901`    | :1 |
+| a2    | `a2.<tailnet>.ts.net:5902`    | `a2:5902`    | :2 (physical X11 desktop owns :1) |
+| a3    | `a3.<tailnet>.ts.net:5901` | `a3:5901`    | :1 |
+| spark | `spark.<tailnet>.ts.net:5901`  | `spark:5901` | :1 |
 
 (VNC Viewer warns about an unencrypted connection — expected; dismiss it when
-using the `100.x` Tailscale addresses.)
+using the Tailscale addresses; MagicDNS names resolve to the tailnet 100.x IPs.)
 
 ## Set up / re-do a node
 
