@@ -1,0 +1,47 @@
+/**
+ * @nationaldesignstudio/rampart
+ *
+ * Client-side PII filter for LLM chat. Strips names, SSNs, card numbers, and
+ * every other PII class out of text before it leaves the device — keeping only
+ * {city, state, zip} — so raw PII never reaches our servers or logs.
+ *
+ * Layers: offset-preserving heuristics + validators (structured PII, any
+ * separator form), an optional small wasm token-classifier (contextual PII),
+ * a default-deny keep-set policy, and a reversible placeholder/rehydrate
+ * session table for coherent multi-turn chat.
+ */
+
+export {
+  ChatGuard,
+  createGuard,
+  DEFAULT_ALIASES,
+  type GuardOptions,
+  type NerDetector,
+} from "./src/guard";
+export {
+  StreamingReveal,
+  createRevealTransform,
+  type PlaceholderResolver,
+} from "./src/streaming";
+export {
+  SessionEntityTable,
+  PLACEHOLDER_PATTERN,
+  type ScrubResult,
+  type PlaceholderAliases,
+} from "./src/session";
+export { detectHeuristics } from "./src/heuristics";
+export { mergeSpans, applyPolicy } from "./src/policy";
+export { premask, projectMaskedSpan, sentinelFor, type PremaskResult } from "./src/premask";
+export { KEEP_LABELS, resolveKeepLabels, shouldRedact, type PiiLabel, type Span } from "./src/types";
+export {
+  detectNer,
+  loadNerClassifier,
+  RAMPART_MODEL_ID,
+  NER_TOKEN_BUDGET,
+  NER_TOKEN_OVERLAP,
+  type NerOptions,
+  type TokenClassifier,
+  type TokenCounter,
+} from "./src/ner/classifier";
+export { registerNerWorker, createWorkerClassifier } from "./src/ner/worker";
+export { isLuhnValid, isValidSsn } from "./src/validators";

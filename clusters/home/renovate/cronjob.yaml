@@ -39,7 +39,7 @@ spec:
               env:
                 - { name: RENOVATE_PLATFORM, value: gitea }
                 - { name: RENOVATE_ENDPOINT, value: "https://forgejo.lan/api/v1" }
-                - { name: RENOVATE_REPOSITORIES, value: brian/home-lab }
+                - { name: RENOVATE_REPOSITORIES, value: "brian/home-lab,brian/rampart" }
                 - { name: RENOVATE_GIT_AUTHOR, value: "Renovate Bot <renovate@home-cluster.lan>" }
                 - { name: RENOVATE_ONBOARDING, value: "false" }
                 - name: RENOVATE_TOKEN

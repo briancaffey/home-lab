@@ -12,6 +12,10 @@ spec:
     metadata:
       labels: { app: rampart }
     spec:
+      # CODE LIVES AT forgejo.lan/brian/rampart — push there and CI builds,
+      # pushes harbor.lan/apps/rampart:<sha12>, and commits the tag bump into
+      # THIS file ([skip ci]); Argo deploys it. Don't edit the image tag by
+      # hand unless breaking glass.
       # CPU-only and tiny (~19M-param ONNX model). No PVC: weights are baked
       # into the image; session tables are in-memory by design (Rampart's
       # entity table is meant to be ephemeral). Image is amd64-only, hence the
