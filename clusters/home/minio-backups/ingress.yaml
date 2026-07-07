@@ -1,0 +1,32 @@
+# MinIO console for the backup target. Login: Vaultwarden `minio-backups-root`
+# (username + password). Read-only browsing of restic repos — the repos are
+# encrypted blobs, so this is for health/capacity checks, not file browsing.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-backups
+  namespace: minio-backups
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Backups (MinIO)"
+    gethomepage.dev/description: "Nightly restic target — 5 repos on a2's e-disk"
+    gethomepage.dev/group: "Infra"
+    gethomepage.dev/icon: "minio.png"
+    gethomepage.dev/href: "https://backups.lan/"
+    gethomepage.dev/pod-selector: "app=minio-backups"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["backups.lan"]
+      secretName: backups-tls
+  rules:
+    - host: backups.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-backups
+                port:
+                  number: 9001

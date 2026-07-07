@@ -1,0 +1,28 @@
+# App-of-apps root (home-lab#43 task 3): THE one Application you apply by
+# hand — it watches this apps/ directory and creates/updates every other
+# Application from git. After this exists, adding a service to GitOps is
+# purely: commit an Application file here, push. No kubectl.
+#
+# It manages itself too (root.yaml is in the kustomization it renders) —
+# edits to this file also roll out via git. prune stays OFF: deleting an
+# app file never deletes the Application (remove those by hand, eyes open).
+#
+# Bootstrap (once): kubectl apply -f clusters/home/argocd/apps/root.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-apps-root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/argocd/apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
