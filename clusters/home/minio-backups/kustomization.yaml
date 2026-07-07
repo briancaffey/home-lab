@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: minio-backups
+
+# Dedicated backup-target MinIO (red-tape #28 item 7) — deliberately SEPARATE
+# from the platform MinIO on a3: backups must not share a node/disk with the
+# data they protect (vaultwarden/grafana live on a3). This one is pinned to
+# a2's 5.5 TB "e" disk at /home/brian/e/backups (plain files, browseable).
+# Consumers: restic CronJobs (clusters/home/backups/), later the Longhorn
+# backup target and the media pipeline (docs/08). Console: https://backups.lan/
+#
+# Out-of-band prereq:
+#   kubectl -n minio-backups create secret generic minio-backups-secrets \
+#     --from-literal=root-user="$(scripts/vault-secret.sh minio-backups-root username)" \
+#     --from-literal=root-password="$(scripts/vault-secret.sh minio-backups-root)"
+resources:
+  - namespace.yaml
+  - minio.yaml
+  - ingress.yaml

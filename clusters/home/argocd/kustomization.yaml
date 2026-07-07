@@ -32,3 +32,13 @@ patches:
         name: argocd-cmd-params-cm
       data:
         server.insecure: "true"
+  # Let repo-server render kustomize dirs that inflate Helm charts
+  # (helmCharts: blocks — open-webui etc.). Without this those apps fail
+  # with "must specify --enable-helm". Restart repo-server after changing.
+  - patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-cm
+      data:
+        kustomize.buildOptions: --enable-helm

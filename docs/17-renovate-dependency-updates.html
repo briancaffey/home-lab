@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:12.8px;line-height:1.46;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;height:297mm;overflow:hidden;padding:11mm 13mm 12mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:5px 0 4px}
+  h2{font-size:18px;font-weight:900;margin:13px 0 7px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14px;color:#c7d0e4;max-width:172mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:9px 0 3px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:25px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .stat .d{font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)} .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 14px;margin:9px 0;break-inside:avoid}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);border-radius:0 13px 13px 0;padding:12px 15px;margin:11px 0}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .note h3{color:var(--ok)}
+  .warnbox{border:1px solid rgba(255,159,67,.38);background:rgba(255,159,67,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .warnbox h3{color:var(--high)}
+  .myth{border:1px solid rgba(255,93,108,.38);background:rgba(255,93,108,.09);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .myth h3{color:var(--crit)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.6px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  td b{color:var(--ink)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);border:1px solid var(--line);color:var(--blue)}
+  .tag.g{color:var(--ok)} .tag.o{color:var(--high)} .tag.p{color:var(--purple)} .tag.r{color:var(--crit)}
+  pre{background:#11151f;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:8px 0;overflow:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;color:#cdd6ea}
+  pre .c{color:var(--dim)} pre .k{color:var(--blue)} pre .s{color:var(--ok)}
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0;font-size:11px}
+  .col{flex:1;display:flex;flex-direction:column;gap:7px}
+  .node{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;text-align:center}
+  .node.hub{background:var(--grad);color:#0b1220;font-weight:900;border:none;display:flex;align-items:center;justify-content:center;min-height:100%}
+  .node b{display:block;font-size:11.5px} .node span{font-size:10px;color:var(--mut)}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 9px;color:var(--dim);font-size:20px;font-weight:900}
+  ul{margin:3px 0 7px 17px} li{margin:3px 0;font-size:12.2px;color:#cbd4e8}
+  ol{margin:3px 0 7px 18px} ol li{margin:5px 0;font-size:12.3px}
+  .rank{display:flex;gap:11px;align-items:flex-start;margin:7px 0;break-inside:avoid}
+  .rank .num{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:14px;color:#0b1220;background:var(--grad);border-radius:9px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank .num.b{background:var(--soft);color:var(--mut);border:1px solid var(--line)}
+  .rank h3{font-size:13px} .rank p{font-size:11.8px;color:#c2cbe0;margin:2px 0 0}
+  .foot{position:absolute;bottom:9mm;left:13mm;right:13mm;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--line);padding-top:6px}
+  .verdict{border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(55,182,230,.10),rgba(168,116,216,.10));padding:13px 16px;margin:9px 0}
+  .verdict h3{font-size:15px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style></head><body>
+
+<!-- ============ PAGE 1 · What it is, why self-hosted, the pipeline ============ -->
+<div class="page">
+  <div class="kick">Automation · Home Cluster · k3s</div>
+  <h1>Renovate<br><span class="grad">automated dependency updates for the home cluster</span></h1>
+  <p class="lead">Every pinned image tag in this repo is a dependency that silently ages. Renovate is the bot that
+  notices: a <b>self-hosted</b> instance pointed at the Forgejo copy of the repo
+  (<span class="mono">brian/home-lab</span> on <span class="mono">https://forgejo.lan</span>) that scans every
+  manifest, checks upstream registries, and opens PRs when something is behind. Merge a PR and — for the services
+  already under Argo&nbsp;CD — the cluster updates itself. This doc explains what's deployed, how the tracking
+  mechanics actually work, one worked example, and where the blind spots are.</p>
+
+  <div class="meta">
+    <div class="chip"><b>Runs</b> daily · 06:00 America/New_York</div>
+    <div class="chip"><b>Target</b> brian/home-lab @ forgejo.lan</div>
+    <div class="chip"><b>Image</b> renovate/renovate:43.251.3</div>
+    <div class="chip"><b>Status</b> deployed — first run pending scoped token</div>
+  </div>
+
+  <div class="cards">
+    <div class="stat b"><div class="n blue">1/day</div><div class="l">Batch run</div><div class="d">CronJob wakes at 06:00, scans, opens PRs, exits</div></div>
+    <div class="stat p"><div class="n purp">3</div><div class="l">Managers</div><div class="d">kubernetes + kustomize + dockerfile parse the repo</div></div>
+    <div class="stat g"><div class="n okc">5/hr</div><div class="l">PR budget</div><div class="d">prHourlyLimit 5, prConcurrentLimit 10 — no PR flood</div></div>
+    <div class="stat o"><div class="n orng">4</div><div class="l">Auto-deploy</div><div class="d">Argo CD starter tranche syncs merged PRs hands-free</div></div>
+  </div>
+
+  <h2><span class="bar"></span>Get the mental model right first</h2>
+  <div class="myth">
+    <h3>Unlearn this: "Renovate is a service you run"</h3>
+    <p style="margin:3px 0 0" class="small">There is no Renovate server, no webhook listener, no long-running pod.
+    Renovate is a <b>batch job</b>: wake up, clone the repo, parse it, query registries, open/update PRs on Forgejo,
+    exit. Between runs it consumes <b>zero</b> resources and holds <b>zero</b> state — everything it "remembers"
+    (open PRs, the dashboard issue, branch state) lives <i>in Forgejo itself</i>. That's why a CronJob is the whole
+    deployment, and why deleting the namespace loses nothing.</p>
+  </div>
+  <div class="posture">
+    <p style="margin:0" class="small"><b>Why self-hosted?</b> The hosted Renovate GitHub App runs in Mend's cloud —
+    it can reach <span class="mono">github.com</span>, not a Forgejo that only exists on this LAN behind a mkcert
+    certificate. Since the repo of record for the cluster is the Forgejo copy (the GitOps source Argo&nbsp;CD watches,
+    home-lab#29), the bot has to live where the repo lives: <b>inside the cluster</b>, trusting the LAN CA, talking
+    to <span class="mono">forgejo.lan</span> over the Gitea-compatible API.</p>
+  </div>
+
+  <h2><span class="bar"></span>The pipeline, end to end</h2>
+  <div class="flow">
+    <div class="col"><div class="node"><b>git repo</b><span>pinned image tags in manifests</span></div></div>
+    <div class="arrow">→</div>
+    <div class="col"><div class="node hub"><div>Renovate<br><span style="color:#0b1220">CronJob · 06:00</span></div></div></div>
+    <div class="arrow">→</div>
+    <div class="col"><div class="node"><b>registries</b><span>Docker Hub · ghcr.io</span></div>
+      <div class="node"><b>Forgejo API</b><span>PRs + dashboard issue</span></div></div>
+    <div class="arrow">→</div>
+    <div class="col"><div class="node" style="border-color:var(--purple)"><b>you merge</b><span>review the diff, click</span></div></div>
+    <div class="arrow">→</div>
+    <div class="col"><div class="node" style="border-color:var(--ok)"><b>Argo CD</b><span>auto-sync (4 svcs)</span></div>
+      <div class="node" style="border-color:var(--high)"><b>kubectl apply -k</b><span>everything else</span></div></div>
+  </div>
+  <p class="small dim">The human stays exactly at the merge button. Everything left of it is automated noticing;
+  everything right of it is deployment — automated only for the services migrated to GitOps so far.</p>
+
+  <div class="foot"><span>Renovate — automated dependency updates</span><span>1 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 2 · Deployment: CronJob, TLS, token ============ -->
+<div class="page">
+  <div class="kick">Deployment · clusters/home/renovate</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>The whole deployment is one CronJob</h2>
+  <p class="small mut" style="margin:0 0 4px"><span class="mono">clusters/home/renovate/</span> is two manifests:
+  a namespace and a CronJob. The interesting decisions, straight from
+  <span class="mono">cronjob.yaml</span>:</p>
+  <table>
+    <tr><th>Field</th><th>Value</th><th>Why</th></tr>
+    <tr><td><b>image</b></td><td><span class="mono">renovate/renovate:43.251.3</span></td><td>Pinned — and Renovate tracks <b>its own tag</b>, so it self-updates via its own PRs</td></tr>
+    <tr><td><b>schedule</b></td><td><span class="mono">"0 6 * * *"</span> · <span class="mono">America/New_York</span></td><td>One morning sweep; PRs are waiting with coffee</td></tr>
+    <tr><td><b>concurrencyPolicy</b></td><td><span class="mono">Forbid</span></td><td>Two Renovates racing on one repo = duplicate branches</td></tr>
+    <tr><td><b>limits</b></td><td><span class="mono">activeDeadlineSeconds: 3600</span> · <span class="mono">backoffLimit: 1</span></td><td>A hung run dies in an hour; one retry, then wait for tomorrow</td></tr>
+    <tr><td><b>resources</b></td><td>250m CPU / 512Mi req · 2Gi mem limit</td><td>Node's a big clone + parse; bounded so it can't squeeze GPU workloads</td></tr>
+  </table>
+
+  <div class="two">
+    <div><h3>Platform wiring (env)</h3>
+<pre><span class="k">RENOVATE_PLATFORM</span>=<span class="s">gitea</span>       <span class="c"># Forgejo speaks</span>
+                              <span class="c"># the Gitea API</span>
+<span class="k">RENOVATE_ENDPOINT</span>=<span class="s">https://forgejo.lan/api/v1</span>
+<span class="k">RENOVATE_REPOSITORIES</span>=<span class="s">brian/home-lab</span>
+<span class="k">RENOVATE_ONBOARDING</span>=<span class="s">false</span>   <span class="c"># renovate.json is</span>
+                              <span class="c"># committed; skip the</span>
+                              <span class="c"># onboarding PR dance</span></pre></div>
+    <div><h3>TLS trust for forgejo.lan</h3>
+<pre><span class="k">NODE_EXTRA_CA_CERTS</span>=<span class="s">/etc/mkcert/rootCA.pem</span>
+<span class="k">GIT_SSL_CAINFO</span>=<span class="s">/etc/mkcert/rootCA.pem</span>
+<span class="c"># mounted from the mkcert-ca ConfigMap</span>
+<span class="c"># (maintained by scripts/lan-certs.sh).</span>
+<span class="c"># Both needed: the Node.js process AND</span>
+<span class="c"># the git binary it shells out to must</span>
+<span class="c"># trust the LAN CA independently.</span></pre></div>
+  </div>
+
+  <h2><span class="bar"></span>The token — out-of-band, via Vaultwarden</h2>
+  <p class="small mut" style="margin:0 0 4px">Renovate authenticates to Forgejo with an API token from the k8s Secret
+  <span class="mono">renovate-secrets</span> (key <span class="mono">token</span>) — never committed. Canonical copy
+  lives in Vaultwarden item <span class="mono">renovate-forgejo</span>. Scopes (generated in Forgejo →
+  Settings → Applications): <span class="tag g">read:user</span> <span class="tag g">write:repository</span>
+  <span class="tag g">read:issue</span> <span class="tag g">write:issue</span> — enough to push branches, open PRs,
+  and maintain the dashboard issue; nothing admin.</p>
+<pre><span class="c"># 1 · stash the token in Vaultwarden (nothing touches disk):</span>
+printf %s <span class="s">'&lt;token&gt;'</span> | scripts/vault-put.sh <span class="k">renovate-forgejo</span>
+
+<span class="c"># 2 · (re)create the in-cluster secret from the vault:</span>
+kubectl -n renovate delete secret renovate-secrets --ignore-not-found
+kubectl -n renovate create secret generic <span class="k">renovate-secrets</span> \
+  --from-literal=token=<span class="s">"$(scripts/vault-secret.sh renovate-forgejo)"</span></pre>
+
+  <div class="warnbox">
+    <h3>Status caveat — deployed, not yet proven</h3>
+    <p class="small" style="margin:3px 0 0">As of this writing the properly-scoped token is <b>still pending</b> —
+    the CronJob, config, and TLS trust are all in place, but <b>the first successful run hasn't happened yet</b>.
+    Until the bootstrap above lands, expect the 06:00 job to fail authentication. First real run: see the
+    expectations on p.5.</p>
+  </div>
+
+  <div class="note">
+    <h3>Renovate manages itself — under GitOps</h3>
+    <p class="small" style="margin:3px 0 0"><span class="mono">clusters/home/renovate</span> is in the Argo&nbsp;CD
+    starter tranche (<span class="mono">clusters/home/argocd/apps/home-services.yaml</span>). So the loop closes:
+    Renovate opens a PR bumping <span class="mono">renovate/renovate:43.251.3</span> → merge → Argo rolls the
+    CronJob to the new tag. The updater gets updated through its own PRs.</p>
+  </div>
+
+  <div class="foot"><span>Renovate — automated dependency updates</span><span>2 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 3 · renovate.json + how tracking works ============ -->
+<div class="page">
+  <div class="kick">Mechanics · renovate.json</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Repo-side policy — <span class="mono" style="font-size:15px">renovate.json</span> at the repo root</h2>
+  <p class="small mut" style="margin:0 0 4px">The CronJob is only the scheduler; <i>behavior</i> is committed to the
+  repo it manages, so policy changes are just commits:</p>
+<pre>{
+  <span class="k">"extends"</span>: [<span class="s">"config:recommended"</span>, <span class="s">":dependencyDashboard"</span>],
+  <span class="k">"timezone"</span>: <span class="s">"America/New_York"</span>,
+  <span class="k">"prHourlyLimit"</span>: <span class="s">5</span>, <span class="k">"prConcurrentLimit"</span>: <span class="s">10</span>,     <span class="c"># tame the first-run burst</span>
+  <span class="k">"kubernetes"</span>: { <span class="k">"managerFilePatterns"</span>:
+    [<span class="s">"/^clusters\\/.+\\.ya?ml$/"</span>, <span class="s">"/^services\\/.+\\.ya?ml$/"</span>] }, <span class="c"># scope the k8s manager</span>
+  <span class="k">"packageRules"</span>: [
+    { <span class="c"># all linuxserver.io images travel together in ONE PR</span>
+      <span class="k">"matchPackageNames"</span>: [<span class="s">"linuxserver/**"</span>, <span class="s">"lscr.io/linuxserver/**"</span>],
+      <span class="k">"groupName"</span>: <span class="s">"linuxserver images"</span> },
+    { <span class="c"># majors get an extra label so they stand out in the PR list</span>
+      <span class="k">"matchUpdateTypes"</span>: [<span class="s">"major"</span>], <span class="k">"labels"</span>: [<span class="s">"renovate"</span>, <span class="s">"major"</span>] } ]
+}</pre>
+
+  <h2><span class="bar"></span>How tracking actually works — four steps per run</h2>
+  <div class="rank"><div class="num">1</div><div><h3>Managers parse files into dependencies</h3>
+    <p>A <i>manager</i> is a file-format parser. Three do the work here — see the table below. Each match becomes a
+    (package, current-version, registry) triple. No agents on nodes, no cluster API calls — <b>the git repo is the
+    only input</b>.</p></div></div>
+  <div class="rank"><div class="num">2</div><div><h3>Datasources query the registries</h3>
+    <p>Each dependency is looked up against its registry — Docker Hub for library images,
+    <span class="mono">ghcr.io</span> for GitHub-published ones — listing available tags via the standard registry API.</p></div></div>
+  <div class="rank"><div class="num">3</div><div><h3>Versioning logic sorts what "newer" means</h3>
+    <p>Loose-semver comparison that also handles CalVer tags like <span class="mono">v2026.6.19</span> (p.4) and
+    classifies each jump as patch / minor / major — which is what the grouping and labeling rules key off.</p></div></div>
+  <div class="rank"><div class="num">4</div><div><h3>One branch + PR per update (unless grouped)</h3>
+    <p>Renovate pushes a branch editing <b>every occurrence</b> of the old tag, opens a PR with release notes when it
+    can find them, and keeps the PR rebased as <span class="mono">main</span> moves. Close a PR without merging and
+    that version is remembered as ignored.</p></div></div>
+
+  <table>
+    <tr><th>Manager</th><th>Parses</th><th>Where it bites in this repo</th></tr>
+    <tr><td><span class="tag">kubernetes</span></td><td><span class="mono">image:</span> fields in raw manifests</td><td><span class="mono">clusters/**/*.yaml</span> + <span class="mono">services/**/*.yaml</span> (scoped above — the biggest surface)</td></tr>
+    <tr><td><span class="tag">kustomize</span></td><td><span class="mono">images:</span> overrides + <span class="mono">helmCharts:</span> versions</td><td>every <span class="mono">kustomization.yaml</span> — chart bumps become PRs too</td></tr>
+    <tr><td><span class="tag">dockerfile</span></td><td><span class="mono">FROM</span> lines</td><td>e.g. <span class="mono">clusters/home/hermes/image/Dockerfile</span></td></tr>
+  </table>
+
+  <div class="posture">
+    <p style="margin:0" class="small"><b>The Dependency Dashboard is the audit view.</b>
+    <span class="mono">:dependencyDashboard</span> makes Renovate maintain a single pinned issue in Forgejo listing
+    <b>every dependency it detected and every update pending, open, or ignored</b>. That issue is the one-glance
+    answer to "is the cluster's git state up to date?" — and its checkboxes let you force-retry or un-ignore an
+    update without touching config.</p>
+  </div>
+
+  <div class="note">
+    <h3>Merging a PR <i>is</i> the update — for some services</h3>
+    <p class="small" style="margin:3px 0 0">The Argo&nbsp;CD starter tranche — <b>mailpit, qbittorrent, rampart, and
+    renovate itself</b> (<span class="mono">clusters/home/argocd/apps/home-services.yaml</span>) — auto-syncs on merge
+    (<span class="mono">selfHeal</span> on, <span class="mono">prune</span> off: drift reverts, deletions stay manual).
+    Everything else still needs a <span class="mono">kubectl apply -k clusters/home/&lt;svc&gt;</span> after merging.
+    Renovate makes the gap visible: every merged-but-not-applied PR is drift you chose.</p>
+  </div>
+
+  <div class="foot"><span>Renovate — automated dependency updates</span><span>3 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 4 · Worked example + blind spots ============ -->
+<div class="page">
+  <div class="kick">Worked example · blind spots</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Worked example — the hermes image bump</h2>
+  <p class="small mut" style="margin:0 0 4px"><span class="mono">clusters/home/hermes/deployment.yaml</span> pins
+  <span class="mono">nousresearch/hermes-agent:v2026.6.19</span> — a <b>CalVer</b> tag (year.month.day). Upstream's
+  latest is <span class="mono">v2026.7.1</span>. On its next run, Renovate will open <b>one PR</b> that touches
+  <b>five occurrences</b>:</p>
+  <table>
+    <tr><th>File</th><th>Occurrences</th><th>Found by</th></tr>
+    <tr><td><span class="mono">clusters/home/hermes/deployment.yaml</span></td><td><b>4</b> — main container + three initContainers (bootstrap steps reuse the image)</td><td><span class="tag">kubernetes</span> manager</td></tr>
+    <tr><td><span class="mono">clusters/home/hermes/image/Dockerfile</span></td><td><b>1</b> — the <span class="mono">FROM nousresearch/hermes-agent:v2026.6.19</span> base of the -otel derivative</td><td><span class="tag">dockerfile</span> manager</td></tr>
+  </table>
+  <p class="small dim">All five flip to <span class="mono">v2026.7.1</span> atomically in one branch — no
+  "initContainer on the old tag" skew, which is exactly the mistake a hand edit makes.</p>
+
+  <div class="myth">
+    <h3>Subtlety: image tags are tracked, software releases are not</h3>
+    <p class="small" style="margin:3px 0 0">Hermes-the-software versions like <span class="mono">v0.17.0 →
+    v0.18.0</span> appear <b>nowhere</b> in this repo — only the <b>image tag</b> does. Renovate compares registry
+    tags, full stop. If upstream shipped v0.18.0 without pushing a new image tag, Renovate would (correctly, by its
+    rules) stay silent. The bot audits <i>what the repo pins</i>, not upstream changelogs.</p>
+  </div>
+  <div class="warnbox">
+    <h3>Follow-on chore the bot can't do</h3>
+    <p class="small" style="margin:3px 0 0">The derived <span class="mono">harbor.lan/library/hermes-agent:*-otel</span>
+    image is built <i>from</i> that Dockerfile locally. After merging a base bump, the -otel image must be
+    <b>manually rebuilt and pushed</b> — Renovate updated the recipe, not the cake.</p>
+  </div>
+
+  <h2><span class="bar"></span>Blind spots — what Renovate does <span class="grad">not</span> see</h2>
+  <table>
+    <tr><th>Blind spot</th><th>Examples in this repo</th><th>Why · fix</th></tr>
+    <tr><td><b>Script-downloaded binaries</b> <span class="tag o">fixable</span></td>
+        <td>kubectl <span class="mono">v1.35.5</span> + Bitwarden CLI <span class="mono">2026.6.0</span> URLs inside
+        Hermes initContainers; versions baked into <span class="mono">scripts/*.sh</span></td>
+        <td>Versions live in shell strings no manager parses. Fix later with <b>custom regex managers</b> —
+        teach Renovate the URL patterns.</td></tr>
+    <tr><td><b>Unpinned tags</b> <span class="tag r">unfixable as-is</span></td>
+        <td><span class="mono">latest</span>, <span class="mono">main</span>, <span class="mono">latest-spark-arm64</span></td>
+        <td>Nothing to compare — a floating tag has no version. The real fix is pinning; until then these
+        update invisibly on every pull.</td></tr>
+    <tr><td><b>Locally-built images</b> <span class="tag r">out of scope</span></td>
+        <td><span class="mono">harbor.lan/library/rampart:v0.1.3</span>, the hermes <span class="mono">-otel</span> derivative</td>
+        <td>No upstream registry to poll — <i>you</i> are upstream. (Renovate also has no harbor.lan
+        credentials or CA config anyway.)</td></tr>
+    <tr><td><b>Runtime drift</b> <span class="tag p">different tool</span></td>
+        <td>a running pod whose image differs from git</td>
+        <td>Renovate audits <b>git only</b>. Runtime-vs-latest is jetstack
+        <span class="mono">version-checker</span>'s job — a possible future addition feeding the Grafana stack.</td></tr>
+  </table>
+  <p class="small dim">Honest summary: Renovate covers the pinned-image surface — the majority of what this repo
+  declares — and is structurally blind to everything above. Knowing the boundary is the point of this table.</p>
+
+  <div class="foot"><span>Renovate — automated dependency updates</span><span>4 / 5</span></div>
+</div>
+
+<!-- ============ PAGE 5 · Operations + verdict + quick reference ============ -->
+<div class="page">
+  <div class="kick">Operations · quick reference</div>
+  <h2 style="margin-top:4px"><span class="bar"></span>Day-2 operations</h2>
+<pre><span class="c"># trigger an off-schedule run (don't wait for 06:00):</span>
+kubectl create job --from=cronjob/renovate <span class="k">renovate-manual</span> -n renovate
+<span class="c"># watch what it did:</span>
+kubectl -n renovate logs job/<span class="k">&lt;name&gt;</span>
+<span class="c"># dry-run — full analysis, logs everything, changes NOTHING on Forgejo:</span>
+<span class="c"># add to the job's env:  - { name: RENOVATE_DRY_RUN, value: "full" }</span></pre>
+
+  <div class="note">
+    <h3>First-run expectations — don't panic at the PR burst</h3>
+    <p class="small" style="margin:3px 0 0">The first successful run against a repo this size produces a <b>burst of
+    PRs</b> — every stale pin found at once, rate-limited to <b>5/hour</b> (so the backlog drains across runs, up to
+    10 open at a time) — plus the <b>Dependency Dashboard issue</b> appearing in Forgejo. PRs land authored by the
+    token's user. Triage: merge the boring patch bumps, read the <span class="tag o">major</span>-labeled ones.</p>
+  </div>
+
+  <h2><span class="bar"></span>Quick reference</h2>
+  <table>
+    <tr><th>Thing</th><th>Where / value</th></tr>
+    <tr><td>CronJob</td><td><span class="mono">renovate/renovate</span> in ns <span class="mono">renovate</span> · <span class="mono">clusters/home/renovate/cronjob.yaml</span></td></tr>
+    <tr><td>Schedule</td><td><span class="mono">0 6 * * *</span> America/New_York · <span class="mono">concurrencyPolicy: Forbid</span> · 1h deadline</td></tr>
+    <tr><td>Platform / endpoint</td><td><span class="mono">gitea</span> · <span class="mono">https://forgejo.lan/api/v1</span> · repo <span class="mono">brian/home-lab</span></td></tr>
+    <tr><td>Policy file</td><td><span class="mono">renovate.json</span> @ repo root — dashboard on, 5 PR/hr, 10 concurrent, linuxserver grouped, majors labeled</td></tr>
+    <tr><td>Token</td><td>Secret <span class="mono">renovate-secrets/token</span> ← Vaultwarden <span class="mono">renovate-forgejo</span> · scopes read:user, write:repository, read:issue, write:issue</td></tr>
+    <tr><td>TLS trust</td><td><span class="mono">mkcert-ca</span> ConfigMap → <span class="mono">/etc/mkcert/rootCA.pem</span> via <span class="mono">NODE_EXTRA_CA_CERTS</span> + <span class="mono">GIT_SSL_CAINFO</span></td></tr>
+    <tr><td>Auto-deploy on merge</td><td>mailpit · qbittorrent · rampart · renovate (Argo CD, selfHeal on / prune off) — rest: <span class="mono">kubectl apply -k</span></td></tr>
+    <tr><td>Audit view</td><td>Dependency Dashboard issue in Forgejo — every tracked dep + pending update</td></tr>
+  </table>
+
+  <h2><span class="bar"></span>What's next (in order)</h2>
+  <div class="rank"><div class="num">1</div><div><h3>Finish the token bootstrap</h3>
+    <p>Generate the scoped token in Forgejo → Settings → Applications, <span class="mono">vault-put.sh
+    renovate-forgejo</span>, recreate the secret (p.2), then a manual run to watch the first burst live.</p></div></div>
+  <div class="rank"><div class="num">2</div><div><h3>Widen the Argo CD tranche</h3>
+    <p>Every service migrated to GitOps turns a Renovate merge into a hands-free deploy.</p></div></div>
+  <div class="rank"><div class="num b">3</div><div><h3>Close the blind spots (p.4)</h3>
+    <p>Custom regex managers for the kubectl / Bitwarden CLI download URLs; later, jetstack
+    <span class="mono">version-checker</span> for the runtime-drift half of the audit, graphed in Grafana.</p></div></div>
+
+  <div class="verdict">
+    <h3>Bottom line</h3>
+    <p class="small" style="margin:5px 0 0">One pinned CronJob + one committed policy file, and the repo stops
+    rotting silently: "are we behind?" becomes a pinned Forgejo issue, every update a one-click PR — for the GitOps
+    tranche, also the deploy. It sees exactly what git pins, nothing more (p.4). Pending: the scoped token — a
+    loaded pipeline that hasn't fired yet.</p>
+  </div>
+  <div class="foot"><span>Renovate — Home Cluster · home-lab#29 GitOps</span><span>5 / 5</span></div>
+</div>
+
+</body></html>

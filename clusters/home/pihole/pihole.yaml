@@ -49,7 +49,7 @@ spec:
         inference-club.com/box: a2
       containers:
         - name: pihole
-          image: pihole/pihole:2026.06.0
+          image: pihole/pihole:2026.07.2
           env:
             - { name: TZ, value: "America/New_York" }
             # v6 config via FTLCONF_<toml_key_with_underscores>
