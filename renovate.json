@@ -74,6 +74,26 @@
         "renovate",
         "gpu-ceremony"
       ]
+    },
+    {
+      "description": "Database MAJORS are migration events, not merges: PG data dirs don't cross majors (learned live \u2014 PR #58 took immich's DB down; reverted a1fa32d). Dashboard approval + planned dump/restore required.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "matchPackageNames": [
+        "postgres",
+        "ghcr.io/immich-app/postgres",
+        "redis",
+        "rabbitmq",
+        "influxdb",
+        "mariadb",
+        "mysql"
+      ],
+      "dependencyDashboardApproval": true,
+      "labels": [
+        "renovate",
+        "db-ceremony"
+      ]
     }
   ],
   "argocd": {
