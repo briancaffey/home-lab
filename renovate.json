@@ -48,6 +48,20 @@
         "jellyfin/jellyfin"
       ],
       "enabled": false
+    },
+    {
+      "description": "longhorn chart: STORAGE CEREMONY \u2014 upgrades are ordered/one-way and touch the volume substrate. PRs only via explicit dashboard approval; read release notes; verify volume health before+after.",
+      "matchPackageNames": [
+        "longhorn"
+      ],
+      "matchDatasources": [
+        "helm"
+      ],
+      "dependencyDashboardApproval": true,
+      "labels": [
+        "renovate",
+        "storage-ceremony"
+      ]
     }
   ],
   "argocd": {

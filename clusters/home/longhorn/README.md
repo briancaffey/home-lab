@@ -1,4 +1,12 @@
-# Longhorn — replicated block storage
+# Longhorn — replicated block storage — MANAGED BY ARGO CD (home-longhorn)
+
+Since 2026-07-07 the chart is an Argo multi-source Application (upstream
+longhorn@1.12.0 + values.yaml here + ingress/storageclass). **Never
+`helm upgrade` longhorn again** — bump `targetRevision` in
+clusters/home/argocd/apps/home-services.yaml via a reviewed PR (Renovate
+gates these behind dashboard approval). selfHeal is OFF: syncs happen on
+commits only. Steps 1–2 below (host prereqs, node membership) remain
+manual/scripted and are NOT chart concerns.
 
 Everything needed to stand Longhorn up (or rebuild it from scratch) lives in
 this repo. No tribal knowledge: three steps, all committed.

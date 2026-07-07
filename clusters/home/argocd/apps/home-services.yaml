@@ -973,3 +973,47 @@ spec:
     automated:
       prune: false
       selfHeal: true
+---
+# ── LONGHORN (ceremony day 2026-07-07, home-lab#43 task 17) ──────────────
+# The storage substrate — most conservative policy in the fleet:
+#   - selfHeal OFF (trio treatment): Argo NEVER autonomously touches the
+#     layer holding volume replicas; drift shows OutOfSync for a human.
+#   - prune OFF forever. ServerSideApply: the CRDs exceed client-side
+#     annotation limits.
+#   - Chart bumps are gated in renovate.json (dependencyDashboardApproval)
+#     — longhorn upgrades are ordered/one-way; read release notes first,
+#     verify volumes healthy before AND after, never skip minors.
+# Node membership + disk placement stay in scripts/longhorn-nodes.sh
+# (runtime config via labels/annotations, not the chart).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-longhorn
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.longhorn.io
+      chart: longhorn
+      targetRevision: 1.12.0
+      helm:
+        releaseName: longhorn
+        valueFiles:
+          - $values/clusters/home/longhorn/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      path: clusters/home/longhorn
+      directory:
+        include: "{ingress.yaml,storageclass.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - ServerSideApply=true
