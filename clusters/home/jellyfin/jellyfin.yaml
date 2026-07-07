@@ -33,7 +33,11 @@ spec:
       runtimeClassName: nvidia
       containers:
         - name: jellyfin
-          image: jellyfin/jellyfin:latest
+          # Pinned to the exact daily that was running post-inotify-incident.
+          # Deliberately NOT 10.11.11 stable — that would be a DOWNGRADE from
+          # this daily (DB-schema risk, no backups yet). Move to stable at
+          # 10.11.12+, then drop the jellyfin ignore rule in renovate.json.
+          image: jellyfin/jellyfin:2026070606
           ports:
             - name: http
               containerPort: 8096

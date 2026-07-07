@@ -15,6 +15,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prometheus
+  # Reloader (clusters/home/reloader) rolls this deployment automatically
+  # when its mounted ConfigMaps change — no manual rollout restart needed.
+  annotations:
+    reloader.stakater.com/auto: "true"
   labels:
     app: prometheus
 spec:
@@ -37,7 +41,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: prometheus
-          image: prom/prometheus:v3.1.0
+          image: prom/prometheus:v3.13.0
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"

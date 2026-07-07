@@ -1,0 +1,69 @@
+# InfluxDB 2.x — scrutiny's metrics store. Self-initializes on first boot
+# from the DOCKER_INFLUXDB_INIT_* envs (idempotent: skipped once set up).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: scrutiny-influxdb
+  namespace: scrutiny
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scrutiny-influxdb
+  namespace: scrutiny
+  labels: { app: scrutiny-influxdb }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: scrutiny-influxdb }
+  template:
+    metadata:
+      labels: { app: scrutiny-influxdb }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: influxdb
+          image: influxdb:2.9.1-alpine
+          env:
+            - { name: DOCKER_INFLUXDB_INIT_MODE, value: setup }
+            - { name: DOCKER_INFLUXDB_INIT_USERNAME, value: admin }
+            - { name: DOCKER_INFLUXDB_INIT_ORG, value: scrutiny }
+            - { name: DOCKER_INFLUXDB_INIT_BUCKET, value: metrics }
+            - name: DOCKER_INFLUXDB_INIT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: scrutiny-secrets, key: influx-password }
+            - name: DOCKER_INFLUXDB_INIT_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef: { name: scrutiny-secrets, key: influx-token }
+          ports:
+            - { name: http, containerPort: 8086 }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/influxdb2 }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: scrutiny-influxdb }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scrutiny-influxdb
+  namespace: scrutiny
+spec:
+  selector: { app: scrutiny-influxdb }
+  ports:
+    - { name: http, port: 8086, targetPort: http }
