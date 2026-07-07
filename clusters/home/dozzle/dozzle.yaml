@@ -5,7 +5,8 @@
 # Auth: simple provider, users.yml from the out-of-band secret — pod logs
 # can contain secrets, so no open access. Login: brian / Vaultwarden
 # `dozzle-web`. Recreate the secret:
-#   PW_HASH=$(printf '%s' "$(scripts/vault-secret.sh dozzle-web)" | shasum -a 256 | awk '{print $1}')
+#   PW_HASH=$(htpasswd -bnBC 10 "" "$(scripts/vault-secret.sh dozzle-web)" | tr -d ':\n')
+#   (bcrypt required — dozzle dropped sha256, GHSA-w7qr-q9fh-fj35)
 #   kubectl -n dozzle create secret generic dozzle-users --from-literal=users.yml="
 #   users:
 #     brian:
