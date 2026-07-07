@@ -43,7 +43,10 @@ spec:
       containers:
         - image: nvcr.io/nvidia/k8s-device-plugin:v0.19.3
           name: gpu-feature-discovery
-          command: ["/usr/bin/gpu-feature-discovery"]
+          # v0.19 defaults to publishing NodeFeature API objects (needs RBAC
+          # + an NFD master that watches them). Our NFD pipeline is the
+          # file-based one (features.d hostPath below), so keep file output.
+          command: ["/usr/bin/gpu-feature-discovery", "--use-node-feature-api=false"]
           volumeMounts:
             - name: output-dir
               mountPath: "/etc/kubernetes/node-feature-discovery/features.d"
