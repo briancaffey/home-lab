@@ -597,3 +597,30 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
+---
+# Forgejo (trio 3/3) — THE self-referential one: Argo reads this very repo
+# from the service this Application manages. selfHeal OFF is load-bearing
+# here: Argo must never autonomously restart the thing it reads truth from.
+# If forgejo breaks, fix it from the laptop clone with kubectl (docs/18) —
+# the repo also lives on GitHub (push mirror) and every laptop clone.
+# The Actions runner (runner/) is deliberately NOT included.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-forgejo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/forgejo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forgejo
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
