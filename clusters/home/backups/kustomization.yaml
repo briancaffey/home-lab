@@ -27,3 +27,6 @@ kind: Kustomization
 resources:
   - vaultwarden-backup.yaml
   - forgejo-backup.yaml
+  - immich-backup.yaml
+  - paperless-backup.yaml
+  - hermes-backup.yaml
