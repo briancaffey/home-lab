@@ -17,7 +17,14 @@ set -euo pipefail
 
 # Members run the longhorn-manager daemonset (= appear on the dashboard).
 # NOTE: spark's k8s node name is spark-d2ce (arm64 — Longhorn images are multi-arch).
-kubectl label node a2 a3 x1 a1 spark-d2ce inference-club.com/longhorn=member --overwrite
+# MEMBERS = a2 + a3 ONLY (2026-07-07). The earlier "inventory-only
+# membership" for a1/x1/spark (member label + scheduling-off disks) made
+# Longhorn 1.12 churn forever: it creates node-pinned instance-manager pods
+# for every member with disks, but systemManagedComponentsNodeSelector
+# (longhorn-system=true, below) blocks them off a2/a3 → create-fail-delete
+# loop, ~94 NodeAffinity warnings/hour. To add a node FOR REAL later: give
+# it BOTH labels + a disk config + longhorn-prereqs.sh.
+kubectl label node a2 a3 inference-club.com/longhorn=member --overwrite
 
 # SYSTEM-managed components (instance-managers, RWX share-managers = each
 # volume's NFS server, CSI plugin) are fenced tighter — storage nodes only.
@@ -28,7 +35,7 @@ kubectl label node a2 a3 inference-club.com/longhorn-system=true --overwrite
 # 'config' makes Longhorn read the disk layout from the annotation instead of
 # defaulting to /var/lib/longhorn on /. Longhorn stat()s but does NOT create
 # the path — scripts/longhorn-prereqs.sh mkdirs the non-root ones.
-kubectl label node a2 a3 x1 a1 spark-d2ce node.longhorn.io/create-default-disk=config --overwrite
+kubectl label node a2 a3 node.longhorn.io/create-default-disk=config --overwrite
 
 # Replica homes — never a root partition:
 kubectl annotate node a2 node.longhorn.io/default-disks-config=\
@@ -42,13 +49,9 @@ kubectl annotate node a3 node.longhorn.io/default-disks-config=\
 # (USB WiFi). Annotation is consumed when the Longhorn node has no tags yet.
 kubectl annotate node a2 a3 node.longhorn.io/default-node-tags='["storage"]' --overwrite
 
-# Inventory-only (dashboard visibility; scheduling OFF):
-kubectl annotate node a1 node.longhorn.io/default-disks-config=\
-'[{"path":"/mnt/d/longhorn","allowScheduling":false}]' --overwrite
-kubectl annotate node spark-d2ce node.longhorn.io/default-disks-config=\
-'[{"path":"/var/lib/longhorn","allowScheduling":false}]' --overwrite
-kubectl annotate node x1 node.longhorn.io/default-disks-config=\
-'[{"path":"/var/lib/longhorn","allowScheduling":false}]' --overwrite
+# (Removed 2026-07-07: the a1/x1/spark "inventory-only" disk annotations —
+# see the membership note above. Their node CRs were deleted; nothing was
+# stored on them.)
 
 echo "--- verify ---"
 kubectl get nodes -L inference-club.com/longhorn -L node.longhorn.io/create-default-disk
