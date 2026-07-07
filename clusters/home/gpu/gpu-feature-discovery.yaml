@@ -25,7 +25,7 @@ metadata:
   namespace: kube-system
   labels:
     app.kubernetes.io/name: gpu-feature-discovery
-    app.kubernetes.io/version: 0.17.4
+    app.kubernetes.io/version: 0.19.3
     app.kubernetes.io/part-of: nvidia-gpu
 spec:
   selector:
@@ -36,14 +36,17 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: gpu-feature-discovery
-        app.kubernetes.io/version: 0.17.4
+        app.kubernetes.io/version: 0.19.3
         app.kubernetes.io/part-of: nvidia-gpu
     spec:
       runtimeClassName: nvidia
       containers:
         - image: nvcr.io/nvidia/k8s-device-plugin:v0.19.3
           name: gpu-feature-discovery
-          command: ["/usr/bin/gpu-feature-discovery"]
+          # v0.19 defaults to publishing NodeFeature API objects (needs RBAC
+          # + an NFD master that watches them). Our NFD pipeline is the
+          # file-based one (features.d hostPath below), so keep file output.
+          command: ["/usr/bin/gpu-feature-discovery", "--use-node-feature-api=false"]
           volumeMounts:
             - name: output-dir
               mountPath: "/etc/kubernetes/node-feature-discovery/features.d"
@@ -54,6 +57,12 @@ spec:
           env:
             - name: MIG_STRATEGY
               value: none
+            # Required since v0.19: GFD labels the node it runs on and
+            # refuses to start without knowing which one that is.
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

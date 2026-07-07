@@ -62,6 +62,17 @@
         "renovate",
         "storage-ceremony"
       ]
+    },
+    {
+      "description": "nvidia GPU plumbing (device-plugin/GFD/dcgm): version bumps have shipped breaking manifest changes (v0.19: NODE_NAME + NodeFeature-API default \u2014 see #45 saga, d4ba050). gpu/ is outside the tranche, so these need a human apply anyway \u2014 gate PRs behind dashboard approval.",
+      "matchPackageNames": [
+        "nvcr.io/nvidia/**"
+      ],
+      "dependencyDashboardApproval": true,
+      "labels": [
+        "renovate",
+        "gpu-ceremony"
+      ]
     }
   ],
   "argocd": {

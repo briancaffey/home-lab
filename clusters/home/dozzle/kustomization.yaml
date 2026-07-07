@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: dozzle
+
+# Dozzle — live pod log tailing across the cluster (home-lab#23).
+# Out-of-band prereqs: dozzle-tls (lan-certs.sh) + dozzle-users secret
+# (see dozzle.yaml header; password in Vaultwarden `dozzle-web`).
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - dozzle.yaml
+  - ingress.yaml

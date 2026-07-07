@@ -54,7 +54,7 @@ spec:
       initContainers:
         # Seed config.yaml on first boot only; the PVC copy is live after that.
         - name: seed-config
-          image: busybox:1.37
+          image: busybox:1.38
           command: ["sh", "-c", "[ -f /opt/data/config.yaml ] && echo 'config exists, not seeding' || cp /seed/config.yaml /opt/data/config.yaml"]
           volumeMounts:
             - { name: data, mountPath: /opt/data }

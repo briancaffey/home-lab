@@ -1,0 +1,36 @@
+# Read-only log access, cluster-wide — the entire permission surface.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dozzle
+  namespace: dozzle
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dozzle-log-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # dozzle shows per-container CPU/mem and PANICS (v10.6.7) if it can't
+  # list metrics — not optional in k8s mode.
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dozzle-log-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dozzle-log-reader
+subjects:
+  - kind: ServiceAccount
+    name: dozzle
+    namespace: dozzle

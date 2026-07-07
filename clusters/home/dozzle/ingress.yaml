@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dozzle
+  namespace: dozzle
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Dozzle"
+    gethomepage.dev/description: "Live log tail for any pod (k8s mode)"
+    gethomepage.dev/group: "Infra"
+    gethomepage.dev/icon: "dozzle.png"
+    gethomepage.dev/href: "https://dozzle.lan/"
+    gethomepage.dev/pod-selector: "app=dozzle"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["dozzle.lan"]
+      secretName: dozzle-tls
+  rules:
+    - host: dozzle.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dozzle
+                port:
+                  number: 8080
