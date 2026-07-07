@@ -930,3 +930,46 @@ spec:
       selfHeal: true
     syncOptions:
       - RespectIgnoreDifferences=true
+---
+# ── BACKUP LAYER (red-tape #28 item 7, docs/18 sibling) ──────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-minio-backups
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/minio-backups
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio-backups
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Restic CronJobs live in their targets' namespaces (vaultwarden, forgejo) —
+# resources carry explicit namespaces; destination below is a default only.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-backups
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/backups
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vaultwarden
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true

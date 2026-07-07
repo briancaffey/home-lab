@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Nightly restic backups (red-tape #28 item 7) → the minio-backups S3 target
+# on a2 (clusters/home/minio-backups/). Each CronJob lives IN its target's
+# namespace (PVCs are ns-scoped) and on its target's NODE (RWO local-path).
+#
+# Pattern per target: initContainer makes an app-consistent snapshot of the
+# PVC into an emptyDir (SQLite via the .backup API — a raw file copy of a
+# live WAL db can be torn), then restic backs the snapshot up. Retention:
+# 14 daily + 8 weekly, pruned in-run. First run auto-creates the S3
+# bucket/repo (restic init).
+#
+# Out-of-band secret in EACH target namespace:
+#   kubectl -n <ns> create secret generic backup-secrets \
+#     --from-literal=restic-password="$(scripts/vault-secret.sh restic-password)" \
+#     --from-literal=s3-access-key="$(scripts/vault-secret.sh minio-backups-root username)" \
+#     --from-literal=s3-secret-key="$(scripts/vault-secret.sh minio-backups-root)"
+#
+# ⚠ restic-password circularity: it is in Vaultwarden AND the macOS Keychain
+# (service `restic-password`, account `claude`) — a copy that lives only
+# inside Vaultwarden cannot decrypt Vaultwarden's own backup.
+#
+# Restore (drilled 2026-07-06, see home-lab#43):
+#   restic -r s3:http://minio-backups.minio-backups.svc.cluster.local:9000/restic/<target> \
+#     restore latest --target /tmp/restore
+resources:
+  - vaultwarden-backup.yaml
+  - forgejo-backup.yaml
