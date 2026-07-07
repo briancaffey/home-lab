@@ -509,3 +509,29 @@ spec:
     automated:
       prune: false
       selfHeal: true
+---
+# ── CIRCULARITY TRIO (see docs/18-gitops-break-glass.md) ─────────────────
+# vaultwarden/harbor/forgejo are the services the GitOps loop itself stands
+# on. Policy is deliberately weaker: commits deploy (automated) but
+# selfHeal is OFF — Argo never autonomously restarts the foundations; drift
+# shows as OutOfSync for a human. prune stays false permanently.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-vaultwarden
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/vaultwarden
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vaultwarden
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
