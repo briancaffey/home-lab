@@ -1,0 +1,78 @@
+# Alertmanager — the missing organ (home-lab#19/#24 work): Prometheus rules
+# fired into the void before this. Routes every alert to Telegram (primary,
+# phone push) + Mailpit (backup/record).
+#
+# The CONFIG lives in an out-of-band Secret (it carries the Telegram chat id;
+# the bot token is a separate file the config references). Template:
+# alertmanager.yml.example — recreate after edits:
+#   TOKEN=$(scripts/vault-secret.sh telegram-bot)
+#   CHAT=$(scripts/vault-secret.sh telegram-chat-id)
+#   sed "s/<CHAT_ID>/$CHAT/" clusters/home/monitoring/alertmanager.yml.example > /tmp/am.yml
+#   kubectl -n monitoring create secret generic alertmanager-config \
+#     --from-file=alertmanager.yml=/tmp/am.yml --from-literal=telegram-token="$TOKEN" \
+#     --dry-run=client -o yaml | kubectl apply -f - && rm /tmp/am.yml
+# (Reloader restarts alertmanager automatically on secret change.)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-data
+  namespace: monitoring
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  annotations:
+    reloader.stakater.com/auto: "true"
+  labels: { app: alertmanager }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: alertmanager }
+  template:
+    metadata:
+      labels: { app: alertmanager }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a3
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.33.1
+          args:
+            - --config.file=/etc/alertmanager/alertmanager.yml
+            - --storage.path=/alertmanager
+          ports:
+            - { name: http, containerPort: 9093 }
+          volumeMounts:
+            - { name: config, mountPath: /etc/alertmanager, readOnly: true }
+            - { name: data, mountPath: /alertmanager }
+          readinessProbe:
+            httpGet: { path: /-/ready, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: config
+          secret: { secretName: alertmanager-config }
+        - name: data
+          persistentVolumeClaim: { claimName: alertmanager-data }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  selector: { app: alertmanager }
+  ports:
+    - { name: http, port: 9093, targetPort: http }

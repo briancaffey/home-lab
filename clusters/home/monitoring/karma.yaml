@@ -1,0 +1,71 @@
+# Karma — dashboard over Alertmanager (home-lab#24): grouped/filterable view
+# of firing alerts + silence management. Stateless.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: karma
+  namespace: monitoring
+  labels: { app: karma }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: karma }
+  template:
+    metadata:
+      labels: { app: karma }
+    spec:
+      containers:
+        - name: karma
+          image: ghcr.io/prymitive/karma:v0.131
+          env:
+            - { name: ALERTMANAGER_URI, value: "http://alertmanager:9093" }
+            - { name: ALERTMANAGER_NAME, value: "home" }
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: karma
+  namespace: monitoring
+spec:
+  selector: { app: karma }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: karma
+  namespace: monitoring
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Karma"
+    gethomepage.dev/description: "Alert dashboard (Alertmanager UI)"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "karma.png"
+    gethomepage.dev/href: "https://karma.lan/"
+    gethomepage.dev/pod-selector: "app=karma"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["karma.lan"]
+      secretName: karma-tls
+  rules:
+    - host: karma.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: karma
+                port:
+                  number: 8080

@@ -1,0 +1,30 @@
+# Cluster-health alert rules (the x1 battery incident went unnoticed for
+# 12h — never again). Evaluated by Prometheus, routed by Alertmanager.
+groups:
+  - name: homelab
+    rules:
+      - alert: NodeDown
+        expr: up{job="node-exporter"} == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Node {{ $labels.instance }} is down"
+          description: "node-exporter unreachable for 5m — node offline, crashed, or off the network."
+      - alert: TargetDown
+        expr: up == 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Scrape target {{ $labels.job }}/{{ $labels.instance }} down 15m"
+      - alert: NodeDiskAlmostFull
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes) < 0.08
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} {{ $labels.mountpoint }} under 8% free"
+      - alert: NodeMemoryPressure
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} under 5% memory available for 10m"

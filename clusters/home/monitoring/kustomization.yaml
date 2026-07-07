@@ -11,6 +11,8 @@ resources:
   - dcgm-exporter.yaml
   - vram-reporter.yaml
   - node-exporter.yaml
+  - alertmanager.yaml
+  - karma.yaml
 
 generatorOptions:
   # Stable ConfigMap/Secret names (no hash suffix) so the Deployment volume
@@ -25,6 +27,7 @@ configMapGenerator:
   - name: prometheus-rules
     files:
       - config/vllm-alerts.yml
+      - config/homelab-alerts.yml
   - name: grafana-datasources
     files:
       - config/grafana-datasources.yml

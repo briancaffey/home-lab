@@ -1,0 +1,24 @@
+# TEMPLATE for the out-of-band alertmanager-config Secret — see
+# alertmanager.yaml header for the recreate command. <CHAT_ID> is
+# substituted from Vaultwarden `telegram-chat-id`; the bot token arrives as
+# a mounted file (never in this config, never in git).
+route:
+  receiver: all
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+
+receivers:
+  - name: all
+    telegram_configs:
+      - bot_token_file: /etc/alertmanager/telegram-token
+        chat_id: <CHAT_ID>
+        parse_mode: HTML
+        send_resolved: true
+    email_configs:
+      - to: brian@home-cluster.lan
+        from: alertmanager@home-cluster.lan
+        smarthost: mailpit-smtp.mailpit.svc.cluster.local:1025
+        require_tls: false
+        send_resolved: true

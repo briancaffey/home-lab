@@ -7,6 +7,11 @@ global:
 rule_files:
   - /etc/prometheus/rules/*.yml
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   # vLLM engine(s). Add more targets here as instances come online.
   # The endpoint is the host IP:port of the vLLM OpenAI server; metrics
