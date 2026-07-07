@@ -27,6 +27,9 @@ spec:
     metadata:
       labels: { app: dozzle }
     spec:
+      # A Service named `dozzle` injects DOZZLE_* service-link env vars that
+      # dozzle misparses as its own config (same collision hermes had).
+      enableServiceLinks: false
       serviceAccountName: dozzle
       containers:
         - name: dozzle
@@ -37,7 +40,10 @@ spec:
           ports:
             - { name: http, containerPort: 8080 }
           volumeMounts:
-            - { name: users, mountPath: /data, readOnly: true }
+            # /data must be WRITABLE (per-user UI profiles live there);
+            # users.yml is injected read-only via subPath from the secret.
+            - { name: data, mountPath: /data }
+            - { name: users, mountPath: /data/users.yml, subPath: users.yml, readOnly: true }
           readinessProbe:
             httpGet: { path: /healthcheck, port: http }
             initialDelaySeconds: 5
@@ -46,6 +52,8 @@ spec:
             requests: { cpu: 50m, memory: 64Mi }
             limits: { memory: 256Mi }
       volumes:
+        - name: data
+          emptyDir: {}
         - name: users
           secret: { secretName: dozzle-users }
 ---
