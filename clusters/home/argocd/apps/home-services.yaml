@@ -535,3 +535,65 @@ spec:
       selfHeal: false
     syncOptions:
       - CreateNamespace=true
+---
+# Harbor (trio 2/3) — helm-inflating dir with a twist: the chart REGENERATES
+# four internal secrets + checksum pod-annotations on every render (verified
+# empirically 2026-07-06 by double-render diff). Without the ignore rules
+# below, Argo would be perpetually OutOfSync and every sync would rotate
+# trust tokens and roll core/jobservice/registry. RespectIgnoreDifferences
+# makes syncs leave those fields alone. Do NOT remove either half.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-harbor
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/harbor
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+  ignoreDifferences:
+    - kind: Secret
+      name: harbor-core
+      jsonPointers: ["/data"]
+    - kind: Secret
+      name: harbor-jobservice
+      jsonPointers: ["/data"]
+    - kind: Secret
+      name: harbor-registry
+      jsonPointers: ["/data"]
+    - kind: Secret
+      name: harbor-registry-htpasswd
+      jsonPointers: ["/data"]
+    - group: apps
+      kind: Deployment
+      name: harbor-core
+      jqPathExpressions:
+        - .spec.template.metadata.annotations."checksum/secret"
+        - .spec.template.metadata.annotations."checksum/secret-jobservice"
+        - .spec.template.metadata.annotations."checksum/secret-core"
+    - group: apps
+      kind: Deployment
+      name: harbor-jobservice
+      jqPathExpressions:
+        - .spec.template.metadata.annotations."checksum/secret"
+        - .spec.template.metadata.annotations."checksum/secret-jobservice"
+        - .spec.template.metadata.annotations."checksum/secret-core"
+    - group: apps
+      kind: Deployment
+      name: harbor-registry
+      jqPathExpressions:
+        - .spec.template.metadata.annotations."checksum/secret"
+        - .spec.template.metadata.annotations."checksum/secret-jobservice"
+        - .spec.template.metadata.annotations."checksum/secret-core"
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
