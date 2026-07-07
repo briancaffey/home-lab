@@ -8,7 +8,7 @@
 #   docker save harbor.lan/library/rampart:v1 -o /tmp/rampart.tar
 #   crane auth login harbor.lan -u <robot> -p <secret>   # creds: vault-secret.sh harbor-robot
 #   crane push /tmp/rampart.tar harbor.lan/library/rampart:v1
-FROM node:22-slim
+FROM node:24-slim
 
 ENV NODE_ENV=production \
     TRANSFORMERS_CACHE=/app/.hf-cache \
