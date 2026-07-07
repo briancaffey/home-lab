@@ -71,7 +71,8 @@ Claude/HyperFrames (PDFs, videos).
    (push-media)                  ├── images/  (.png/.jpg)     ├─►  Immich      immich.lan
                                  ├── video/   (.mp4)          ├─►  Immich / Jellyfin
                                  ├── pdf/     (.pdf)          ├─►  Paperless   paperless.lan
-                                 ├── 3d/      (.glb/.gltf)    └─►  3D gallery  models.lan
+                                 ├── 3d/      (.glb/.gltf)    └─►  Manyfold  manyfold.lan
+                                 (custom 3D gallery retired 2026-07-07, home-lab#11)
                                  └── _meta/   (sidecar .json)
                                                                   fan-out = small `mc mirror`
                                                                   CronJobs / watchers per app
@@ -99,7 +100,7 @@ for v1.
 | Navidrome | `mc mirror generations/music/ → /music` PVC | auto-scans library |
 | Paperless-ngx | `mc mirror generations/pdf/ → consume/` | consumes + OCRs, then removes |
 | Immich | `mc mirror generations/{images,video}/ → /import` PVC | **External Library** (read-only) indexes folder |
-| 3D gallery | *(none)* — reads MinIO directly via presigned URLs | lists `generations/3d/`, renders inline |
+| Manyfold | *(replaced the custom 3D gallery — home-lab#11)* | library PVC `manyfold-library`; MinIO `generations/3d/` seed/sync still to wire |
 
 ---
 

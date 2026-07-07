@@ -80,7 +80,7 @@ run `mkcert -install` once per client to trust the CA).
 | InvokeAI | Image generation (a2) | https://invokeai.lan/ |
 | Jellyfin | Media server (a2, NVENC) | https://jellyfin.lan/ |
 | Immich | Photos & video, CLIP semantic search + faces (a2) | https://immich.lan/ · app → `http://192.168.5.96:30283` |
-| 3D Gallery | trellis2 meshes, `<model-viewer>` (a2) | https://models.lan/ |
+| Manyfold | 3D model library (replaced the custom 3D Gallery, 2026-07-07) | https://manyfold.lan/ |
 | Navidrome | Music streaming — AI songs (a2) | https://music.lan/ · Subsonic clients → `http://192.168.5.96:30533` |
 | Audiobookshelf | Audiobooks & podcasts (a3) | https://abs.lan/ |
 | Paperless | PDF & document library, OCR + search (a2) | https://paperless.lan/ (user `admin`) |
