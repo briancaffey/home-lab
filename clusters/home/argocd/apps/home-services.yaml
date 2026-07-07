@@ -423,3 +423,29 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# Household DNS (Pi-hole serves *.lan + ad-blocking at 192.168.5.96).
+# prune stays false and NOBODY flips it casually: a pruned/reverted object
+# here is a family-wide DNS incident, not a broken dashboard. Config edits
+# via git only; remember a pod restart = a few seconds of DNS outage for
+# everything pointed at it (laptop, node split-DNS, coredns .lan zone).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-pihole
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/pihole
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pihole
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
