@@ -52,7 +52,7 @@ spec:
         # the kubelet creates the hostPath root:root 0755 but the NIM runs
         # non-root and must mkdir under /data.
         - name: fix-perms
-          image: busybox:1.36
+          image: busybox:1.38
           command: ["sh", "-c", "rm -rf /data/* /data/.[!.]* 2>/dev/null; mkdir -p /data && chmod 0777 /data"]
           securityContext:
             runAsUser: 0
