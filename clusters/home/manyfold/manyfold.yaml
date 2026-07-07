@@ -52,7 +52,7 @@ spec:
         fsGroup: 1000   # make the PVCs writable by the PUID/PGID the app drops to
       containers:
         - name: manyfold
-          image: ghcr.io/manyfold3d/manyfold:0.145.1
+          image: ghcr.io/manyfold3d/manyfold:0.146.0
           ports:
             - { name: http, containerPort: 3214 }
           env:
