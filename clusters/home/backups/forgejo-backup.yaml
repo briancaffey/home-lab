@@ -1,0 +1,85 @@
+# Nightly forgejo backup — every repo AND every issue (the ops logbook).
+# Only home-lab's code is mirrored to GitHub; issues exist nowhere else.
+# PVC on a2 → job pinned to a2 (same node as the MinIO target, different
+# disk is not possible here — the offsite tier is a future item).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-forgejo
+  namespace: forgejo
+spec:
+  schedule: "20 3 * * *"
+  timeZone: America/New_York
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            inference-club.com/box: a2
+          initContainers:
+            - name: snapshot
+              image: python:3.12-alpine
+              command:
+                - python3
+                - -c
+                - |
+                  import os, shutil, sqlite3
+                  SRC, DST = '/pvc', '/snap'
+                  def ig(d, names):
+                      return [n for n in names if n.endswith(('.sqlite3','.sqlite3-wal','.sqlite3-shm','.db','.db-wal','.db-shm'))]
+                  shutil.copytree(SRC, DST, ignore=ig, dirs_exist_ok=True)
+                  for root, _, files in os.walk(SRC):
+                      for f in files:
+                          if f.endswith(('.sqlite3', '.db')):
+                              s = os.path.join(root, f)
+                              d = os.path.join(DST, os.path.relpath(s, SRC))
+                              os.makedirs(os.path.dirname(d), exist_ok=True)
+                              src = sqlite3.connect(f'file:{s}?mode=ro', uri=True)
+                              dst = sqlite3.connect(d)
+                              src.backup(dst)
+                              dst.close(); src.close()
+                              print('sqlite-consistent copy:', f)
+                  print('snapshot done')
+              volumeMounts:
+                - { name: pvc, mountPath: /pvc, readOnly: true }
+                - { name: snap, mountPath: /snap }
+          containers:
+            - name: restic
+              image: restic/restic:0.19.1
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  restic snapshots -q >/dev/null 2>&1 || restic init
+                  restic backup /snap --tag nightly --host forgejo
+                  restic forget --prune --keep-daily 14 --keep-weekly 8
+                  restic check --read-data-subset=10%
+              env:
+                - { name: RESTIC_REPOSITORY, value: "s3:http://minio-backups.minio-backups.svc.cluster.local:9000/restic/forgejo" }
+                - name: RESTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: restic-password }
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: s3-access-key }
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: s3-secret-key }
+              volumeMounts:
+                - { name: snap, mountPath: /snap, readOnly: true }
+              resources:
+                requests: { cpu: 100m, memory: 256Mi }
+                limits: { memory: 1Gi }
+          volumes:
+            - name: pvc
+              persistentVolumeClaim:
+                claimName: forgejo-data
+            - name: snap
+              emptyDir: {}

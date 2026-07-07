@@ -39,7 +39,7 @@ spec:
         kubernetes.io/hostname: a3
       containers:
         - name: agent
-          image: ghcr.io/inference-club/inference-club-agent:sha-5cb6774e8b9fd7382c0450545aac375392f6168c
+          image: ghcr.io/inference-club/inference-club-agent:vram3
           env:
             # Discovery: identical to prod — build the manifest from labeled
             # Services in this namespace and poll.

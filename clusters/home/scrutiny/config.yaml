@@ -1,0 +1,15 @@
+# Scrutiny web config — mounted as a single file over the config dir (the
+# dir itself is a PVC holding scrutiny's sqlite DB). Notifications go to
+# Mailpit's SMTP sink (no auth/TLS) — check https://mailpit.lan/ for alerts;
+# swap the smtp:// host when a real outbound provider exists someday.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scrutiny-config
+  namespace: scrutiny
+data:
+  scrutiny.yaml: |
+    version: 1
+    notify:
+      urls:
+        - "smtp://mailpit-smtp.mailpit.svc.cluster.local:1025/?from=scrutiny@home-cluster.lan&to=brian@home-cluster.lan&auth=None&encryption=None&subject=Scrutiny%20disk%20alert"
