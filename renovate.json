@@ -64,9 +64,10 @@
       ]
     },
     {
-      "description": "nvidia GPU plumbing (device-plugin/GFD/dcgm): version bumps have shipped breaking manifest changes (v0.19: NODE_NAME + NodeFeature-API default \u2014 see #45 saga, d4ba050). gpu/ is outside the tranche, so these need a human apply anyway \u2014 gate PRs behind dashboard approval.",
+      "description": "nvidia GPU plumbing (device-plugin/GFD/dcgm): version bumps have shipped breaking manifest changes (v0.19: NODE_NAME + NodeFeature-API default \u2014 see #45 saga, d4ba050). gpu/ is outside the tranche, so these need a human apply anyway \u2014 gate PRs behind dashboard approval. Also NFD (github datasource, same gpu/ dir): the 0.18 bump needed kubectl replace (SSA chokes on the exec\u2192grpc probe switch).",
       "matchPackageNames": [
-        "nvcr.io/nvidia/**"
+        "nvcr.io/nvidia/**",
+        "kubernetes-sigs/node-feature-discovery"
       ],
       "dependencyDashboardApproval": true,
       "labels": [
