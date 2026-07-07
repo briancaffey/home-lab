@@ -43,6 +43,7 @@ spec:
             - { name: http, containerPort: 8080 }
           volumeMounts:
             - { name: config, mountPath: /opt/scrutiny/config }
+            - { name: config-file, mountPath: /opt/scrutiny/config/scrutiny.yaml, subPath: scrutiny.yaml }
           readinessProbe:
             httpGet: { path: /api/health, port: http }
             initialDelaySeconds: 10
@@ -53,6 +54,8 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim: { claimName: scrutiny-web-config }
+        - name: config-file
+          configMap: { name: scrutiny-config }
 ---
 apiVersion: v1
 kind: Service

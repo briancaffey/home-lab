@@ -18,6 +18,7 @@ namespace: scrutiny
 #   (password2 = influx admin UI password; token = API token scrutiny uses)
 resources:
   - namespace.yaml
+  - config.yaml
   - influxdb.yaml
   - web.yaml
   - collector.yaml
