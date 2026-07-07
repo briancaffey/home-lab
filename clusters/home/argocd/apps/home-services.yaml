@@ -477,3 +477,35 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# Homepage — second helm-release migration (netdata pattern). The June-2026
+# "kubectl apply put it in the wrong namespace" incident class is retired:
+# Argo renders the upstream chart with git values and applies with an
+# explicit destination namespace. Tailnet privacy: values.yaml carries
+# {{HOMEPAGE_VAR_TAILNET}} placeholders; the real name arrives via the
+# out-of-band homepage-tailnet Secret (envFrom).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-homepage
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://jameswynn.github.io/helm-charts
+      chart: homepage
+      targetRevision: 2.1.0
+      helm:
+        releaseName: homepage
+        valueFiles:
+          - $values/clusters/home/homepage/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: homepage
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
