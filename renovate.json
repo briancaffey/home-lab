@@ -41,6 +41,13 @@
         "ghcr.io/inference-club/**"
       ],
       "enabled": false
+    },
+    {
+      "description": "jellyfin: pinned to a daily (see jellyfin.yaml); daily tags would spam PRs. Re-enable when back on stable 10.11.12+",
+      "matchPackageNames": [
+        "jellyfin/jellyfin"
+      ],
+      "enabled": false
     }
   ],
   "argocd": {
