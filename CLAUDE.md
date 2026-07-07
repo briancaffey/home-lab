@@ -108,14 +108,13 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
 ## Gotchas (learned the hard way)
 - **`kubectl kustomize --enable-helm` is broken with Helm v4** (it calls the v3
   `helm version -c`). Use the **standalone `kustomize` v5** binary instead.
-- **longhorn is the LAST helm-CLI release** (`longhorn-system` ns) — deploy per
-  `clusters/home/longhorn/README.md`; node membership/disk placement live in
-  `scripts/longhorn-nodes.sh`, never ad-hoc. Never `kubectl apply` a helm
-  release (namespaceless objects land in `default` and fight the real release —
-  the 2026-06-29 homepage incident). Everything else that was helm-CLI
-  (homepage, netdata) is now an **Argo CD multi-source Application** — edit
-  values in git and push; `helm upgrade` on those is WRONG and helm's
-  bookkeeping secrets are gone. Homepage's tailnet bits arrive via the
+- **There are NO helm-CLI releases anymore** (since 2026-07-07). Everything
+  that was helm-CLI (homepage, netdata, longhorn) is an **Argo CD multi-source
+  Application** — edit values in git and push; `helm upgrade` anywhere is
+  WRONG and helm's bookkeeping secrets are gone. Longhorn is the most
+  protected app: selfHeal off, chart bumps gated behind Renovate dashboard
+  approval (`storage-ceremony` label), node membership/disk placement in
+  `scripts/longhorn-nodes.sh`. Homepage's tailnet bits arrive via the
   out-of-band `homepage-tailnet` Secret ({{HOMEPAGE_VAR_TAILNET}} placeholders
   in committed values); the tailnet name is in Vaultwarden (`tailnet-name`).
 - **Homepage host validation:** any host serving Homepage must be in

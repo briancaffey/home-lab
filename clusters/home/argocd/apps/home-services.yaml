@@ -122,7 +122,7 @@ spec:
     namespace: open-webui
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -130,8 +130,8 @@ spec:
 # Hand-rolled monitoring stack (prometheus, grafana, exporters). Safe under
 # GitOps: disableNameSuffixHash keeps ConfigMap names stable (no churn), and
 # a zero-drift kubectl diff was verified before onboarding (2026-07-06).
-# Caveat unchanged from manual days: config-only CM edits still need a
-# `kubectl rollout restart` — Argo updates the CM but nothing bounces pods.
+# Config-only CM edits now roll pods automatically via Reloader
+# (clusters/home/reloader — prometheus/grafana carry the opt-in annotation).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -148,7 +148,7 @@ spec:
     namespace: monitoring
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -171,7 +171,7 @@ spec:
     namespace: hermes
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -190,7 +190,7 @@ spec:
     namespace: speedtest
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -211,7 +211,7 @@ spec:
     namespace: gatus
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -234,7 +234,7 @@ spec:
     namespace: headlamp
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -255,7 +255,7 @@ spec:
     namespace: kube-ops-view
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -973,3 +973,68 @@ spec:
     automated:
       prune: false
       selfHeal: true
+---
+# ── LONGHORN (ceremony day 2026-07-07, home-lab#43 task 17) ──────────────
+# The storage substrate — most conservative policy in the fleet:
+#   - selfHeal OFF (trio treatment): Argo NEVER autonomously touches the
+#     layer holding volume replicas; drift shows OutOfSync for a human.
+#   - prune OFF forever. ServerSideApply: the CRDs exceed client-side
+#     annotation limits.
+#   - Chart bumps are gated in renovate.json (dependencyDashboardApproval)
+#     — longhorn upgrades are ordered/one-way; read release notes first,
+#     verify volumes healthy before AND after, never skip minors.
+# Node membership + disk placement stay in scripts/longhorn-nodes.sh
+# (runtime config via labels/annotations, not the chart).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-longhorn
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.longhorn.io
+      chart: longhorn
+      targetRevision: 1.12.0
+      helm:
+        releaseName: longhorn
+        valueFiles:
+          - $values/clusters/home/longhorn/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      path: clusters/home/longhorn
+      directory:
+        include: "{ingress.yaml,storageclass.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-reloader
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/reloader
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: reloader
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

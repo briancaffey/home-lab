@@ -15,6 +15,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grafana
+  # Reloader (clusters/home/reloader) rolls this deployment automatically
+  # when its mounted ConfigMaps change — no manual rollout restart needed.
+  annotations:
+    reloader.stakater.com/auto: "true"
   labels:
     app: grafana
 spec:

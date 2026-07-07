@@ -14,8 +14,8 @@ resources:
 
 generatorOptions:
   # Stable ConfigMap/Secret names (no hash suffix) so the Deployment volume
-  # references stay fixed. After editing config, `kubectl rollout restart` the
-  # affected deployment to pick it up.
+  # references stay fixed. Reloader (clusters/home/reloader) restarts the
+  # annotated deployments automatically when their CM content changes.
   disableNameSuffixHash: true
 
 configMapGenerator:
