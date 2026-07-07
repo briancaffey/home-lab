@@ -68,9 +68,17 @@ spec:
                               if f.endswith(DBEXT):
                                   s = os.path.join(root, f); d = os.path.join(dst, os.path.relpath(s, src))
                                   os.makedirs(os.path.dirname(d), exist_ok=True)
-                                  a = sqlite3.connect(f'file:{s}?mode=ro', uri=True); b = sqlite3.connect(d)
-                                  a.backup(b); b.close(); a.close()
-                                  print('sqlite copy:', os.path.relpath(s, src))
+                                  try:
+                                      a = sqlite3.connect(f'file:{s}?mode=ro', uri=True); b = sqlite3.connect(d)
+                                      a.backup(b); b.close(); a.close()
+                                      print('sqlite copy:', os.path.relpath(s, src))
+                                  except sqlite3.Error as e:
+                                      # not sqlite, or WAL db on a RO mount: raw
+                                      # crash-consistent copy of db(+wal+shm)
+                                      for ext in ('', '-wal', '-shm'):
+                                          if os.path.exists(s + ext):
+                                              shutil.copy2(s + ext, d + ext)
+                                      print('raw copy (%s):' % e, os.path.relpath(s, src))
                   print('snapshot done')
               volumeMounts:
                 - { name: pvc-data, mountPath: /pvc-data, readOnly: true }
