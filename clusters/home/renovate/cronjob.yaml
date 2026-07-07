@@ -5,9 +5,14 @@
 # only the scheduler. Renovate manages its own image tag below, so it
 # self-updates via its own PRs.
 #
-# Out-of-band secret (token = Forgejo API token, from Vaultwarden):
+# Out-of-band secret (token = dedicated Forgejo token, Vaultwarden item
+# renovate-forgejo; scopes: read:user, write:repository, read:issue,
+# write:issue):
 #   kubectl -n renovate create secret generic renovate-secrets \
-#     --from-literal=token="$(scripts/vault-secret.sh forgejo-api)"
+#     --from-literal=token="$(scripts/vault-secret.sh renovate-forgejo)" \
+#     --from-literal=github-token="$(scripts/vault-secret.sh renovate-github)"
+# (github-token = scopeless classic PAT: lifts rate limits + enables
+# release-notes retrieval for PR descriptions.)
 # The mkcert-ca ConfigMap comes from scripts/lan-certs.sh (bw/node + git both
 # need it to trust forgejo.lan).
 apiVersion: batch/v1
@@ -40,6 +45,9 @@ spec:
                 - name: RENOVATE_TOKEN
                   valueFrom:
                     secretKeyRef: { name: renovate-secrets, key: token }
+                - name: GITHUB_COM_TOKEN
+                  valueFrom:
+                    secretKeyRef: { name: renovate-secrets, key: github-token }
                 - { name: NODE_EXTRA_CA_CERTS, value: /etc/mkcert/rootCA.pem }
                 - { name: GIT_SSL_CAINFO, value: /etc/mkcert/rootCA.pem }
               volumeMounts:

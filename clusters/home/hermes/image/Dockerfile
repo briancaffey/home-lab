@@ -12,7 +12,7 @@
 #   docker save harbor.lan/library/hermes-agent:v2026.6.19-otel -o /tmp/hermes.tar
 #   crane auth login harbor.lan -u <robot> -p <secret>   # creds: vault-secret.sh harbor-robot
 #   crane push /tmp/hermes.tar harbor.lan/library/hermes-agent:v2026.6.19-otel
-FROM nousresearch/hermes-agent:v2026.6.19
+FROM nousresearch/hermes-agent:v2026.7.1
 
 # The venv is uv-managed and ships without pip — install via uv.
 RUN uv pip install --no-cache --python /opt/hermes/.venv/bin/python \

@@ -3,14 +3,22 @@ enableRbac: true
 serviceAccount:
   create: true
 
-# Required by Homepage v1.x or it rejects requests.
-env:
-  - name: HOMEPAGE_ALLOWED_HOSTS
-    # LAN ingress only here (safe to publish). The Tailscale `*.ts.net` host is
-    # appended by the gitignored values.local.yaml (see values.local.yaml.example)
-    # so the tailnet name stays out of this public repo. Homepage rejects any
-    # Host header not listed.
-    value: "home.lan"
+# HOMEPAGE_ALLOWED_HOSTS + HOMEPAGE_VAR_TAILNET come from the out-of-band
+# `homepage-tailnet` Secret via envFrom (tailnet name stays out of this
+# public repo; Homepage substitutes {{HOMEPAGE_VAR_TAILNET}} in config).
+# Recreate the secret with:
+#   TN=$(scripts/vault-secret.sh tailnet-name)
+#   kubectl -n homepage create secret generic homepage-tailnet \
+#     --from-literal=HOMEPAGE_ALLOWED_HOSTS="home.lan,homepage.$TN.ts.net" \
+#     --from-literal=HOMEPAGE_VAR_TAILNET="$TN" \
+#     --dry-run=client -o yaml | kubectl apply -f -
+# env MUST stay [] — the chart default sets HOMEPAGE_ALLOWED_HOSTS as a plain
+# env entry (value null), and container `env` beats `envFrom`, which would
+# silently break host validation.
+env: []
+envFrom:
+  - secretRef:
+      name: homepage-tailnet
 
 service:
   main:
@@ -42,8 +50,8 @@ ingress:
 # Custom Homepage icons served at /icons/<file> (reference in a service's
 # gethomepage.dev/icon annotation as "/icons/milvus.png"). Icons live in
 # clusters/home/homepage/icons/ and are loaded into the `homepage-icons`
-# configMap (binary data). This configMap is created OUT OF BAND (Homepage is a
-# Helm release, not kustomize) — re-run after adding/updating an icon:
+# configMap (binary data). This configMap is created OUT OF BAND — re-run
+# after adding/updating an icon:
 #   kubectl -n homepage create configmap homepage-icons \
 #     --from-file=clusters/home/homepage/icons/ \
 #     --dry-run=client -o yaml | kubectl apply -f -
@@ -63,10 +71,59 @@ config:
   kubernetes:
     mode: cluster
   docker: {}
-  # NOTE: `config.services` is owned by the gitignored values.local.yaml (the
-  # Tailnet group). Helm REPLACES lists, so anything set here would be clobbered
-  # by that overlay — put committed static links under `bookmarks` instead.
-  services: []
+  # Static "Tailnet" group — remote-access tiles. The tailnet name arrives at
+  # runtime via {{HOMEPAGE_VAR_TAILNET}} substitution (homepage-tailnet Secret),
+  # so this is safe to commit. Auto-discovered .lan tiles are separate.
+  services:
+    - Tailnet:
+        - Grafana:
+            href: https://grafana.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: grafana.png
+            description: Metrics & dashboards
+        - Netdata:
+            href: https://netdata.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: netdata.png
+            description: Live per-node hardware metrics
+        - Jellyfin:
+            href: https://jellyfin.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: jellyfin.png
+            description: Media server
+        - Audiobookshelf:
+            href: https://abs.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: audiobookshelf.png
+            description: Audiobooks & podcasts
+        - Open WebUI:
+            href: https://openwebui.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: open-webui.png
+            description: Chat with local LLMs
+        - InvokeAI:
+            href: https://invokeai.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: invoke-ai.svg
+            description: Image generation
+        - JupyterLab:
+            href: https://jupyter.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: jupyter.png
+            description: GPU notebooks
+        - Headlamp:
+            href: https://headlamp.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: headlamp.png
+            description: Kubernetes dashboard
+        - Harbor:
+            href: https://harbor.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: harbor.png
+            description: Container registry (UI)
+        - Forgejo:
+            href: https://forgejo.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: forgejo.png
+            description: Self-hosted Git forge
+        - Speedtest:
+            href: https://speedtest.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: speedtest-tracker.png
+            description: WAN/ISP speed tracker
+        - Vaultwarden:
+            href: https://vault.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: vaultwarden.png
+            description: Passwords & secrets
   bookmarks:
     - Homelab:
         - GitHub:
@@ -149,9 +206,9 @@ config:
     headerStyle: boxed
     # Pin the Inference group (auto-discovered from clusters/home/inference-lan
     # ingress annotations) to the top as a compact indicator row. Tailnet (the
-    # static group from values.local.yaml) renders as a compact 4-column row —
-    # listing it here alone would hoist it to position #2, so the full current
-    # group order is spelled out to keep everything where it is.
+    # static group in config.services above) renders as a compact 4-column
+    # row — listing it here alone would hoist it to position #2, so the full
+    # current group order is spelled out to keep everything where it is.
     layout:
       Inference:
         style: row
