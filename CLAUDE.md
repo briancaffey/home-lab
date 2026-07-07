@@ -108,15 +108,16 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
 ## Gotchas (learned the hard way)
 - **`kubectl kustomize --enable-helm` is broken with Helm v4** (it calls the v3
   `helm version -c`). Use the **standalone `kustomize` v5** binary instead.
-- **Helm-managed services must be applied with Helm, not kubectl.** The chart
-  renders namespaceless objects; `kubectl apply` without `-n` drops them in the
-  `default` namespace, where they fight the real release (this broke Homepage's
-  `home.lan` on 2026-06-29). **homepage** specifically is a Helm release in the
-  `homepage` ns — change it via `helm upgrade homepage homepage --repo
-  https://jameswynn.github.io/helm-charts --version 2.1.0 -n homepage
-  -f values.yaml -f values.local.yaml`. **longhorn** is likewise a Helm release
-  (`longhorn-system` ns) — deploy per `clusters/home/longhorn/README.md`; node
-  membership/disk placement live in `scripts/longhorn-nodes.sh`, never ad-hoc.
+- **longhorn is the LAST helm-CLI release** (`longhorn-system` ns) — deploy per
+  `clusters/home/longhorn/README.md`; node membership/disk placement live in
+  `scripts/longhorn-nodes.sh`, never ad-hoc. Never `kubectl apply` a helm
+  release (namespaceless objects land in `default` and fight the real release —
+  the 2026-06-29 homepage incident). Everything else that was helm-CLI
+  (homepage, netdata) is now an **Argo CD multi-source Application** — edit
+  values in git and push; `helm upgrade` on those is WRONG and helm's
+  bookkeeping secrets are gone. Homepage's tailnet bits arrive via the
+  out-of-band `homepage-tailnet` Secret ({{HOMEPAGE_VAR_TAILNET}} placeholders
+  in committed values); the tailnet name is in Vaultwarden (`tailnet-name`).
 - **Homepage host validation:** any host serving Homepage must be in
   `HOMEPAGE_ALLOWED_HOSTS` or it returns "Host validation failed".
 - **Monitoring is hand-rolled** (`clusters/home/monitoring/`): plain Prometheus
