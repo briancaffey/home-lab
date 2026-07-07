@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: scrutiny
+
+# Scrutiny — S.M.A.R.T. disk-health dashboard (home-lab#20). All cluster data
+# lives on node-local disks with no redundancy, so early warning of a dying
+# drive is the whole ballgame (pairs with the nightly backups: detect the
+# disk BEFORE it takes a PVC with it).
+#
+# Hub-and-spoke: web UI + InfluxDB pinned to a2; a PRIVILEGED collector
+# DaemonSet on every node runs smartctl against host /dev (the one privileged
+# workload in the cluster — it needs raw disk access, that's the job).
+#
+# Out-of-band secret (values in Vaultwarden `scrutiny-influx`):
+#   kubectl -n scrutiny create secret generic scrutiny-secrets \
+#     --from-literal=influx-token="$(scripts/vault-secret.sh scrutiny-influx)" \
+#     --from-literal=influx-password="$(scripts/vault-secret.sh scrutiny-influx password2)"
+#   (password2 = influx admin UI password; token = API token scrutiny uses)
+resources:
+  - namespace.yaml
+  - influxdb.yaml
+  - web.yaml
+  - collector.yaml
+  - ingress.yaml

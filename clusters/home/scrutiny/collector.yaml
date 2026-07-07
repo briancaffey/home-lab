@@ -1,0 +1,42 @@
+# Collector DaemonSet — every node, PRIVILEGED (smartctl needs raw /dev
+# access; this is the one privileged workload in the cluster and the whole
+# point of the service). Runs at container start, then on its internal cron
+# (~every 15 min). Multi-arch image: spark (arm64) included.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: scrutiny-collector
+  namespace: scrutiny
+  labels: { app: scrutiny-collector }
+spec:
+  selector:
+    matchLabels: { app: scrutiny-collector }
+  template:
+    metadata:
+      labels: { app: scrutiny-collector }
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: collector
+          image: ghcr.io/analogj/scrutiny:v0.9.2-collector
+          securityContext:
+            privileged: true
+          env:
+            - { name: COLLECTOR_API_ENDPOINT, value: "http://scrutiny-web.scrutiny.svc.cluster.local:8080" }
+            - name: COLLECTOR_HOST_ID
+              valueFrom:
+                fieldRef: { fieldPath: spec.nodeName }
+          volumeMounts:
+            - { name: dev, mountPath: /dev }
+            - { name: udev, mountPath: /run/udev, readOnly: true }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+      volumes:
+        - name: dev
+          hostPath: { path: /dev }
+        - name: udev
+          hostPath: { path: /run/udev }

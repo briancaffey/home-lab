@@ -1,0 +1,65 @@
+# Scrutiny web/API hub — collectors on every node report here.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: scrutiny-web-config
+  namespace: scrutiny
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scrutiny-web
+  namespace: scrutiny
+  labels: { app: scrutiny-web }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: scrutiny-web }
+  template:
+    metadata:
+      labels: { app: scrutiny-web }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: web
+          image: ghcr.io/analogj/scrutiny:v0.9.2-web
+          env:
+            - { name: SCRUTINY_WEB_INFLUXDB_HOST, value: scrutiny-influxdb }
+            - { name: SCRUTINY_WEB_INFLUXDB_PORT, value: "8086" }
+            - { name: SCRUTINY_WEB_INFLUXDB_ORG, value: scrutiny }
+            - { name: SCRUTINY_WEB_INFLUXDB_BUCKET, value: metrics }
+            - name: SCRUTINY_WEB_INFLUXDB_TOKEN
+              valueFrom:
+                secretKeyRef: { name: scrutiny-secrets, key: influx-token }
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: config, mountPath: /opt/scrutiny/config }
+          readinessProbe:
+            httpGet: { path: /api/health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: config
+          persistentVolumeClaim: { claimName: scrutiny-web-config }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scrutiny-web
+  namespace: scrutiny
+spec:
+  selector: { app: scrutiny-web }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
