@@ -1,0 +1,59 @@
+# Dozzle in Kubernetes mode — live tail of any pod's logs, cluster-wide,
+# agentless (reads via the k8s API with the read-only RBAC in rbac.yaml).
+# Complements Loki: this is `tail -f` with a UI, not retention/search.
+#
+# Auth: simple provider, users.yml from the out-of-band secret — pod logs
+# can contain secrets, so no open access. Login: brian / Vaultwarden
+# `dozzle-web`. Recreate the secret:
+#   PW_HASH=$(printf '%s' "$(scripts/vault-secret.sh dozzle-web)" | shasum -a 256 | awk '{print $1}')
+#   kubectl -n dozzle create secret generic dozzle-users --from-literal=users.yml="
+#   users:
+#     brian:
+#       name: Brian
+#       password: $PW_HASH
+#   "
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dozzle
+  namespace: dozzle
+  labels: { app: dozzle }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: dozzle }
+  template:
+    metadata:
+      labels: { app: dozzle }
+    spec:
+      serviceAccountName: dozzle
+      containers:
+        - name: dozzle
+          image: amir20/dozzle:v10.6.7
+          env:
+            - { name: DOZZLE_MODE, value: k8s }
+            - { name: DOZZLE_AUTH_PROVIDER, value: simple }
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - { name: users, mountPath: /data, readOnly: true }
+          readinessProbe:
+            httpGet: { path: /healthcheck, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: users
+          secret: { secretName: dozzle-users }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dozzle
+  namespace: dozzle
+spec:
+  selector: { app: dozzle }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
