@@ -79,6 +79,11 @@ spec:
             - { name: lan-ca, mountPath: /lan-ca, readOnly: true }
         - name: daemon
           image: docker:28-dind
+          # --mtu: the pod's flannel VXLAN interface is 1450, but dockerd's
+          # default bridge is 1500 — oversized packets from build containers
+          # blackhole, so LARGE downloads (npm tarballs, model weights) die
+          # with ECONNRESET while small requests work. Found via rampart CI.
+          args: ["--mtu=1400"]
           env:
             - name: DOCKER_TLS_CERTDIR
               value: /certs
