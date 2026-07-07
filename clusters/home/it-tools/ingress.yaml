@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: it-tools
+  namespace: it-tools
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "IT-Tools"
+    gethomepage.dev/description: "Offline dev/sysadmin utilities — encoders, converters, generators"
+    gethomepage.dev/group: "Cluster"
+    gethomepage.dev/icon: "it-tools.png"
+    gethomepage.dev/href: "https://it-tools.lan/"
+    gethomepage.dev/pod-selector: "app=it-tools"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: ["it-tools.lan"]
+      secretName: it-tools-tls
+  rules:
+    - host: it-tools.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: it-tools
+                port:
+                  number: 80

@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: it-tools
+
+# IT-Tools — offline dev/sysadmin utility grab-bag (home-lab#22). Fully
+# static SPA (nginx), zero state, multi-arch — no node pin, the scheduler
+# places it wherever there's room. TLS via lan-certs.sh (it-tools.lan).
+resources:
+  - namespace.yaml
+  - it-tools.yaml
+  - ingress.yaml
