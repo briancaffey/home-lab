@@ -629,8 +629,7 @@ spec:
 # Plain-yaml dirs into inference-club. ONE fleet-wide rule: /spec/replicas
 # is IGNORED on every Deployment (+RespectIgnoreDifferences) — scaling is
 # operational state owned by Brian/Hermes (GPU bin-packing, park/unpark),
-# never by git. Everything else selfHeals. agent-dev deliberately NOT
-# onboarded yet (live image drifted from git — pending reconciliation).
+# never by git. Everything else selfHeals.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -893,6 +892,31 @@ spec:
     repoURL: https://forgejo.lan/brian/home-lab.git
     targetRevision: main
     path: services/trellis2
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-agent-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/agent-dev
   destination:
     server: https://kubernetes.default.svc
     namespace: inference-club
