@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: reloader
+
+# Reloader (stakater) — watches ConfigMaps/Secrets and rolls Deployments that
+# opt in via `reloader.stakater.com/auto: "true"`. Retires the "config-only
+# CM edits need a manual rollout restart" caveat (monitoring's prometheus +
+# grafana are the first opt-ins). Helm-inflating dir — renders in Argo via
+# the --enable-helm buildOption; Renovate tracks the chart version below.
+resources:
+  - namespace.yaml
+
+helmCharts:
+  - name: reloader
+    repo: https://stakater.github.io/stakater-charts
+    version: 2.2.14
+    releaseName: reloader
+    namespace: reloader

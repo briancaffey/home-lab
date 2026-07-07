@@ -34,7 +34,7 @@ spec:
     namespace: mailpit
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -55,7 +55,7 @@ spec:
     namespace: qbittorrent
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -76,7 +76,7 @@ spec:
     namespace: rampart
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -99,7 +99,7 @@ spec:
     namespace: renovate
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -122,7 +122,7 @@ spec:
     namespace: open-webui
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -130,8 +130,8 @@ spec:
 # Hand-rolled monitoring stack (prometheus, grafana, exporters). Safe under
 # GitOps: disableNameSuffixHash keeps ConfigMap names stable (no churn), and
 # a zero-drift kubectl diff was verified before onboarding (2026-07-06).
-# Caveat unchanged from manual days: config-only CM edits still need a
-# `kubectl rollout restart` — Argo updates the CM but nothing bounces pods.
+# Config-only CM edits now roll pods automatically via Reloader
+# (clusters/home/reloader — prometheus/grafana carry the opt-in annotation).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -146,6 +146,892 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# code-server lives in the HERMES namespace (co-mounts the hermes-data PVC
+# on x1) — destination ns is hermes, not its own.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-code-server
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/code-server
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hermes
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-speedtest
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/speedtest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: speedtest
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-gatus
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/gatus
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gatus
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Helm-inflating dir (like open-webui) — relies on the argocd-cm
+# kustomize.buildOptions: --enable-helm patch.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-headlamp
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/headlamp
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: headlamp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-kube-ops-view
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/kube-ops-view
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-ops-view
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# First TRUE HELM RELEASE under Argo (the homepage/longhorn class). Three
+# sources: the upstream chart, our values.yaml from git ($values ref), and
+# the .lan ingress file from the same dir. releaseName MUST stay `netdata`
+# or every rendered object gets renamed. Verified pre-merge: helm template
+# at 3.7.168 + these values == live release, zero drift. After merge the
+# helm CLI bookkeeping is retired (helm release secrets deleted) — from
+# then on `helm upgrade` is WRONG for netdata; git is the only path.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-netdata
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://netdata.github.io/helmchart/
+      chart: netdata
+      targetRevision: 3.7.168
+      helm:
+        releaseName: netdata
+        valueFiles:
+          - $values/clusters/home/netdata/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      path: clusters/home/netdata
+      directory:
+        include: ingress.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: netdata
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-jellyfin
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/jellyfin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jellyfin
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-audiobookshelf
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/audiobookshelf
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: audiobookshelf
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-navidrome
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/navidrome
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: navidrome
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-manyfold
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/manyfold
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: manyfold
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-immich
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/immich
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: immich
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-paperless
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/paperless
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: paperless
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Household DNS (Pi-hole serves *.lan + ad-blocking at 192.168.5.96).
+# prune stays false and NOBODY flips it casually: a pruned/reverted object
+# here is a family-wide DNS incident, not a broken dashboard. Config edits
+# via git only; remember a pod restart = a few seconds of DNS outage for
+# everything pointed at it (laptop, node split-DNS, coredns .lan zone).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-pihole
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/pihole
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pihole
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Hermes agent. Two things to know: (1) the dir's kustomization uses an
+# unsetOnly NamespaceTransformer to protect a cross-namespace RoleBinding
+# (hermes-edit -> inference-club) — Argo manages that object in ITS
+# namespace, which is correct; (2) the agent's mutable brain (SOUL.md,
+# skills, self-edited config) lives on the hermes-data PVC, NOT in git —
+# git owns the workload shape only. code-server shares this namespace but
+# is its own Application (home-code-server).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-hermes
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/hermes
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hermes
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Homepage — second helm-release migration (netdata pattern). The June-2026
+# "kubectl apply put it in the wrong namespace" incident class is retired:
+# Argo renders the upstream chart with git values and applies with an
+# explicit destination namespace. Tailnet privacy: values.yaml carries
+# {{HOMEPAGE_VAR_TAILNET}} placeholders; the real name arrives via the
+# out-of-band homepage-tailnet Secret (envFrom).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-homepage
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://jameswynn.github.io/helm-charts
+      chart: homepage
+      targetRevision: 2.1.0
+      helm:
+        releaseName: homepage
+        valueFiles:
+          - $values/clusters/home/homepage/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: homepage
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+---
+# ── CIRCULARITY TRIO (see docs/18-gitops-break-glass.md) ─────────────────
+# vaultwarden/harbor/forgejo are the services the GitOps loop itself stands
+# on. Policy is deliberately weaker: commits deploy (automated) but
+# selfHeal is OFF — Argo never autonomously restarts the foundations; drift
+# shows as OutOfSync for a human. prune stays false permanently.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-vaultwarden
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/vaultwarden
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vaultwarden
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+---
+# Harbor (trio 2/3) — helm-inflating dir with a twist: the chart REGENERATES
+# four internal secrets + checksum pod-annotations on every render (verified
+# empirically 2026-07-06 by double-render diff). Without the ignore rules
+# below, Argo would be perpetually OutOfSync and every sync would rotate
+# trust tokens and roll core/jobservice/registry. RespectIgnoreDifferences
+# makes syncs leave those fields alone. Do NOT remove either half.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-harbor
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/harbor
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+  ignoreDifferences:
+    - kind: Secret
+      name: harbor-core
+      jsonPointers: ["/data"]
+    - kind: Secret
+      name: harbor-jobservice
+      jsonPointers: ["/data"]
+    - kind: Secret
+      name: harbor-registry
+      jsonPointers: ["/data"]
+    - kind: Secret
+      name: harbor-registry-htpasswd
+      jsonPointers: ["/data"]
+    - group: apps
+      kind: Deployment
+      name: harbor-core
+      jqPathExpressions:
+        - .spec.template.metadata.annotations."checksum/secret"
+        - .spec.template.metadata.annotations."checksum/secret-jobservice"
+        - .spec.template.metadata.annotations."checksum/secret-core"
+    - group: apps
+      kind: Deployment
+      name: harbor-jobservice
+      jqPathExpressions:
+        - .spec.template.metadata.annotations."checksum/secret"
+        - .spec.template.metadata.annotations."checksum/secret-jobservice"
+        - .spec.template.metadata.annotations."checksum/secret-core"
+    - group: apps
+      kind: Deployment
+      name: harbor-registry
+      jqPathExpressions:
+        - .spec.template.metadata.annotations."checksum/secret"
+        - .spec.template.metadata.annotations."checksum/secret-jobservice"
+        - .spec.template.metadata.annotations."checksum/secret-core"
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+---
+# Forgejo (trio 3/3) — THE self-referential one: Argo reads this very repo
+# from the service this Application manages. selfHeal OFF is load-bearing
+# here: Argo must never autonomously restart the thing it reads truth from.
+# If forgejo breaks, fix it from the laptop clone with kubectl (docs/18) —
+# the repo also lives on GitHub (push mirror) and every laptop clone.
+# The Actions runner (runner/) is deliberately NOT included.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-forgejo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/forgejo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forgejo
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+---
+# ── INFERENCE FLEET (services/*) ──────────────────────────────────────────
+# Plain-yaml dirs into inference-club. ONE fleet-wide rule: /spec/replicas
+# is IGNORED on every Deployment (+RespectIgnoreDifferences) — scaling is
+# operational state owned by Brian/Hermes (GPU bin-packing, park/unpark),
+# never by git. Everything else selfHeals.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-acestep
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/acestep
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-dia
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/dia
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-firecrawl
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/firecrawl
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-flux2
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/flux2
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-lmstudio
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/lmstudio-headless
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-ltx2
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/ltx2
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-magpie-tts
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/magpie-tts
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-nemotron-asr
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/nemotron-asr
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-nemotron-omni
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/nemotron-omni
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-studio-voice
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/studio-voice
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-trellis2
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/trellis2
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-agent-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/agent-dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
+# ── BACKUP LAYER (red-tape #28 item 7, docs/18 sibling) ──────────────────
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-minio-backups
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/minio-backups
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: minio-backups
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Restic CronJobs live in their targets' namespaces (vaultwarden, forgejo) —
+# resources carry explicit namespaces; destination below is a default only.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-backups
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/backups
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vaultwarden
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+---
+# ── LONGHORN (ceremony day 2026-07-07, home-lab#43 task 17) ──────────────
+# The storage substrate — most conservative policy in the fleet:
+#   - selfHeal OFF (trio treatment): Argo NEVER autonomously touches the
+#     layer holding volume replicas; drift shows OutOfSync for a human.
+#   - prune OFF forever. ServerSideApply: the CRDs exceed client-side
+#     annotation limits.
+#   - Chart bumps are gated in renovate.json (dependencyDashboardApproval)
+#     — longhorn upgrades are ordered/one-way; read release notes first,
+#     verify volumes healthy before AND after, never skip minors.
+# Node membership + disk placement stay in scripts/longhorn-nodes.sh
+# (runtime config via labels/annotations, not the chart).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-longhorn
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.longhorn.io
+      chart: longhorn
+      targetRevision: 1.12.0
+      helm:
+        releaseName: longhorn
+        valueFiles:
+          - $values/clusters/home/longhorn/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      path: clusters/home/longhorn
+      directory:
+        include: "{ingress.yaml,storageclass.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: longhorn-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-reloader
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/reloader
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: reloader
   syncPolicy:
     automated:
       prune: false

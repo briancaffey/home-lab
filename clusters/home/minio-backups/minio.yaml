@@ -1,0 +1,64 @@
+# S3 endpoint (cluster-internal): http://minio-backups.minio-backups.svc.cluster.local:9000
+# Console: kubectl -n minio-backups port-forward svc/minio-backups 9001:9001
+# (no .lan ingress on purpose — this is infrastructure, not a daily UI).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-backups
+  namespace: minio-backups
+  labels: { app: minio-backups }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: minio-backups }
+  template:
+    metadata:
+      labels: { app: minio-backups }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      securityContext:
+        runAsUser: 1000   # brian on a2 — backup files land owned by brian
+        runAsGroup: 1000
+      containers:
+        - name: minio
+          image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+          args: ["server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef: { name: minio-backups-secrets, key: root-user }
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: minio-backups-secrets, key: root-password }
+          ports:
+            - { name: s3, containerPort: 9000 }
+            - { name: console, containerPort: 9001 }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /minio/health/ready, port: s3 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: data
+          hostPath:
+            path: /home/brian/e/backups
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-backups
+  namespace: minio-backups
+  labels: { app: minio-backups }
+spec:
+  selector: { app: minio-backups }
+  ports:
+    - { name: s3, port: 9000, targetPort: s3 }
+    - { name: console, port: 9001, targetPort: console }
