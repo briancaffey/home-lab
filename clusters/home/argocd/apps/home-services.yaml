@@ -122,7 +122,7 @@ spec:
     namespace: open-webui
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -130,8 +130,8 @@ spec:
 # Hand-rolled monitoring stack (prometheus, grafana, exporters). Safe under
 # GitOps: disableNameSuffixHash keeps ConfigMap names stable (no churn), and
 # a zero-drift kubectl diff was verified before onboarding (2026-07-06).
-# Caveat unchanged from manual days: config-only CM edits still need a
-# `kubectl rollout restart` — Argo updates the CM but nothing bounces pods.
+# Config-only CM edits now roll pods automatically via Reloader
+# (clusters/home/reloader — prometheus/grafana carry the opt-in annotation).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -148,7 +148,7 @@ spec:
     namespace: monitoring
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -171,7 +171,7 @@ spec:
     namespace: hermes
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -190,7 +190,7 @@ spec:
     namespace: speedtest
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -211,7 +211,7 @@ spec:
     namespace: gatus
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -234,7 +234,7 @@ spec:
     namespace: headlamp
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -255,7 +255,7 @@ spec:
     namespace: kube-ops-view
   syncPolicy:
     automated:
-      prune: false
+      prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
@@ -1017,3 +1017,24 @@ spec:
       selfHeal: false
     syncOptions:
       - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-reloader
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/reloader
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: reloader
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -68,5 +68,22 @@
     "managerFilePatterns": [
       "/^clusters\\/home\\/argocd\\/apps\\/.+\\.ya?ml$/"
     ]
-  }
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Bitwarden CLI pinned by URL in hermes' install-vault-tools initContainer",
+      "managerFilePatterns": [
+        "/^clusters\\/home\\/hermes\\/deployment\\.yaml$/"
+      ],
+      "matchStrings": [
+        "download/cli-v(?<currentValue>\\d+\\.\\d+\\.\\d+)/",
+        "bw-linux-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\.zip"
+      ],
+      "depNameTemplate": "bitwarden-cli",
+      "packageNameTemplate": "bitwarden/clients",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^cli-v(?<version>.*)$"
+    }
+  ]
 }
