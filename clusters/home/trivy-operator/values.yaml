@@ -1,0 +1,16 @@
+# Trivy Operator — continuous scanning of RUNNING workloads (home-lab#16).
+# Complements Harbor's registry-side Trivy (auto_scan on apps/ + library/):
+# Harbor scans what you STORE, the operator scans what you RUN (incl. all
+# the upstream images that only pass through the proxy cache).
+operator:
+  # Gentle on the cluster: one scan job at a time.
+  scanJobsConcurrentLimit: 1
+excludeNamespaces: "kube-system,trivy-system,inference-club"
+# inference-club excluded for now: 10–20 GB CUDA/vLLM images make scan jobs
+# heavy (the issue's own warning). Revisit with resource limits + timeout
+# raised if inference-image vulns become interesting.
+trivy:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 2Gi }
+  timeout: 15m0s

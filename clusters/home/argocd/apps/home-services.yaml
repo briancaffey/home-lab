@@ -1101,3 +1101,27 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# Helm-inflating dir. Scan-job CRDs + reports are operator-owned runtime
+# state — prune must stay false.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-trivy-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/trivy-operator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: trivy-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
