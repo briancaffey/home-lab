@@ -68,7 +68,7 @@ spec:
         # TODO(x1-harbor-trust): swap image to the Harbor tag and drop this
         # initContainer + the PYTHONPATH env.
         - name: install-otel-libs
-          image: nousresearch/hermes-agent:v2026.7.1
+          image: nousresearch/hermes-agent:v2026.7.7
           command: ["sh", "-c", "[ -d /opt/data/otel-libs/opentelemetry ] && echo 'otel libs present' || uv pip install --no-cache --target /opt/data/otel-libs opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http"]
           volumeMounts:
             - { name: data, mountPath: /opt/data }
@@ -78,7 +78,7 @@ spec:
         # image story as install-otel-libs; fold into image/Dockerfile when
         # x1 trusts Harbor (TODO(x1-harbor-trust)).
         - name: install-kubectl
-          image: nousresearch/hermes-agent:v2026.7.1
+          image: nousresearch/hermes-agent:v2026.7.7
           command: ["sh", "-c", "[ -x /opt/data/.local/bin/kubectl ] && echo 'kubectl present' || (mkdir -p /opt/data/.local/bin && curl -fsSL -o /opt/data/.local/bin/kubectl https://dl.k8s.io/release/v1.35.5/bin/linux/amd64/kubectl && chmod +x /opt/data/.local/bin/kubectl)"]
           volumeMounts:
             - { name: data, mountPath: /opt/data }
@@ -88,7 +88,7 @@ spec:
         # bw (a ~100 MB pkg'd Node binary, no unzip in image → python zipfile)
         # only downloads once. TODO(x1-harbor-trust): fold into image/Dockerfile.
         - name: install-vault-tools
-          image: nousresearch/hermes-agent:v2026.7.1
+          image: nousresearch/hermes-agent:v2026.7.7
           command:
             - sh
             - -c
@@ -108,7 +108,7 @@ spec:
             - { name: vault-tools, mountPath: /vault-tools }
       containers:
         - name: hermes
-          image: nousresearch/hermes-agent:v2026.7.1
+          image: nousresearch/hermes-agent:v2026.7.7
           # Keep the image ENTRYPOINT (/init = s6 PID 1); this is the CMD.
           args: ["gateway", "run"]
           ports:
