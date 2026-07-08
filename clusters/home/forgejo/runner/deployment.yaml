@@ -23,7 +23,7 @@ spec:
       automountServiceAccountToken: false
       initContainers:
         - name: register
-          image: code.forgejo.org/forgejo/runner:12.12.0
+          image: code.forgejo.org/forgejo/runner:12.13.0
           workingDir: /data
           command: ["/bin/sh", "-c"]
           args:
@@ -51,7 +51,7 @@ spec:
             - { name: lan-ca, mountPath: /lan-ca, readOnly: true }
       containers:
         - name: runner
-          image: code.forgejo.org/forgejo/runner:12.12.0
+          image: code.forgejo.org/forgejo/runner:12.13.0
           workingDir: /data
           command: ["/bin/sh", "-c"]
           args:
