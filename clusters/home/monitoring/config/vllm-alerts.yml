@@ -1,14 +1,11 @@
 groups:
   - name: vllm-alerts
     rules:
-      - alert: VLLMTargetDown
-        expr: up{job="vllm"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "vLLM target {{ $labels.instance }} is down"
-          description: "Prometheus cannot scrape /metrics on {{ $labels.instance }} for 1m."
+      # (VLLMTargetDown removed 2026-07-07: inference services are parked and
+      # unparked routinely — a down target is normal ops, not an incident.
+      # The metric-derived rules below self-silence when parked and only fire
+      # while a model is ACTIVELY serving and struggling, which is the signal
+      # we want. Generic TargetDown in homelab-alerts.yml also excludes vllm.)
 
       - alert: HighKVCacheUsage
         expr: vllm:kv_cache_usage_perc > 0.90

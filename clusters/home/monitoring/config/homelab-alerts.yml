@@ -4,14 +4,15 @@ groups:
   - name: homelab
     rules:
       - alert: NodeDown
-        expr: up{job="node-exporter"} == 0
+        expr: up{job="node"} == 0
         for: 5m
         labels: { severity: critical }
         annotations:
           summary: "Node {{ $labels.instance }} is down"
           description: "node-exporter unreachable for 5m — node offline, crashed, or off the network."
       - alert: TargetDown
-        expr: up == 0
+        # job="vllm" excluded: parked inference services are normal ops
+        expr: up{job!="vllm"} == 0
         for: 15m
         labels: { severity: warning }
         annotations:
