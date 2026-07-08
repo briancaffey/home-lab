@@ -32,7 +32,9 @@ spec:
           # CPU image (no -cuda suffix): a2's 4090 is exclusively flux2-klein,
           # so run CLIP on CPU for now (indexing is just slower). Switch to the
           # -cuda image + NVIDIA_VISIBLE_DEVICES=all later to share the GPU.
-          image: ghcr.io/immich-app/immich-machine-learning:release
+          # Pinned to a version tag (not :release) so Renovate tracks it; keep in
+          # lockstep with immich-server's tag — they must run the same version.
+          image: ghcr.io/immich-app/immich-machine-learning:v2.7.5
           ports:
             - name: http
               containerPort: 3003
