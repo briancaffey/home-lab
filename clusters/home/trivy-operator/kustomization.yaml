@@ -14,3 +14,6 @@ helmCharts:
     releaseName: trivy-operator
     namespace: trivy-system
     valuesFile: values.yaml
+    includeCRDs: true   # report CRDs live in the chart's crds/ — kustomize
+                        # excludes them by default (netdata/homepage charts
+                        # have none, so this never bit before)
