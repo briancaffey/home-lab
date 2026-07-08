@@ -1125,3 +1125,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      # chart ships ClusterComplianceReport CRs next to their CRDs —
+      # same-wave apply needs the dry-run skip for not-yet-known kinds
+      - SkipDryRunOnMissingResource=true
