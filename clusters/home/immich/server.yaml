@@ -37,7 +37,7 @@ spec:
           # track it — :release silently rolls majors (it already points at v3),
           # and IfNotPresent means a re-pull would jump uncontrolled. Bump via
           # Renovate PR; app majors are a migration event (schema migrates on boot).
-          image: ghcr.io/immich-app/immich-server:v2.7.5
+          image: ghcr.io/immich-app/immich-server:v3.0.1
           ports:
             - name: http
               containerPort: 2283
