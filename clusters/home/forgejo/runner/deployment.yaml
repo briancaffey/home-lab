@@ -78,7 +78,7 @@ spec:
             - { name: docker-certs, mountPath: /certs }
             - { name: lan-ca, mountPath: /lan-ca, readOnly: true }
         - name: daemon
-          image: docker:28-dind
+          image: docker:29-dind
           # --mtu: the pod's flannel VXLAN interface is 1450, but dockerd's
           # default bridge is 1500 — oversized packets from build containers
           # blackhole, so LARGE downloads (npm tarballs, model weights) die
