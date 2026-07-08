@@ -18,7 +18,7 @@ spec:
         kubernetes.io/arch: amd64   # apps/ images are amd64-only (dind runner)
       containers:
         - name: docs
-          image: harbor.lan/apps/home-lab-docs:init
+          image: harbor.lan/apps/home-lab-docs:75e5f605f649
           ports:
             - { name: http, containerPort: 80 }
           readinessProbe:
