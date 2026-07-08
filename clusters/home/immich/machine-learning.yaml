@@ -34,7 +34,7 @@ spec:
           # -cuda image + NVIDIA_VISIBLE_DEVICES=all later to share the GPU.
           # Pinned to a version tag (not :release) so Renovate tracks it; keep in
           # lockstep with immich-server's tag — they must run the same version.
-          image: ghcr.io/immich-app/immich-machine-learning:v2.7.5
+          image: ghcr.io/immich-app/immich-machine-learning:v3.0.1
           ports:
             - name: http
               containerPort: 3003
