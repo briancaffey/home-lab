@@ -112,7 +112,7 @@ spec:
         # (grpcio ships manylinux wheels, no compile). It self-warms the NIM so the
         # first real request isn't slow.
         - name: bridge
-          image: python:3.11-slim
+          image: python:3.14-slim
           command: ["sh", "-c"]
           args:
             - |

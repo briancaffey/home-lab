@@ -34,7 +34,7 @@ spec:
               volumeMounts:
                 - { name: snap, mountPath: /snap }
             - name: snapshot
-              image: python:3.12-alpine
+              image: python:3.14-alpine
               env:
                 - { name: SRCS, value: "/pvc-library:/snap/library" }
                 - { name: SKIP, value: "" }

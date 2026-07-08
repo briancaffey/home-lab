@@ -25,7 +25,7 @@ spec:
         inference-club.com/box: a2
       containers:
         - name: fetch
-          image: python:3.12-slim
+          image: python:3.14-slim
           env:
             - name: HF_HOME
               value: /models

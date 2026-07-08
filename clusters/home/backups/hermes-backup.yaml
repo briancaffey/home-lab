@@ -24,7 +24,7 @@ spec:
             inference-club.com/box: x1
           initContainers:
             - name: snapshot
-              image: python:3.12-alpine
+              image: python:3.14-alpine
               env:
                 - { name: SRCS, value: "/pvc-data:/snap/data" }
                 - { name: SKIP, value: "otel-libs,.local,.cache,.npm,.bw,.bw.backup,sandboxes" }
