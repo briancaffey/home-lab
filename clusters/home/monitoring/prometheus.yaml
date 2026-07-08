@@ -47,6 +47,10 @@ spec:
             - "--storage.tsdb.path=/prometheus"
             - "--storage.tsdb.retention.time=15d"
             - "--web.enable-lifecycle"
+            # Alert Source links (generatorURL) render as clickable
+            # prometheus.lan URLs in Telegram/Mailpit instead of the pod
+            # hostname.
+            - "--web.external-url=https://prometheus.lan"
           ports:
             - name: http
               containerPort: 9090
