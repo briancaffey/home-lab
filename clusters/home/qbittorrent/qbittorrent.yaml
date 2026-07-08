@@ -40,7 +40,7 @@ spec:
         inference-club.com/box: a2
       containers:
         - name: qbittorrent
-          image: linuxserver/qbittorrent:5.2.2
+          image: linuxserver/qbittorrent:5.2.3
           env:
             - { name: PUID, value: "1000" }   # brian on a2 — files land owned by brian
             - { name: PGID, value: "1000" }
