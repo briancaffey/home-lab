@@ -1128,3 +1128,25 @@ spec:
       # chart ships ClusterComplianceReport CRs next to their CRDs —
       # same-wave apply needs the dry-run skip for not-yet-known kinds
       - SkipDryRunOnMissingResource=true
+---
+# Docs site (home-lab#67) — image tag managed by .forgejo/workflows/docs.yml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-docs
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/docs
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: docs
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

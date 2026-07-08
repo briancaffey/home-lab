@@ -1,0 +1,14 @@
+{
+  "title": {
+    "message": "实验笔记",
+    "description": "The title for the blog used in SEO"
+  },
+  "description": {
+    "message": "构建家庭实验室过程中的里程碑与经验",
+    "description": "The description for the blog used in SEO"
+  },
+  "sidebar.title": {
+    "message": "Recent posts",
+    "description": "The label for the left sidebar"
+  }
+}

@@ -1,0 +1,40 @@
+# In-cluster docs deploy (docs.lan) — rampart CI pattern, path-filtered so
+# infra commits never rebuild the site. Secrets: HARBOR_ROBOT_USER/TOKEN.
+# The bump commit ([skip ci]) is what triggers Argo's rollout.
+name: docs-build-deploy
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs-site/**'
+      - '.forgejo/workflows/docs.yml'
+
+jobs:
+  build:
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Harbor
+        env:
+          HARBOR_USER: ${{ secrets.HARBOR_ROBOT_USER }}
+          HARBOR_TOKEN: ${{ secrets.HARBOR_ROBOT_TOKEN }}
+        run: |
+          echo "$HARBOR_TOKEN" | docker login harbor.lan -u "$HARBOR_USER" --password-stdin
+
+      - name: Build and push image
+        run: |
+          TAG="${GITHUB_SHA::12}"
+          IMAGE="harbor.lan/apps/home-lab-docs"
+          docker build -t "$IMAGE:$TAG" docs-site/
+          docker push "$IMAGE:$TAG"
+
+      - name: Bump image tag (Argo deploys)
+        run: |
+          TAG="${GITHUB_SHA::12}"
+          sed -i "s|image: harbor.lan/apps/home-lab-docs:.*|image: harbor.lan/apps/home-lab-docs:$TAG|" clusters/home/docs/deployment.yaml
+          git config user.name "forgejo-actions"
+          git config user.email "actions@forgejo.lan"
+          git add clusters/home/docs/deployment.yaml
+          git commit -m "deploy(docs): image $TAG [skip ci]"
+          git push origin main

@@ -1,0 +1,40 @@
+# Docs site (docs.lan) — image tag is managed by .forgejo/workflows/docs.yml
+# ([skip ci] bump commits). Don't edit the tag by hand.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docs
+  namespace: docs
+  labels: { app: docs }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: docs }
+  template:
+    metadata:
+      labels: { app: docs }
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64   # apps/ images are amd64-only (dind runner)
+      containers:
+        - name: docs
+          image: harbor.lan/apps/home-lab-docs:init
+          ports:
+            - { name: http, containerPort: 80 }
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docs
+  namespace: docs
+spec:
+  selector: { app: docs }
+  ports:
+    - { name: http, port: 80, targetPort: http }
