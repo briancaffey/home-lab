@@ -25,18 +25,24 @@ data:
       logo: ""
 
     # ---- Alerting -----------------------------------------------------------
-    # Email (Gmail SMTP) is the active channel. Create a Google *app password*
-    # and store it in the `gatus-secrets` secret to turn on delivery (see
-    # docs/14). To migrate to self-hosted ntfy later (issue #19), add an
-    # `ntfy:` provider block here and switch each endpoint's `alerts:` type.
+    # Telegram is primary (token/chat via gatus-secrets env; values in
+    # Vaultwarden telegram-bot / telegram-chat-id). Mailpit keeps the
+    # backup/record copy (in-cluster SMTP sink, no auth).
     alerting:
+      telegram:
+        token: "${GATUS_TELEGRAM_TOKEN}"
+        id: "${GATUS_TELEGRAM_CHAT_ID}"
+        default-alert:
+          enabled: true
+          failure-threshold: 3
+          success-threshold: 2
+          send-on-resolved: true
+          description: "homelab healthcheck failed"
       email:
-        host: "smtp.gmail.com"
-        port: 587
-        from: "${GATUS_SMTP_FROM}"
-        username: "${GATUS_SMTP_USERNAME}"
-        password: "${GATUS_SMTP_PASSWORD}"
-        to: "${GATUS_SMTP_TO}"
+        host: "mailpit-smtp.mailpit.svc.cluster.local"
+        port: 1025
+        from: "gatus@home-cluster.lan"
+        to: "brian@home-cluster.lan"
         default-alert:
           enabled: true
           failure-threshold: 3   # ~3 consecutive fails (3 min at 1m interval)
@@ -52,31 +58,31 @@ data:
         url: "http://homepage.homepage:3000"
         interval: 1m
         conditions: ["[STATUS] < 400"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: headlamp
         group: Cluster
         url: "http://headlamp.headlamp:80"
         interval: 1m
         conditions: ["[STATUS] < 400"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: grafana
         group: Cluster
         url: "http://grafana.monitoring:3000/api/health"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: prometheus
         group: Cluster
         url: "http://prometheus.monitoring:9090/-/healthy"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: loki
         group: Cluster
         url: "http://loki.monitoring:3100/ready"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: kube-ops-view
         group: Cluster
         url: "http://kube-ops-view.kube-ops-view:80/health"
@@ -87,13 +93,13 @@ data:
         url: "http://harbor-core.harbor:80/api/v2.0/health"
         interval: 1m
         conditions: ["[STATUS] == 200", "[BODY].status == healthy"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: netdata
         group: Cluster
         url: "http://netdata.netdata:19999/api/v1/info"
         interval: 5m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
 
       # ===== Infra / networking =====
       # Validates the real ingress data path: route THROUGH Traefik (:80 web
@@ -107,13 +113,13 @@ data:
         headers:
           Host: "home.lan"
         conditions: ["[STATUS] < 400"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: pihole-admin
         group: Infra
         url: "http://pihole-web.pihole:80/admin/"
         interval: 1m
         conditions: ["[STATUS] < 400"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: dns-resolution
         group: Infra
         url: "1.1.1.1"
@@ -122,13 +128,13 @@ data:
           query-name: "github.com"
           query-type: "A"
         conditions: ["[DNS_RCODE] == NOERROR"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: internet
         group: Infra
         url: "icmp://1.1.1.1"
         interval: 1m
         conditions: ["[CONNECTED] == true"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: speedtest
         group: Infra
         url: "http://speedtest.speedtest:80"
@@ -141,31 +147,31 @@ data:
         url: "http://forgejo.forgejo:3000"
         interval: 1m
         conditions: ["[STATUS] < 400"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: vaultwarden
         group: Apps
         url: "http://vaultwarden.vaultwarden:80/alive"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: immich
         group: Apps
         url: "http://immich-server.immich:80/api/server/ping"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: paperless
         group: Apps
         url: "http://paperless-webserver.paperless:80"
         interval: 1m
         conditions: ["[STATUS] < 400"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: jellyfin
         group: Apps
         url: "http://jellyfin.jellyfin:80/health"
         interval: 5m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: navidrome
         group: Apps
         url: "http://navidrome.navidrome:80/ping"
@@ -198,13 +204,13 @@ data:
         url: "http://hermes.hermes:8642/health"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
       - name: hermes-dashboard
         group: Apps
         url: "http://hermes.hermes:9119/api/status"
         interval: 1m
         conditions: ["[STATUS] == 200"]
-        alerts: [{ type: email }]
+        alerts: [{ type: telegram }, { type: email }]
 
       # ===== Inference (visibility only — GPU pods cycle, no alerts) =====
       # lmstudio-headless parked (scaled to 0) — monitor removed.

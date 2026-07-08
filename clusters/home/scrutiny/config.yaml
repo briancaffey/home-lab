@@ -10,6 +10,9 @@ metadata:
 data:
   scrutiny.yaml: |
     version: 1
-    notify:
-      urls:
-        - "smtp://mailpit-smtp.mailpit.svc.cluster.local:1025/?from=scrutiny@home-cluster.lan&to=brian@home-cluster.lan&auth=None&encryption=None&subject=Scrutiny%20disk%20alert"
+    # notify.urls comes from SCRUTINY_WEB_NOTIFY_URLS env (scrutiny-secrets):
+    # telegram (token inside the URL — can't live in this public ConfigMap)
+    # + the mailpit backup. Recreate:
+    #   TOK=$(scripts/vault-secret.sh telegram-bot); CHAT=$(scripts/vault-secret.sh telegram-chat-id)
+    #   kubectl -n scrutiny patch secret scrutiny-secrets -p "{\"stringData\":{\"notify-urls\":\"[\\\"telegram://$TOK@telegram?chats=$CHAT\\\",\\\"smtp://mailpit-smtp.mailpit.svc.cluster.local:1025/?from=scrutiny@home-cluster.lan&to=brian@home-cluster.lan&auth=None&encryption=None&subject=Scrutiny%20disk%20alert\\\"]\"}}"
+    notify: {}
