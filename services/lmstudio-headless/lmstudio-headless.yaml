@@ -84,7 +84,7 @@ spec:
         runAsGroup: 1000
       containers:
         - name: lmstudio-headless
-          image: nvidia/cuda:13.0.0-runtime-ubuntu24.04
+          image: nvidia/cuda:13.3.0-runtime-ubuntu24.04
           imagePullPolicy: IfNotPresent
           command: ["bash", "/etc/lms/entrypoint.sh"]
           env:

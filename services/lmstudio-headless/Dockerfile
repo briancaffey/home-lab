@@ -20,7 +20,7 @@
 # Or, with no ghcr write credentials, seed it straight into k3s containerd:
 #   docker save ghcr.io/inference-club/lmstudio-headless:latest-spark-arm64 \
 #     | sudo k3s ctr -n k8s.io images import -
-FROM nvidia/cuda:13.0.0-runtime-ubuntu24.04
+FROM nvidia/cuda:13.3.0-runtime-ubuntu24.04
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libgomp1 ca-certificates curl tini \
