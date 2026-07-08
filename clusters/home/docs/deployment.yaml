@@ -16,6 +16,8 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/arch: amd64   # apps/ images are amd64-only (dind runner)
+        inference-club.com/box: a2  # keep off a1 — its flaky USB WiFi times out
+                                    # harbor.lan image pulls (ImagePullBackOff)
       containers:
         - name: docs
           image: harbor.lan/apps/home-lab-docs:75e5f605f649
