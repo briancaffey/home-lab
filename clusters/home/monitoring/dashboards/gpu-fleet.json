@@ -660,7 +660,7 @@
           },
           "instant": true,
           "refId": "A",
-          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(node_thermal_zone_temp{type=\"x86_pkg_temp\"}, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\")",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(node_thermal_zone_temp{type=\"x86_pkg_temp\"}, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\"), \"node\",\"t430\",\"instance\",\"192\\\\.168\\\\.4\\\\.33.*\")",
           "legendFormat": "{{node}}"
         }
       ]
@@ -824,7 +824,7 @@
           },
           "refId": "D",
           "legendFormat": "{{node}} CPU pkg",
-          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(node_thermal_zone_temp{type=\"x86_pkg_temp\"}, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\")"
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(node_thermal_zone_temp{type=\"x86_pkg_temp\"}, \"node\",\"a3\",\"instance\",\"192\\\\.168\\\\.5\\\\.173.*\"), \"node\",\"a1\",\"instance\",\"192\\\\.168\\\\.5\\\\.253.*\"), \"node\",\"a2\",\"instance\",\"192\\\\.168\\\\.5\\\\.96.*\"), \"node\",\"spark\",\"instance\",\"192\\\\.168\\\\.6\\\\.19.*\"), \"node\",\"x1\",\"instance\",\"192\\\\.168\\\\.5\\\\.174.*\"), \"node\",\"t430\",\"instance\",\"192\\\\.168\\\\.4\\\\.33.*\")"
         }
       ]
     }
