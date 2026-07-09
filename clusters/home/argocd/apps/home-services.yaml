@@ -931,6 +931,33 @@ spec:
     syncOptions:
       - RespectIgnoreDifferences=true
 ---
+# The in-cluster club.lan app's agent (PRD 21). Was applied manually; bringing
+# it under GitOps so its image/config/RBAC track git like the dev agent.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-agent-club-lan
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/agent-club-lan
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
 # ── BACKUP LAYER (red-tape #28 item 7, docs/18 sibling) ──────────────────
 apiVersion: argoproj.io/v1alpha1
 kind: Application
