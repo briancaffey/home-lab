@@ -40,7 +40,7 @@ spec:
                   - { key: inference-club.com/box, operator: In, values: [a2, a3] }
       containers:
         - name: agent
-          image: ghcr.io/inference-club/inference-club-agent:vram3
+          image: ghcr.io/inference-club/inference-club-agent:prd21-scale
           env:
             - { name: AGENT_DISCOVERY, value: kubernetes }
             - { name: AGENT_DISCOVERY_NAMESPACE, value: inference-club }
@@ -56,6 +56,13 @@ spec:
             - name: INFERENCE_CLUB_API_KEY
               valueFrom:
                 secretKeyRef: { name: club-lan-agent-key, key: api-key }
+            # Control center (PRD 21): shared secret the club.lan backend presents
+            # to park/unpark. Per-environment token (distinct from agent-dev), so
+            # revoking one environment doesn't touch the others. Its presence
+            # ENABLES scaling. Backend Provider.agent_control_token must match.
+            - name: AGENT_CONTROL_TOKEN
+              valueFrom:
+                secretKeyRef: { name: agent-control-token-lan, key: token }
             - { name: AGENT_STATE_DIR, value: /var/lib/club-host }
           ports:
             - { name: http, containerPort: 8091 }
