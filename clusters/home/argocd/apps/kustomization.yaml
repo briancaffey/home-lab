@@ -10,3 +10,4 @@ resources:
   - hello-gitops.yaml
   - clusterscape.yaml
   - home-services.yaml
+  - inference-club.yaml

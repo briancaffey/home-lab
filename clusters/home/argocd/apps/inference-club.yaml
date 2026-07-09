@@ -1,0 +1,25 @@
+# inference.club (home lab): the web app (Django + Nuxt) deployed by the GitOps
+# loop. CI (app repo .forgejo) builds harbor.lan/apps/inference-club-{backend,
+# frontend} and bumps deploy/ in the inference-club-deploy repo; Argo CD rolls
+# club.lan. Namespace + the inference-club-secrets Secret + home-tls cert are
+# created out-of-band first (see the deploy repo README).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: inference-club
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/inference-club-deploy.git
+    targetRevision: main
+    path: deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club-web
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
