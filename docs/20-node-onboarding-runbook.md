@@ -131,12 +131,50 @@ ssh brian@<ip> "sudo bash -s" < scripts/k3s-registries.sh
 ```
 Points containerd at Harbor's proxy cache + pins its CA, restarts the agent.
 
-## 8. Post-join verification & guardrails (from your laptop)
+## 8. Tailnet enrollment — remote access (out of band, per node)
+
+Every node runs the **Tailscale daemon on the host** so you can reach it off-LAN
+(SSH, VNC, NodePorts). This is host state + an auth step, so it's **not in the
+repo**, and it is **not** the in-cluster Tailscale operator (that only exposes
+select *services* as `<name>.<tailnet>.ts.net`). Do it on the node:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up            # opens an auth URL, or pass an --authkey
+tailscale ip -4              # note the 100.x address — do NOT commit it (privacy)
+```
+
+The tailnet ACL is **default-deny**, but the standing `autogroup:member ->
+autogroup:member` grant covers device-to-device, so a freshly-upped node is
+reachable the moment it shows in `tailscale status`. Verify with a real TCP probe
+— ACLs can block TCP while `tailscale ping` still succeeds:
+
+```bash
+nc -vz <node-tailnet-ip> 22
+```
+
+## 9. Post-join verification & guardrails (from your laptop)
 
 ```bash
 kubectl get nodes -o wide                       # <name> Ready, right IP, v1.35.5+k3s1
 kubectl get node <name> -o jsonpath='{.metadata.labels}' | tr , '\n' | grep -E 'box|arch'
 ```
+
+> **Confirm the prep actually took — don't assume it did.** t430 joined once with
+> the §4 scripts silently skipped: it was `Ready` by luck (lid open, plugged in),
+> the inotify limit was still at the default, sleep was **unmasked**, and it wasn't
+> on the tailnet. A join succeeding tells you nothing about prep. Check it:
+> ```bash
+> ssh brian@<ip> '
+>   echo -n "inotify:  "; sysctl -n fs.inotify.max_user_instances    # want 1024, not 128
+>   echo -n "sleep:    "; systemctl is-enabled sleep.target suspend.target | tr "\n" " "; echo  # want: masked masked
+>   echo -n "harbor:   "; getent hosts harbor.lan || echo MISSING     # want 192.168.5.173
+>   echo -n "lan-ca:   "; getent hosts home.lan >/dev/null && echo ok || echo MISSING
+>   echo -n "tailnet:  "; tailscale ip -4 >/dev/null 2>&1 && echo ok || echo MISSING
+> '
+> ```
+> Any default/`MISSING` value = the matching §4 script (or §8 tailnet step) never
+> ran. Re-run just that one — the scripts are idempotent.
 
 - **Ready, then flaps to NotReady?** → power-save (§4) wasn't applied, or WiFi
   drop. On a laptop this is the #1 cause. Wake it, run `node-powersave.sh`.
@@ -153,7 +191,7 @@ kubectl get node <name> -o jsonpath='{.metadata.labels}' | tr , '\n' | grep -E '
 - **Weak nodes (Pi, old laptops):** don't enroll in Longhorn; keep heavy/write-
   heavy PVCs off SD cards; let only light or arch-agnostic pods land there.
 
-## 9. Observability — mostly automatic, ONE manual step
+## 10. Observability — mostly automatic, THREE manual steps
 
 Node-level observability agents are **DaemonSets**, so k8s schedules one onto the
 new node automatically the moment it's Ready — no ArgoCD/deploy change needed:
@@ -166,6 +204,8 @@ new node automatically the moment it's Ready — no ArgoCD/deploy change needed:
 | `nfd-worker` | DaemonSet | none |
 | GPU: `dcgm`, `vram-reporter`, `nvidia-device-plugin` | DaemonSet + GPU-label affinity | none — correctly SKIP non-GPU nodes |
 | **`node-exporter` → Prometheus** | DaemonSet runs, but Prometheus scrapes via **`static_configs`** | ⚠️ **MANUAL: add the node's target** |
+| **Dozzle** (live pod tail) | single pod, k8s mode, reads all pods via the a3 API | ⚠️ **MANUAL: restart the pod** — it lists nodes/"hosts" only at **startup**, so a node that joins later is invisible until it re-scans |
+| **Grafana `gpu-fleet` dashboard** | CPU-package & NVMe temp panels map instance-IP → node name with hardcoded `label_replace` chains | ⚠️ **MANUAL: add the node** to the CPU-temp chains, or its temps render as a raw IP (skip the NVMe chain if the node has no NVMe, e.g. t430) |
 
 > **The one manual step:** the monitoring stack is hand-rolled Prometheus with
 > `static_configs` (no service discovery), so a new node's node-exporter is *not*
@@ -178,6 +218,31 @@ new node automatically the moment it's Ready — no ArgoCD/deploy change needed:
 > The `prometheus-config` ConfigMap has `reloader.stakater.com/auto: true`, so
 > once ArgoCD syncs the change Prometheus restarts itself and Grafana picks up the
 > node — no manual rollout. (Leave GPU jobs `dcgm`/`gpu-vram` alone for CPU nodes.)
+
+> **The second manual step:** Dozzle runs in **k8s mode** (`clusters/home/dozzle/`)
+> — one pod reading every pod's logs through a3's API, no per-node agent and no
+> config file to edit. But it enumerates nodes ("hosts" in the UI) only when it
+> connects, so a node that joins *after* the pod started never shows up. Bounce it
+> once the new node is `Ready`:
+> ```bash
+> kubectl -n dozzle rollout restart deploy/dozzle
+> ```
+> No git change — it re-scans the cluster on restart and the node appears at
+> `dozzle.lan`. (t430 hit exactly this: it was Ready with pods for hours but stayed
+> absent from Dozzle until the restart.)
+
+> **The third manual step:** the `gpu-fleet` Grafana dashboard
+> (`clusters/home/monitoring/dashboards/gpu-fleet.json`) relabels node-exporter
+> temp series from instance IP to node name with per-node `label_replace` chains.
+> A new node isn't in them, so its CPU-package temp shows as a bare `192.168.x.y`.
+> Add one clause per CPU-temp panel, mirroring an existing CPU node (x1):
+> ```
+> ), "node","<name>","instance","192\\.168\\.<a>\\.<b>.*")
+> ```
+> Only the `x86_pkg_temp` panels — skip the NVMe chain unless the node actually has
+> an NVMe drive (`node_hwmon_temp_celsius{chip=~"nvme.*"}` returns a series). Then
+> **rollout-restart Grafana** so it reloads the provisioned dashboard:
+> `kubectl -n monitoring rollout restart deploy/grafana`.
 
 ---
 
@@ -199,4 +264,6 @@ node token   : a3:/mnt/d/k3s-data/server/node-token   (data-dir was moved off ro
 k3s version  : v1.35.5+k3s1   (pin INSTALL_K3S_VERSION to match)
 box label    : inference-club.com/box=<hostname>
 prep scripts : scripts/node-{sudoers,powersave,sysctls,hosts}.sh, trust-lan-ca.sh, k3s-registries.sh
+tailnet      : tailscale up on the host (out of band, §8) — needed for off-LAN reach
+manual/node  : Prometheus static_config · Dozzle restart · gpu-fleet temp mapping (§10)
 ```

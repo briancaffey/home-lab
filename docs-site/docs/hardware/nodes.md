@@ -1,14 +1,14 @@
 ---
-title: The Five Machines
-description: The five nodes that make up the cluster — three RTX 4090 towers, one repurposed ThinkPad, and an arm64 DGX Spark.
+title: The Six Machines
+description: The six nodes that make up the cluster — three RTX 4090 towers, two repurposed ThinkPads, and an arm64 DGX Spark.
 tags: [hardware, nodes, k3s]
 ---
 
-# The Five Machines
+# The Six Machines
 
 The cluster grew around GPUs first. The main goal was to run AI inference at home, so the machines were chosen for that, and the other services — media, photos, documents, Git — were added later because the hardware was already running.
 
-It is five different computers, all on home WiFi, running k3s. They are not identical, and several design decisions in this lab exist to work around the specific limits of a specific machine.
+It is six different computers, all on home WiFi, running k3s. They are not identical, and several design decisions in this lab exist to work around the specific limits of a specific machine.
 
 | node | role | CPU arch | GPU | notes |
 |------|------|----------|-----|-------|
@@ -16,6 +16,7 @@ It is five different computers, all on home WiFi, running k3s. They are not iden
 | **a2** | worker | amd64 | RTX 4090 | the busiest node; most disk |
 | **a1** | worker | amd64 | RTX 4090 | speech models; most spare GPU |
 | **x1** | worker | amd64 | none | CPU-only laptop |
+| **t430** | worker | amd64 | none | CPU-only ThinkPad; its own subnet |
 | **spark** | worker | arm64 | GB10 (128 GB unified) | arm64; often offline |
 
 ```mermaid
@@ -26,10 +27,14 @@ flowchart LR
     a1["a1 · .253<br/>RTX 4090"]
     x1["x1 · .174<br/>ThinkPad"]
   end
+  subgraph lan4["192.168.4.x"]
+    t430["t430 · .33<br/>ThinkPad, CPU"]
+  end
   subgraph lan6["192.168.6.x — other subnet"]
     spark["spark · .19<br/>DGX Spark"]
   end
   lan <--> router(("eero mesh"))
+  lan4 <--> router
   lan6 <--> router
 ```
 
@@ -48,6 +53,16 @@ The third RTX 4090 machine. It hosts the speech stack: text-to-speech and speech
 ## x1 — the laptop node
 
 A ThinkPad X1 Carbon, CPU-only, added to the cluster to host [Hermes](/ai/hermes) — the in-cluster AI agent — and the browser-based code editor. A laptop works well as an agent host: it is quiet and low-power, and its battery acts as a built-in UPS. One caveat is that the battery can also mask a power problem: if the power cable comes loose, the machine keeps running until the battery drains and then shuts down. It now has a battery alert for this reason.
+
+## t430 — the second laptop node
+
+An old ThinkPad T430: four cores, 8 GB of RAM, a ~108 GB SATA SSD, and no GPU. It's the weakest machine in the fleet by a wide margin, which is exactly the point — it's here to soak up small CPU-only services and free the 4090 machines to do GPU work. Like x1, it is deliberately **not** a Longhorn storage member and holds no GPU role: a weak, WiFi-only laptop is a bad home for replicated storage or model weights. It also sits on its own subnet (192.168.4.x), so it was a useful test that a node doesn't have to share the main LAN to join.
+
+Onboarding it is where the interesting part happened.
+
+:::warning[🔥 War story]
+t430 showed up as `Ready` in `kubectl get nodes`, and I very nearly ticked the box and moved on. But *joining* a cluster and being *prepped* for one are different things. The join only needs a token; everything that actually keeps a laptop node healthy is separate host prep — masking sleep and suspend, telling it to ignore the lid closing, turning off WiFi power-save (the single change that stops a laptop node flapping to `NotReady`), raising the inotify limits so file-watching pods don't crashloop, trusting the LAN certificate authority, and pinning `harbor.lan`. On t430, all of that had been silently skipped. It was `Ready` by luck, not by readiness. The lesson I keep relearning: a green node status only tells you the kubelet is talking to the API — it says nothing about whether the prep took. Verify the prep, don't trust the status.
+:::
 
 ## spark — the arm64 node
 

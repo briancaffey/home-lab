@@ -20,9 +20,13 @@ description: Two log tools, two questions — what did it say last Tuesday, and 
 
 **How it's wired:** promtail is a DaemonSet shipping every container's logs to Loki. Dozzle is a single small pod in **Kubernetes mode** — no agents anywhere; it reads logs through the Kubernetes API using a deliberately tiny, read-only permission set ([`clusters/home/dozzle/`](https://github.com/briancaffey/home-lab/tree/main/clusters/home/dozzle)). And unlike most of my `.lan` tools, Dozzle requires a **login**: pod logs are exactly where stray tokens and connection strings end up, so "it's only my LAN" isn't good enough here. The password hash is bcrypt, because Dozzle itself dropped SHA-256 support in a security advisory — a nice example of an upstream forcing good hygiene.
 
+:::warning[🔥 War story]
+When I added a new node to the cluster, its pods showed up in Loki immediately (promtail is a DaemonSet — it lands on every node automatically) but were **completely invisible in Dozzle**. Nothing was broken: Dozzle in Kubernetes mode enumerates the nodes *once, at startup*, and this node had joined afterward. It simply didn't know the node existed. A single `kubectl rollout restart` of the Dozzle deployment and the new node's logs appeared. Worth remembering, because the failure mode is silent — Dozzle doesn't tell you it's showing you an incomplete cluster.
+:::
+
 ```mermaid
 flowchart LR
-    PODS[All pods] -->|stdout/stderr| PT[promtail ×5]
+    PODS[All pods] -->|stdout/stderr| PT[promtail ×6]
     PT --> LOKI[Loki — retention & search]
     LOKI --> G[Grafana]
     PODS -.k8s API, read-only.-> DZ[Dozzle — live tail]

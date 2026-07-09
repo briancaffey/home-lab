@@ -14,7 +14,7 @@ description: SMART monitoring for a cluster whose entire storage story is node-l
 {/* screenshot: observability/scrutiny-drive-detail.png — temp history on one of a2's HDDs */}
 
 **What I use it for:**
-- 💚 A weekly glance at `scrutiny.lan`: twelve drives across five machines, ideally all green
+- 💚 A weekly glance at `scrutiny.lan`: thirteen drives across six machines, ideally all green
 - 🌡️ Temperature history when a node's placement or workload changes (is that HDD running hot since the backup job moved in?)
 - 📉 SMART attribute trends with failure-rate context — Scrutiny shows how *drives like yours* fared at these values, not just raw numbers
 - 📱 Doing nothing, mostly: a failure-threshold alert goes to Telegram and Mailpit on its own; quiet is the feature
