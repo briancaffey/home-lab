@@ -1,6 +1,6 @@
 # Docs site — in-cluster build (docs.lan). GitHub Pages builds separately
 # with DOCS_BASE_URL=/home-lab/ via .github/workflows/docs.yml.
-FROM node:22-slim AS build
+FROM node:24-slim AS build
 WORKDIR /site
 COPY package.json package-lock.json ./
 RUN npm ci --no-fund --no-audit
