@@ -11,7 +11,7 @@ tags: [foundations, k3s, kubernetes]
 
 ## Current architecture
 
-Five machines, one of them the control plane:
+Six machines, one of them the control plane:
 
 ```mermaid
 graph TD
@@ -19,16 +19,18 @@ graph TD
     a1["a1 · agent<br/>RTX 4090"]
     a2["a2 · agent<br/>RTX 4090 · all the disks"]
     x1["x1 · agent<br/>CPU-only ThinkPad"]
+    t430["t430 · agent<br/>CPU-only ThinkPad · own subnet"]
     spark["spark · agent<br/>DGX Spark GB10 · arm64"]
     a1 --> a3
     a2 --> a3
     x1 --> a3
+    t430 --> a3
     spark --> a3
 ```
 
 The main limitation: **a3 is the only control plane, and it runs on SQLite, not etcd.** If a3 goes down, running pods keep running, but nothing can be scheduled or changed until it is back. This is a deliberate trade-off. A three-node etcd control plane on consumer hardware over WiFi would add resilience I have not yet needed, at a cost in complexity I would pay every day. For now the single control plane is the right choice, but moving to HA is a planned next step.
 
-Adding a node is straightforward: run `scripts/install-k3s-server.sh` once for the server, then `scripts/install-k3s-agent.sh` for each agent. Even the arm64 DGX Spark on a different subnet joined without any special handling.
+Adding a node is straightforward: run `scripts/install-k3s-server.sh` once for the server, then `scripts/install-k3s-agent.sh` for each agent. Even the arm64 DGX Spark on a different subnet joined without any special handling. The catch is that *joining* is the easy 10% — the token gets a node to `Ready`, but the host prep that keeps it healthy (disabling laptop sleep, WiFi power-save, inotify limits, LAN-CA trust, registry pinning) is separate, and skipping it is silent. t430, the newest agent, joined `Ready` with almost none of that applied; see [The Six Machines](/hardware/nodes) for how that went.
 
 ## Plans to migrate to HA
 

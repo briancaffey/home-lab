@@ -15,18 +15,20 @@ description: Metrics without an operator — a monitoring stack you can read top
 
 **What I use it for daily:**
 - 📈 The **GPU fleet dashboard** — which 4090 is busy, how hot, how much VRAM each pod holds (via a tiny custom exporter called `vram-reporter`, because shared GPUs are invisible to the scheduler)
-- 🌡️ Node health at a glance — five machines, one row each
+- 🌡️ Node health at a glance — six machines, one row each
 - 🚀 vLLM serving metrics — tokens/sec, time-to-first-token, KV-cache pressure when a model is loaded
 - 📶 WAN speed history (a speedtest exporter feeds a dashboard that settles arguments with the ISP)
 - 🧾 The raw query console at `prometheus.lan` when an alert links me straight to the expression that fired
 
-**How it's wired, minus the boring parts:** node-exporter runs on all five machines; dcgm-exporter reads the NVIDIA GPUs; vLLM servers expose `/metrics` natively. Dashboards are *file-provisioned* — JSON in git, mounted into Grafana — so the repo is the source of truth for what dashboards exist. Retention is 15 days, which is plenty for "when did this start?"
+**How it's wired, minus the boring parts:** node-exporter runs on all six machines; dcgm-exporter reads the NVIDIA GPUs; vLLM servers expose `/metrics` natively. Dashboards are *file-provisioned* — JSON in git, mounted into Grafana — so the repo is the source of truth for what dashboards exist. Retention is 15 days, which is plenty for "when did this start?"
+
+**The tax on legibility:** the flip side of hand-rolled `static_configs` is that a new node is a manual edit, not a discovery. When t430 joined, its node-exporter DaemonSet started running instantly, but Prometheus wouldn't scrape it until I added the target to `prometheus.yml` by hand — and its temperature row stayed blank until I added its IP to the node-label mapping baked into the fleet dashboard JSON. An Operator would have found the node on its own. I still take the trade: I'd rather edit one readable file per node than run a system I can't read the rest of the time. But it's an honest cost, and it's exactly the kind of step that's easy to forget when a node "just works" after joining.
 
 The one genuinely tricky bit: config files live in ConfigMaps with **stable names** (no content-hash suffixes), which used to mean editing a dashboard required manually restarting Grafana. That era ended when [Reloader](https://github.com/briancaffey/home-lab/tree/main/clusters/home/reloader) joined the cluster — now a config commit rolls the right pods automatically, and the whole loop (edit JSON → push → Argo syncs → Reloader restarts → dashboard live) involves zero kubectl.
 
 ```mermaid
 flowchart LR
-    NE[node-exporter ×5] --> P[Prometheus]
+    NE[node-exporter ×6] --> P[Prometheus]
     DC[dcgm-exporter GPUs] --> P
     VR[vram-reporter] --> P
     VL[vLLM /metrics] --> P

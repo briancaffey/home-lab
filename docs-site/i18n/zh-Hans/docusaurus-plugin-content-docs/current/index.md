@@ -2,13 +2,13 @@
 slug: /
 sidebar_position: 1
 title: 实验室速览
-description: 带你参观一个由五台机器组成的 k3s 家庭实验室——GPU 推理、全套自托管服务，以及协助运维的 AI 智能体。
+description: 带你参观一个由六台机器组成的 k3s 家庭实验室——GPU 推理、全套自托管服务，以及协助运维的 AI 智能体。
 tags: [overview, tour]
 ---
 
 # 实验室速览
 
-这个网站记录了我的家庭实验室：**家里的五台电脑，在 Kubernetes 上运行着大约四十个自托管服务**，包括配备 GPU 的 AI 模型、照片库、媒体服务器、密码保险库、Git 服务器，以及让这一切保持更新、备份和监控的工具。
+这个网站记录了我的家庭实验室：**家里的六台电脑，在 Kubernetes 上运行着大约四十个自托管服务**，包括配备 GPU 的 AI 模型、照片库、媒体服务器、密码保险库、Git 服务器，以及让这一切保持更新、备份和监控的工具。
 
 我搭建它是为了通过实际运行来学习基础设施的工作原理——一个我们全家都依赖的真实系统，因为我们的 DNS、照片和文档都存放在这里。这个项目的一部分是把 AI 智能体作为运维者来使用：它们有自己的凭证、访问密码保险库的权限，以及修改集群的能力。
 
@@ -70,7 +70,7 @@ flowchart TB
 
 ## 从哪里开始
 
-- **刚接触 Kubernetes** → 先看[五台机器](/hardware/nodes)，再看 [k3s](/foundations/k3s)——从硬件讲起。
+- **刚接触 Kubernetes** → 先看[六台机器](/hardware/nodes)，再看 [k3s](/foundations/k3s)——从硬件讲起。
 - **对工程感兴趣** → [连接组织](/tissue/trust-fabric)——一个凭证保险库、一个 Git 仓库和一架委托阶梯如何把四十个服务组合成一个系统。
 - **关注 GitOps** → [Argo CD](/gitops/argocd) 和 [CI 循环](/gitops/ci-loops)——合并一个 Pull Request，集群随之更新。
 - **AI 智能体** → 从 `/llms.txt` 开始。每个页面的 frontmatter 都包含指向真实配置的 `repo_path` 指针。

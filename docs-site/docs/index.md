@@ -2,13 +2,13 @@
 slug: /
 sidebar_position: 1
 title: The Lab at a Glance
-description: A guided tour of a five-machine k3s home lab — GPU inference, self-hosted everything, and the AI agents that help run it.
+description: A guided tour of a six-machine k3s home lab — GPU inference, self-hosted everything, and the AI agents that help run it.
 tags: [overview, tour]
 ---
 
 # The Lab at a Glance
 
-This site documents my home lab: **five computers in my house running about forty self-hosted services** on Kubernetes. It includes AI models with GPUs, a photo library, a media server, a password vault, a Git server, and the tooling that keeps all of it updated, backed up, and monitored.
+This site documents my home lab: **six computers in my house running about forty self-hosted services** on Kubernetes. It includes AI models with GPUs, a photo library, a media server, a password vault, a Git server, and the tooling that keeps all of it updated, backed up, and monitored.
 
 I built it to learn how infrastructure works by running it — a real system my household depends on, since our DNS, photos, and documents all live here. Part of the project is also using AI agents as operators: they have their own credentials, access to the secret vault, and the ability to make changes to the cluster.
 
@@ -70,7 +70,7 @@ The lab has a **3D explorer**. [clusterscape](https://briancaffey.github.io/clus
 
 ## Where to start
 
-- **New to Kubernetes** → [The Five Machines](/hardware/nodes), then [k3s](/foundations/k3s) — the lab explained from the hardware up.
+- **New to Kubernetes** → [The Six Machines](/hardware/nodes), then [k3s](/foundations/k3s) — the lab explained from the hardware up.
 - **Interested in the engineering** → [The Connective Tissue](/tissue/trust-fabric) — how one credential vault, one Git repo, and a delegation ladder tie forty services into one system.
 - **Here for the GitOps** → [Argo CD](/gitops/argocd) and [the CI loops](/gitops/ci-loops) — merge a pull request and the cluster updates.
 - **An AI agent** → start at `/llms.txt`. Each page's frontmatter includes `repo_path` pointers to the live configuration.

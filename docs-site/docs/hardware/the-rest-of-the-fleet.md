@@ -22,9 +22,9 @@ It could join the cluster, but it won't: a machine used to control and repair th
 
 A GPU laptop that currently does nothing for the lab. It's the obvious candidate if I want a burst node — a sixth machine that joins for a heavy job and then leaves — or a dedicated Windows/gaming machine that stays out of the cluster. For now it is unassigned spare capacity.
 
-## The X1 Carbon as a node
+## Laptops as nodes
 
-One of my three laptops is a cluster node: [x1](/hardware/nodes). Converting it took several changes: passwordless sudo, sleep and lid-switch disabled, WiFi power-save off, trust certificates installed, and a battery alert. A laptop can run as a server, but it still behaves like a laptop in ways you have to account for.
+Two of my old laptops are cluster nodes now: [x1](/hardware/nodes) and, most recently, [t430](/hardware/nodes). Converting a laptop takes several changes it doesn't come with: passwordless sudo, sleep and lid-switch disabled, WiFi power-save off, trust certificates installed, and a battery alert. A laptop can run as a server, but it still behaves like a laptop in ways you have to account for — and, as t430 taught me, a laptop that has *joined* the cluster hasn't necessarily had any of that prep applied. It can look `Ready` and still be one closed lid away from dropping out.
 
 ## Raspberry Pis — unused
 
@@ -42,6 +42,6 @@ None of these exist yet, but each is a small project.
 2. **A second Pi-hole / DNS failure domain** — see above; also enables household-wide ad-blocking.
 3. **Offsite backups** — the remaining gap in the disaster-recovery plan.
 4. **More disk on a3** — the control plane's data disk is the fullest in the fleet.
-5. **A sixth node, eventually** — but the current fleet is underused, so the next upgrade is cables, not more computers.
+5. **More nodes from hardware I already own** — done once, now: an old ThinkPad (t430) joined as a sixth node. It cost nothing and added CPU headroom, which is the right kind of expansion. New computers are still not the priority — cables are.
 
 {/* screenshot: hardware/wishlist-cables.jpg — optional: unused ethernet cable, Brian-provided */}
