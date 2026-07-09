@@ -1,0 +1,35 @@
+# Cluster control center (PRD 21) — extra RBAC for the agent's ServiceAccount
+# so the control center can (a) READ Deployments to surface the parked/startable
+# roster in /cluster/state, and (b) PATCH deployments/scale to park/unpark.
+#
+# Bound to `agent-inference-club-agent`, the SA that BOTH the prod agent and
+# agent-dev run as (agent-dev reuses it). This only grants capability; actuation
+# still requires each agent to have AGENT_CONTROL_TOKEN set (the prod agent
+# doesn't, so it stays read-only). Read (get/list) is harmless everywhere and
+# lets every environment's control center show the parked roster.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent-control-center
+  namespace: inference-club
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-control-center
+  namespace: inference-club
+subjects:
+  - kind: ServiceAccount
+    name: agent-inference-club-agent
+    namespace: inference-club
+roleRef:
+  kind: Role
+  name: agent-control-center
+  apiGroup: rbac.authorization.k8s.io

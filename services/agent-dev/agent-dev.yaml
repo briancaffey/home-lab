@@ -39,7 +39,7 @@ spec:
         kubernetes.io/hostname: a3
       containers:
         - name: agent
-          image: ghcr.io/inference-club/inference-club-agent:vram3
+          image: ghcr.io/inference-club/inference-club-agent:prd21-scale
           env:
             # Discovery: identical to prod — build the manifest from labeled
             # Services in this namespace and poll.
@@ -66,6 +66,16 @@ spec:
                 secretKeyRef:
                   name: club-host-dev-key
                   key: api-key
+            # Control center (PRD 21): the shared secret the backend must present
+            # (Bearer) to park/unpark via POST /cluster/deployments/{name}/scale.
+            # Its presence is what ENABLES scaling — without it the agent is
+            # read-only. Backend Provider.agent_control_token must hold the same
+            # value. Secret created out-of-band (like club-host-dev-key).
+            - name: AGENT_CONTROL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: agent-control-token
+                  key: token
             - name: AGENT_STATE_DIR
               value: /var/lib/club-host
           ports:
