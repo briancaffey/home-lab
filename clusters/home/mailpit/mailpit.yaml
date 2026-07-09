@@ -35,7 +35,7 @@ spec:
     spec:
       containers:
         - name: mailpit
-          image: axllent/mailpit:v1.30.3
+          image: axllent/mailpit:v1.30.4
           env:
             - { name: MP_DATABASE, value: /data/mailpit.db }
             - { name: MP_MAX_MESSAGES, value: "5000" }
