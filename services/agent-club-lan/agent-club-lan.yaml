@@ -1,0 +1,77 @@
+# inference.club agent for the HOME-LAB (club.lan) instance.
+#
+# Same Kubernetes discovery path as the prod agent (`agent-inference-club-agent`)
+# and `agent-dev`, but registered to the in-cluster home-lab backend
+# (inference.club running at club.lan, ns inference-club-web) instead of prod or
+# a developer's Mac. Everything stays inside the cluster:
+#   - discovers labeled Services in the `inference-club` namespace (the GPU
+#     inference workloads: LLMs, flux, ltx, acestep, dia/magpie, trellis, …)
+#   - registers to http://backend.inference-club-web.svc:8001 with the club.lan
+#     API key (Secret `club-lan-agent-key`)
+#   - AGENT_DIRECT (no tailnet): advertises its own Service DNS so the backend
+#     reaches the agent's /v1 proxy in-cluster. The backend runs with
+#     INFERENCE_DIRECT_AGENTS=True to trust that address.
+#
+# Reuses the prod agent's ServiceAccount RBAC (read services/pods/endpointslices
+# in this ns + nodes/metrics). Image is public multi-arch GHCR, so it schedules
+# anywhere (incl. nodes that don't trust harbor.lan).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-club-lan
+  namespace: inference-club
+  labels: { app: agent-club-lan }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: agent-club-lan }
+  template:
+    metadata:
+      labels: { app: agent-club-lan }
+    spec:
+      serviceAccountName: agent-inference-club-agent
+      # Stable amd64 nodes (spark is arm64 + often offline; a1 has flaky WiFi).
+      nodeSelector: { kubernetes.io/arch: amd64 }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: inference-club.com/box, operator: In, values: [a2, a3] }
+      containers:
+        - name: agent
+          image: ghcr.io/inference-club/inference-club-agent:vram3
+          env:
+            - { name: AGENT_DISCOVERY, value: kubernetes }
+            - { name: AGENT_DISCOVERY_NAMESPACE, value: inference-club }
+            - { name: AGENT_DISCOVERY_INTERVAL, value: 30s }
+            # Direct (no tailnet); advertise this agent's own Service DNS so the
+            # in-cluster backend can reach the /v1 proxy.
+            - { name: AGENT_DIRECT, value: "1" }
+            - { name: AGENT_NAME, value: home-cluster }
+            - { name: AGENT_ADVERTISE_HOST, value: agent-club-lan.inference-club.svc.cluster.local }
+            - { name: AGENT_LISTEN_PORT, value: "8091" }
+            # The home-lab backend, in-cluster.
+            - { name: INFERENCE_CLUB_URL, value: "http://backend.inference-club-web.svc.cluster.local:8001" }
+            - name: INFERENCE_CLUB_API_KEY
+              valueFrom:
+                secretKeyRef: { name: club-lan-agent-key, key: api-key }
+            - { name: AGENT_STATE_DIR, value: /var/lib/club-host }
+          ports:
+            - { name: http, containerPort: 8091 }
+          volumeMounts:
+            - { name: state, mountPath: /var/lib/club-host }
+      volumes:
+        - name: state
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-club-lan
+  namespace: inference-club
+  labels: { app: agent-club-lan }
+spec:
+  selector: { app: agent-club-lan }
+  ports:
+    - { name: http, port: 8091, targetPort: http }
