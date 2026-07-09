@@ -1,0 +1,22 @@
+{
+  "title": {
+    "message": "Brian 的家庭实验室",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "home-lab",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Docs": {
+    "message": "文档",
+    "description": "Navbar item with label Docs"
+  },
+  "item.label.Lab notes": {
+    "message": "实验笔记",
+    "description": "Navbar item with label Lab notes"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  }
+}

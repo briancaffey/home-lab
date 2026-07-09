@@ -1,0 +1,27 @@
+/* Accent: a warm copper — reads "hardware and solder", distinct from stock
+   Docusaurus green, works in both modes. */
+:root {
+  --ifm-color-primary: #b3591f;
+  --ifm-color-primary-dark: #a1501c;
+  --ifm-color-primary-darker: #984c1a;
+  --ifm-color-primary-darkest: #7d3e16;
+  --ifm-color-primary-light: #c56222;
+  --ifm-color-primary-lighter: #ce6724;
+  --ifm-color-primary-lightest: #e0762f;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+[data-theme='dark'] {
+  --ifm-color-primary: #f0954c;
+  --ifm-color-primary-dark: #ee8632;
+  --ifm-color-primary-darker: #ed7f25;
+  --ifm-color-primary-darkest: #d16a12;
+  --ifm-color-primary-light: #f2a466;
+  --ifm-color-primary-lighter: #f3ac73;
+  --ifm-color-primary-lightest: #f7c49a;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+/* War-story admonition flavor */
+.alert--warning strong:first-child { color: inherit; }
+/* Screenshot frames */
+article img { border-radius: 10px; border: 1px solid var(--ifm-color-emphasis-300); }

@@ -14,3 +14,10 @@ trivy:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { memory: 2Gi }
   timeout: 15m0s
+  # Scan-job pods don't trust the mkcert CA that signs harbor.lan's TLS, so
+  # scanning our self-built harbor.lan/apps/* images failed with
+  # "x509: certificate signed by unknown authority" → BackoffLimitExceeded.
+  # The apps/ project is PUBLIC (no creds needed) and it's our own LAN
+  # registry, so allow insecure TLS to harbor.lan only (home-lab#16).
+  insecureRegistries:
+    harborLan: harbor.lan

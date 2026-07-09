@@ -1,0 +1,38 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.The Hardware": {
+    "message": "硬件",
+    "description": "The label for category 'The Hardware' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Foundations": {
+    "message": "基础设施",
+    "description": "The label for category 'Foundations' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.The Connective Tissue": {
+    "message": "连接组织",
+    "description": "The label for category 'The Connective Tissue' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.GitOps & the Machinery": {
+    "message": "GitOps 与自动化机制",
+    "description": "The label for category 'GitOps & the Machinery' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Inference & AI": {
+    "message": "推理与 AI",
+    "description": "The label for category 'Inference & AI' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Observability & Alerting": {
+    "message": "可观测性与告警",
+    "description": "The label for category 'Observability & Alerting' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Media & Life": {
+    "message": "媒体与生活",
+    "description": "The label for category 'Media & Life' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Platform Services": {
+    "message": "平台服务",
+    "description": "The label for category 'Platform Services' in sidebar 'docs'"
+  }
+}

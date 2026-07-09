@@ -141,6 +141,14 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
   forwards the `lan` zone to Pi-hole). Pods could NOT resolve `.lan` before
   that existed — remember it when a pod can't reach forgejo.lan/harbor.lan.
 
+## Documentation site
+- `docs-site/` = the public Docusaurus site (briancaffey.github.io/home-lab +
+  docs.lan in-cluster). After any session that changes services/architecture,
+  run the **docs-scribe** agent (`.claude/agents/docs-scribe.md`) with a
+  change summary — it updates pages in BOTH locales and drafts blog posts at
+  milestones. Content rules live in the agent file; never paste YAML walls
+  into the site; MDX comments (`{/* */}`) not HTML comments in docs pages.
+
 ## Working style / preferences
 - **Goal: bin-packing** — maximize service density; move workloads to nodes with
   headroom. Reliability hardening (HA control plane, Longhorn, backups, secrets

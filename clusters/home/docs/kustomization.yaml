@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: docs
+
+# In-cluster docs site (home-lab#67). Source: docs-site/ at repo root;
+# built by .forgejo/workflows/docs.yml. TLS via lan-certs.sh.
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - ingress.yaml
