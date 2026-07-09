@@ -8,6 +8,6 @@ COPY . .
 ENV DOCS_BASE_URL=/
 RUN npm run build
 
-FROM nginx:1.29-alpine
+FROM nginx:1.31-alpine
 COPY --from=build /site/build /usr/share/nginx/html
 EXPOSE 80
