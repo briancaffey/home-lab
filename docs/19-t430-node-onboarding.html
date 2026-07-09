@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:12.8px;line-height:1.46;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;height:297mm;overflow:hidden;padding:11mm 13mm 12mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:5px 0 4px}
+  h2{font-size:18px;font-weight:900;margin:13px 0 7px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14px;color:#c7d0e4;max-width:172mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:9px 0 3px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:25px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .stat .d{font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)} .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 14px;margin:9px 0;break-inside:avoid}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);border-radius:0 13px 13px 0;padding:12px 15px;margin:11px 0}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .note h3{color:var(--ok)}
+  .warnbox{border:1px solid rgba(255,159,67,.38);background:rgba(255,159,67,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .warnbox h3{color:var(--high)}
+  .myth{border:1px solid rgba(255,93,108,.38);background:rgba(255,93,108,.09);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .myth h3{color:var(--crit)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.6px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  td b{color:var(--ink)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);border:1px solid var(--line);color:var(--blue)}
+  .tag.g{color:var(--ok)} .tag.o{color:var(--high)} .tag.p{color:var(--purple)} .tag.r{color:var(--crit)}
+  pre{background:#11151f;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:8px 0;overflow:auto;font-family:'IBM Plex Mono',monospace;font-size:10.6px;line-height:1.5;color:#cdd6ea}
+  pre .c{color:var(--dim)} pre .k{color:var(--blue)} pre .s{color:var(--ok)} pre .r{color:var(--crit)}
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0;font-size:11px}
+  .col{flex:1;display:flex;flex-direction:column;gap:7px}
+  .node{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;text-align:center}
+  .node.hub{background:var(--grad);color:#0b1220;font-weight:900;border:none;display:flex;align-items:center;justify-content:center;min-height:100%}
+  .node b{display:block;font-size:11.5px} .node span{font-size:10px;color:var(--mut)}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 9px;color:var(--dim);font-size:20px;font-weight:900}
+  ul{margin:3px 0 7px 17px} li{margin:3px 0;font-size:12.2px;color:#cbd4e8}
+  ol{margin:3px 0 7px 18px} ol li{margin:5px 0;font-size:12.3px}
+  .rank{display:flex;gap:11px;align-items:flex-start;margin:7px 0;break-inside:avoid}
+  .rank .num{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:14px;color:#0b1220;background:var(--grad);border-radius:9px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank .num.b{background:var(--soft);color:var(--mut);border:1px solid var(--line)}
+  .rank h3{font-size:13px} .rank p{font-size:11.8px;color:#c2cbe0;margin:2px 0 0}
+  .foot{position:absolute;bottom:9mm;left:13mm;right:13mm;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--line);padding-top:6px}
+  .verdict{border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(55,182,230,.10),rgba(168,116,216,.10));padding:13px 16px;margin:9px 0}
+  .verdict h3{font-size:15px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .phase{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#0b1220;background:var(--grad);border-radius:6px;padding:2px 8px;letter-spacing:.04em}
+  .ck{list-style:none;margin:5px 0 8px 2px}
+  .ck li{position:relative;padding-left:24px;margin:5px 0;font-size:12px;color:#cbd4e8}
+  .ck li::before{content:"";position:absolute;left:0;top:1px;width:14px;height:14px;border:1.6px solid var(--blue);border-radius:4px;background:var(--soft)}
+</style></head><body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="kick">Node Onboarding · Home Cluster · k3s</div>
+  <h1>T430 &rarr; k3s cluster onboarding<br><span class="grad">joining an old ThinkPad as CPU agent node <code>x2</code></span></h1>
+  <p class="lead">A phased checklist to prep a scavenged <b>ThinkPad T430</b> (Ubuntu 24.04, WiFi, 100&nbsp;GB disk, no GPU)
+  and enroll it in the home k3s cluster as a <b>CPU agent</b> named <code>x2</code>. The catch: this drive is a <b>clone of a
+  former GPU box</b> — it boots up thinking it's <code>a3</code> and still carries a k3s install, a datastore, and NVIDIA/CUDA
+  bloat. Two special cautions fall out of that, and they gate everything else. Follow the phases in order; the first two exist
+  purely to keep this laptop from picking a fight with the real cluster.</p>
+
+  <div class="meta">
+    <div class="chip"><b>Hardware</b> ThinkPad T430 · Ivy Bridge · no GPU</div>
+    <div class="chip"><b>OS</b> Ubuntu 24.04 · WiFi (internal Intel)</div>
+    <div class="chip"><b>Disk</b> ~100 GB (cloned from a GPU box)</div>
+    <div class="chip"><b>Role</b> k3s <b>agent</b> · label box=x2</div>
+  </div>
+
+  <div class="cards">
+    <div class="stat o"><div class="n orng">x2</div><div class="l">Target name</div><div class="d">x-series = CPU ThinkPads; x1 already taken</div></div>
+    <div class="stat b"><div class="n blue">4.33</div><div class="l">Reserved IP</div><div class="d">192.168.4.33 · eero reservation "t430"</div></div>
+    <div class="stat p"><div class="n purp">8</div><div class="l">Phases</div><div class="d">Router &rarr; purge &rarr; rename &rarr; prep &rarr; join &rarr; verify</div></div>
+    <div class="stat g"><div class="n okc">agent</div><div class="l">Not a server</div><div class="d">No control plane, no etcd, no Longhorn</div></div>
+  </div>
+
+  <h2><span class="bar"></span>Read these two before you touch the network</h2>
+  <div class="warnbox">
+    <h3>&#9888; It thinks it's <code>a3</code> — because it's a clone of a GPU box</h3>
+    <p style="margin:3px 0 0" class="small">The hostname is <code>a3</code> because the drive is almost certainly a
+    <b>clone of a GPU box (likely the old a3)</b>. It may still carry a full k3s install <b>plus the cluster's datastore
+    plus a3's identity/certs</b>. If that k3s ever autostarts on the LAN it can fight the <b>real a3</b>
+    (<code>192.168.5.173</code>) — duplicate control plane, split-brain datastore, corrupted cluster state.
+    <b>Purging the old k3s is step&nbsp;1</b>, and renaming the host is step&nbsp;2. Do them before the laptop has any
+    reason to reach the cluster.</p>
+  </div>
+  <div class="myth">
+    <h3>Unlearn this: "add it as a masternode for HA"</h3>
+    <p style="margin:3px 0 0" class="small">Join as an <b>agent</b>, not a server. A second control plane means migrating
+    a3 from <b>SQLite &rarr; embedded etcd</b> (HA), and <b>etcd hates WiFi latency and wants fast disks</b> — an old laptop
+    on WiFi is the <i>worst possible</i> etcd member (it would degrade the whole API, not add resilience). As an agent (like
+    <code>x1</code>) it's ideal for light CPU workloads. HA is a real roadmap item, but it's better served by <b>wired
+    desktops</b>, not a scavenged Ivy-Bridge ThinkPad.</p>
+  </div>
+
+  <div class="posture">
+    <p style="margin:0"><b>The mental model:</b> an agent is a kubelet + container runtime that phones home to the server's
+    API at <code>https://192.168.5.173:6443</code> with a join token. It runs pods the scheduler hands it and reports
+    status. It holds <b>no cluster state</b> — so if x2 dies, you lose only the pods pinned to it, nothing about the cluster
+    itself. That's exactly why a flaky old laptop is a fine agent and a terrible server.</p>
+  </div>
+
+  <div class="foot"><span>T430 &rarr; k3s onboarding (x2)</span><span>1 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <h2><span class="bar"></span><span class="phase">PHASE 0</span> &nbsp;Router — already done</h2>
+  <p class="small mut">The address is pinned so every later phase can address the node as <code>192.168.4.33</code>.</p>
+  <ul class="ck">
+    <li><b>DHCP reservation is set</b> in the eero: device nickname <code>t430</code> &rarr; <code>192.168.4.33</code>.</li>
+    <li>The node will be named <code>x2</code> in the cluster (set via <code>hostnamectl</code> in Phase&nbsp;2).</li>
+  </ul>
+  <div class="note">
+    <h3>Cross-subnet, and that's fine</h3>
+    <p style="margin:3px 0 0" class="small">The node sits on <code>192.168.4.x</code> while the control plane is on
+    <code>192.168.5.x</code> — a different /24. This is fine: <b>spark already runs on 192.168.6.19 as a cluster member</b>,
+    so the eero routes between these subnets. Just verify reachability before joining (Phase&nbsp;5.5).</p>
+  </div>
+
+  <h2><span class="bar"></span><span class="phase">PHASE 1</span> &nbsp;&#9888; Purge the cloned k3s <span class="tag r">CRITICAL</span></h2>
+  <p class="small mut">Before it touches the cluster. This tears out the inherited k3s install, datastore, and kubelet state
+  so the clone can never present itself as a3.</p>
+  <pre><span class="c"># is there an inherited k3s install / datastore?</span>
+ls /usr/local/bin/k3s-uninstall.sh /usr/local/bin/k3s-agent-uninstall.sh 2>/dev/null
+systemctl status k3s k3s-agent --no-pager 2>/dev/null | head
+
+<span class="c"># run whichever uninstaller exists (server or agent), ignore if absent</span>
+sudo /usr/local/bin/k3s-uninstall.sh 2>/dev/null || true
+sudo /usr/local/bin/k3s-agent-uninstall.sh 2>/dev/null || true
+
+<span class="c"># wipe any residual config, datastore, and kubelet state</span>
+sudo rm -rf /etc/rancher /var/lib/rancher /var/lib/kubelet</pre>
+  <p class="small mut" style="margin-top:2px">Confirm it's gone: <code>which k3s || echo "clean"</code></p>
+
+  <h2><span class="bar"></span><span class="phase">PHASE 2</span> &nbsp;Rename the host — kills the a3 clash</h2>
+  <pre>sudo hostnamectl set-hostname x2
+sudo sed -i <span class="s">'s/\b\(a3\|old-hostname\)\b/x2/g'</span> /etc/hosts</pre>
+  <p class="small mut" style="margin-top:2px"><b>Re-login or reboot</b> so the prompt shows <code>x2</code>. k3s names the
+  node after the hostname — it <b>must be x2 before joining</b>, or you get a second "a3" in <code>kubectl get nodes</code>.</p>
+
+  <div class="note">
+    <h3>Why Phases 1 + 2 come before anything network-facing</h3>
+    <p style="margin:3px 0 0" class="small">These two are the entire reason this isn't a normal onboarding. An inherited
+    k3s <b>server</b> autostarting as "a3" on the same LAN is the one action that can damage the <i>live</i> cluster — a
+    fresh agent join can't. Neuter the clone (purge) and strip its stolen identity (rename) first; only then is it safe to
+    let the box talk to <code>192.168.5.173</code>.</p>
+  </div>
+
+  <div class="foot"><span>T430 &rarr; k3s onboarding (x2)</span><span>2 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <h2><span class="bar"></span><span class="phase">PHASE 3</span> &nbsp;Reclaim the disk — purge NVIDIA/CUDA</h2>
+  <p class="small mut">There's no GPU in a T430, so every NVIDIA/CUDA package and every model cache the clone dragged along
+  is dead weight on a 100&nbsp;GB disk. Rip it out and reclaim the space.</p>
+  <pre><span class="c"># see what NVIDIA/CUDA cruft is installed, and which apt sources feed it</span>
+dpkg -l | grep -iE <span class="s">'nvidia|cuda|cudnn'</span> | awk <span class="s">'{print $2}'</span>
+ls /etc/apt/sources.list.d/
+
+<span class="c"># removing these .list sources is what STOPS the recurring heavy downloads</span>
+sudo rm -f /etc/apt/sources.list.d/*cuda*.list /etc/apt/sources.list.d/*nvidia*.list
+sudo apt-get update
+
+<span class="c"># purge the driver + CUDA + cuDNN + container toolkit</span>
+sudo apt-get purge -y <span class="s">'^nvidia-.*'</span> <span class="s">'^libnvidia-.*'</span> <span class="s">'^cuda.*'</span> <span class="s">'^libcudnn.*'</span> <span class="s">'nvidia-container*'</span>
+sudo apt-get autoremove --purge -y &amp;&amp; sudo apt-get clean
+
+<span class="c"># drop CUDA install trees + orphaned nvidia dirs</span>
+sudo rm -rf /usr/local/cuda* /opt/nvidia
+
+<span class="c"># find the next big offenders, then trim the systemd journal</span>
+sudo du -x -h --max-depth=2 / 2>/dev/null | sort -rh | head -25
+sudo journalctl --vacuum-size=200M</pre>
+  <p class="small mut" style="margin-top:2px">Check free space after with <code>df -h /</code>.</p>
+
+  <div class="warnbox">
+    <h3>The apt <code>.list</code> source is the real fix</h3>
+    <p style="margin:3px 0 0" class="small">Removing the NVIDIA/CUDA apt <code>.list</code> source is what actually
+    <b>stops the recurring heavy downloads</b> — purge the packages without it and <code>apt upgrade</code> will happily
+    re-pull gigabytes of driver you'll never use.</p>
+  </div>
+
+  <h3>Likely leftover cache/model dirs worth reclaiming</h3>
+  <table>
+    <tr><th>Path</th><th>What it is</th></tr>
+    <tr><td><code>~/.cache/huggingface</code></td><td>Downloaded model weights — often the biggest single win</td></tr>
+    <tr><td><code>/models</code> · <code>/opt</code></td><td>Ad-hoc model + tooling drops from the GPU box</td></tr>
+    <tr><td><code>/root/.cache</code></td><td>Root-owned caches (pip, hf) the clone accumulated</td></tr>
+    <tr><td><code>/var/lib/docker</code></td><td>Old container images/layers if Docker was used on the GPU box</td></tr>
+  </table>
+
+  <div class="foot"><span>T430 &rarr; k3s onboarding (x2)</span><span>3 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <h2><span class="bar"></span><span class="phase">PHASE 4</span> &nbsp;Node-prep scripts — the red-tape eliminators</h2>
+  <p class="small mut">Run these in order from the laptop repo (<code>~/git/home-cluster</code>). Each one erases a class of
+  friction that has bitten a node before. Order matters: sudoers first makes the rest unattended.</p>
+  <pre><span class="c"># from ~/git/home-cluster on the laptop</span>
+<span class="k">for</span> s <span class="k">in</span> node-sudoers node-powersave node-sysctls node-hosts; <span class="k">do</span>
+  ssh brian@192.168.4.33 <span class="s">"sudo bash -s"</span> &lt; scripts/$s.sh
+<span class="k">done</span>
+scp <span class="s">"$(mkcert -CAROOT)/rootCA.pem"</span> brian@192.168.4.33:/tmp/lan-rootCA.pem
+ssh brian@192.168.4.33 <span class="s">"sudo bash -s"</span> &lt; scripts/trust-lan-ca.sh</pre>
+
+  <table>
+    <tr><th>Script</th><th>What it fixes</th></tr>
+    <tr><td><code>node-sudoers.sh</code></td><td>Passwordless sudo for <b>brian</b> — do first; makes the rest unattended.</td></tr>
+    <tr><td><code>node-powersave.sh</code> <span class="tag o">&#9733; laptop-critical</span></td><td>Masks sleep/suspend, sets lid-close = ignore, turns WiFi powersave off. <b>Without it, closing the lid drops the node</b> (this bit x1).</td></tr>
+    <tr><td><code>node-sysctls.sh</code></td><td>Raises inotify limits — the Jellyfin crashloop fix.</td></tr>
+    <tr><td><code>node-hosts.sh</code></td><td>Static <code>harbor.lan &rarr; 192.168.5.173</code> — breaks the Pi-hole-outage image-pull deadlock.</td></tr>
+    <tr><td><code>trust-lan-ca.sh</code></td><td>mkcert CA into the OS trust store + routes <code>.lan</code> DNS to Pi-hole; self-verifies against <code>home.lan</code>.</td></tr>
+  </table>
+
+  <h2><span class="bar"></span><span class="phase">PHASE 5</span> &nbsp;SSH — bidirectional, passwordless</h2>
+  <pre><span class="c"># laptop -> x2</span>
+ssh-copy-id brian@192.168.4.33
+
+<span class="c"># make x2's own key and print its pubkey (for a1/a2/a3/x1)</span>
+ssh brian@192.168.4.33 <span class="s">'ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 &lt;&lt;&lt;y; cat ~/.ssh/id_ed25519.pub'</span></pre>
+  <p class="small mut" style="margin-top:2px">Paste that pubkey into <code>~/.ssh/authorized_keys</code> on <b>a1/a2/a3/x1</b>.
+  Verify with <code>ssh brian@192.168.4.33 sudo -n true &amp;&amp; echo "keyed + nopasswd OK"</code>.
+  Optional hardening once keys work: set <code>PasswordAuthentication no</code>.</p>
+
+  <div class="foot"><span>T430 &rarr; k3s onboarding (x2)</span><span>4 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+  <h2><span class="bar"></span><span class="phase">PHASE 5.5</span> &nbsp;Reachability sanity check <span class="tag">run on the T430</span></h2>
+  <p class="small mut">Because <code>192.168.4.33</code> is on a different /24 than the server, confirm the box can actually
+  reach the control plane <b>before</b> joining. Run these on the T430:</p>
+  <pre>ping -c2 192.168.5.173            <span class="c"># control plane reachable?</span>
+nc -vz 192.168.5.173 6443         <span class="c"># k3s API server</span>
+nc -vz 192.168.5.173 443          <span class="c"># harbor.lan / Traefik ingress</span></pre>
+  <p class="small mut" style="margin-top:2px">If any of these fail, sort the <code>192.168.4</code> &harr; <code>192.168.5</code>
+  routing on the eero before continuing — the join can't succeed until the API server is reachable.</p>
+
+  <h2><span class="bar"></span><span class="phase">PHASE 6</span> &nbsp;Join k3s — as an agent</h2>
+  <p class="small mut">Grab the join token from the real server, then install the agent pointed at <code>192.168.5.173:6443</code>
+  with the <b>version pinned to match the server exactly</b> and the box label set at join time.</p>
+  <pre><span class="c"># read the current node-token off the server (a3)</span>
+ssh brian@192.168.5.173 sudo cat /var/lib/rancher/k3s/server/node-token
+
+curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=<span class="s">v1.35.5+k3s1</span> \
+  K3S_URL=<span class="s">https://192.168.5.173:6443</span> K3S_TOKEN=<span class="s">'&lt;paste-token&gt;'</span> \
+  sh -s - agent --node-label <span class="s">inference-club.com/box=x2</span></pre>
+  <p class="small mut" style="margin-top:2px">This is <code>scripts/install-k3s-agent.sh</code> with the version pin added so
+  the agent matches the server exactly. <b>Do not record the token in this document</b> or anywhere in the repo.</p>
+
+  <h2><span class="bar"></span><span class="phase">PHASE 7</span> &nbsp;Harbor pull trust — after the agent is running</h2>
+  <pre>scp <span class="s">"$(mkcert -CAROOT)/rootCA.pem"</span> brian@192.168.4.33:/tmp/lan-rootCA.pem
+ssh brian@192.168.4.33 <span class="s">"sudo bash -s"</span> &lt; scripts/k3s-registries.sh</pre>
+  <p class="small mut" style="margin-top:2px">Points containerd at Harbor's proxy cache + pins its CA, then restarts
+  <code>k3s-agent</code>. Now x2 pulls docker.io/ghcr.io through Harbor like every other node.</p>
+
+  <h2><span class="bar"></span><span class="phase">PHASE 8</span> &nbsp;Verify — from the laptop</h2>
+  <ul class="ck">
+    <li><code>kubectl get nodes -o wide</code> &rarr; <b>x2 Ready</b>, correct IP, <code>v1.35.5+k3s1</code>.</li>
+    <li><code>kubectl get node x2 -o jsonpath='{.metadata.labels}' | tr , '\n' | grep box</code> &rarr; <code>inference-club.com/box=x2</code>.</li>
+    <li>Smoke-test a pull pinned to x2 (below).</li>
+  </ul>
+  <pre>kubectl run x2-test --image=harbor.lan/dockerhub/library/busybox \
+  --overrides=<span class="s">'{"spec":{"nodeSelector":{"inference-club.com/box":"x2"}}}'</span> \
+  --restart=Never -it --rm -- echo ok</pre>
+
+  <div class="foot"><span>T430 &rarr; k3s onboarding (x2)</span><span>5 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Foreseen red tape &amp; gotchas</h2>
+  <table>
+    <tr><th>Gotcha</th><th>Handling</th></tr>
+    <tr><td><b>Duplicate a3</b></td><td>Phases 1 + 2 handle it. If you ever see two <code>a3</code>'s in <code>kubectl get nodes</code>, <b>stop</b> and delete the rogue one.</td></tr>
+    <tr><td><b>Lid-close = node death</b></td><td><code>node-powersave.sh</code> is the fix; verify with the lid <b>actually shut</b>.</td></tr>
+    <tr><td><b>Weak, WiFi-only box</b></td><td>T430 WiFi is <b>internal Intel</b> (not a1's flaky USB dongle) so it should be reliable — but it's still WiFi + a weak Ivy-Bridge box with a 100&nbsp;GB disk. Keep heavy/network-bound pods pinned elsewhere, <b>don't enroll it in Longhorn</b>, and use <code>nodeSelector</code> to steer big pods off it.</td></tr>
+    <tr><td><b>ufw</b></td><td>If enabled it blocks flannel VXLAN (<code>8472/udp</code>) + kubelet (<code>10250</code>). Check <code>sudo ufw status</code>; disable on-LAN or open those ports.</td></tr>
+    <tr><td><b>inference.club registration</b></td><td>Not required for k3s. If wanted, replicate what x1's <code>inference-club-agent</code> did — a separate follow-up.</td></tr>
+    <tr><td><b>Clock skew</b></td><td>Verify <code>timedatectl</code> shows NTP synced; skew breaks TLS to <code>harbor.lan</code> / <code>.lan</code>.</td></tr>
+  </table>
+
+  <div class="verdict">
+    <h3>Bottom line</h3>
+    <p style="margin:5px 0 0" class="small">Two facts about this drive dictate the whole procedure: it's a <b>clone that
+    believes it's a3</b>, and it's a <b>weak WiFi laptop</b>. So the first job is defensive — purge the inherited k3s and
+    rename the host <i>before</i> it can split-brain the live cluster — and the strategic call is to join it as a plain
+    <b>agent</b>, never a control-plane member. Do that, run the five node-prep scripts (powersave is the one that keeps a
+    laptop alive), pin the k3s version to the server, and x2 lands as a tidy CPU workhorse alongside x1 — extra scheduling
+    headroom for light pods, zero new risk to the cluster's state.</p>
+  </div>
+
+  <h2><span class="bar"></span>Quick reference</h2>
+  <table>
+    <tr><th>Thing</th><th>Value</th></tr>
+    <tr><td>Node name / role</td><td><code>x2</code> · k3s <b>agent</b> (CPU, no GPU)</td></tr>
+    <tr><td>IP (DHCP reservation)</td><td><code>192.168.4.33</code></td></tr>
+    <tr><td>Node label</td><td><code>inference-club.com/box=x2</code></td></tr>
+    <tr><td>Server / API</td><td><code>https://192.168.5.173:6443</code> (a3)</td></tr>
+    <tr><td>k3s version (pin to server)</td><td><code>v1.35.5+k3s1</code></td></tr>
+    <tr><td>Order of operations</td><td>router &rarr; purge k3s &rarr; rename &rarr; disk cleanup &rarr; node-prep &rarr; ssh &rarr; join &rarr; harbor &rarr; verify</td></tr>
+    <tr><td>Do NOT</td><td>join as server · enroll in Longhorn · pin heavy pods · commit the join token</td></tr>
+  </table>
+
+  <div class="foot"><span>T430 &rarr; k3s onboarding (x2) · home-cluster/docs/19</span><span>6 / 6</span></div>
+</div>
+
+</body></html>
