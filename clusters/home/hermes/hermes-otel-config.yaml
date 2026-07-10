@@ -22,10 +22,9 @@ metadata:
 data:
   config.yaml: |
     # Backend selection uses this explicit `backends:` list (deterministic;
-    # evaluated before the plugin's env-var auto-detection). To ALSO send traces
-    # to the local Arize Phoenix, add a second entry:
-    #   - type: phoenix
-    #     endpoint: http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces
+    # evaluated before the plugin's env-var auto-detection). Every entry gets a
+    # copy of each span — this fans traces out to BOTH Weave (cloud) and the
+    # local Phoenix at once.
     project_name: hermes-agent
     backends:
       # W&B Weave (W&B Cloud). The API key comes from the WANDB_API_KEY env var
@@ -34,3 +33,6 @@ data:
         api_key_env: WANDB_API_KEY
         entity: briancaffey-united-states-of-america
         project: hermes-agent
+      # Arize Phoenix (in-cluster, on the LAN). Traces stay local here as well.
+      - type: phoenix
+        endpoint: http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces
