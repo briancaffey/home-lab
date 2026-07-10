@@ -1,0 +1,31 @@
+# https://dagster.lan/ (Traefik + mkcert dagster-tls). gethomepage annotations
+# register it on the Homepage dashboard under a new "Data / Orchestration" group.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dagster
+  namespace: dagster
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Dagster"
+    gethomepage.dev/description: "Data pipeline orchestration"
+    gethomepage.dev/group: "Data / Orchestration"
+    gethomepage.dev/icon: "dagster.png"
+    gethomepage.dev/pod-selector: "component=dagster-webserver"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: dagster.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dagster-dagster-webserver
+                port:
+                  number: 80
+  tls:
+    - secretName: dagster-tls
+      hosts:
+        - dagster.lan

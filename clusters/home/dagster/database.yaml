@@ -1,0 +1,82 @@
+# Dagster metadata store. Plain postgres:16-alpine (repo convention — no bitnami
+# subchart), local-path PVC pinned to a2 (e-disk headroom). The Dagster Helm
+# chart reads the password from the SAME secret/key it expects:
+#   global.postgresqlSecretName: dagster-postgres-secret  (key: postgresql-password)
+# Secret is created out-of-band (NOT committed — public repo):
+#   kubectl -n dagster create secret generic dagster-postgres-secret \
+#     --from-literal=postgresql-password="$(openssl rand -hex 24)"
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dagster-postgres
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dagster-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: dagster-postgres
+  template:
+    metadata:
+      labels:
+        app: dagster-postgres
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: dagster
+            - name: POSTGRES_USER
+              value: dagster
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dagster-postgres-secret
+                  key: postgresql-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "dagster", "-d", "dagster"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: "100m"
+              memory: 256Mi
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: dagster-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dagster-postgres
+spec:
+  selector:
+    app: dagster-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

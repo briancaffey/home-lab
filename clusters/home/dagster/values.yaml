@@ -1,0 +1,87 @@
+# Dagster OSS Helm chart values.
+#
+# Design (see clusters/home/dagster/ and repo CLAUDE.md):
+#  - External Postgres: the bundled subchart is OFF; we point at our own
+#    dagster-postgres Deployment (database.yaml). The chart reads the password
+#    from global.postgresqlSecretName / key `postgresql-password`.
+#  - K8sRunLauncher: every pipeline run is launched as its own Kubernetes Job.
+#  - amd64-only: webserver, daemon, code servers and run Jobs are pinned to
+#    amd64 (Harbor apps/ images are amd64-only; keeps work off arm64 spark).
+#  - The webserver has NO built-in auth — access is gated by LAN (dagster.lan)
+#    and Tailnet only.
+
+global:
+  postgresqlSecretName: dagster-postgres-secret
+
+# Do NOT let the chart render its own (empty) password Secret — we create
+# dagster-postgres-secret out-of-band so it isn't clobbered on every Argo sync.
+generatePostgresqlPasswordSecret: false
+
+# --- Metadata store: our own Postgres, not the bundled subchart ------------
+postgresql:
+  enabled: false
+  postgresqlHost: dagster-postgres
+  postgresqlUsername: dagster
+  postgresqlDatabase: dagster
+  service:
+    port: 5432
+
+# --- Run launcher: each run becomes a Kubernetes Job -----------------------
+runLauncher:
+  type: K8sRunLauncher
+  config:
+    k8sRunLauncher:
+      imagePullPolicy: IfNotPresent
+      loadInclusterConfig: true
+      # Pin run Jobs to a2 — Harbor-trusted, amd64, co-located with Postgres.
+      # (t430 lacks the harbor.lan mkcert CA; spark is arm64. Once every node
+      # trusts Harbor we can relax this to kubernetes.io/arch: amd64 to spread
+      # runs across the fleet.)
+      runK8sConfig:
+        podSpecConfig:
+          nodeSelector:
+            inference-club.com/box: a2
+
+# --- Webserver (UI) --------------------------------------------------------
+dagsterWebserver:
+  service:
+    type: ClusterIP
+    port: 80
+  nodeSelector:
+    inference-club.com/box: a2
+
+# --- Daemon (schedules / sensors / run queue) ------------------------------
+dagsterDaemon:
+  nodeSelector:
+    inference-club.com/box: a2
+
+# --- User code (gRPC code servers) -----------------------------------------
+# Our pipeline code, built by the Forgejo Actions runner from
+# brian/dagster-pipelines → harbor.lan/apps/dagster-pipelines. Promote a build
+# by setting `tag` to the 12-char commit SHA printed in that repo's CI job
+# (see brian/dagster-pipelines README "GitOps loop"), commit + push → Argo rolls.
+dagster-user-deployments:
+  enabled: true
+  enableSubchart: true
+  deployments:
+    - name: pipelines
+      image:
+        repository: harbor.lan/apps/dagster-pipelines
+        tag: "644e4194049d" # bumped to the CI commit SHA to promote a build
+        pullPolicy: IfNotPresent
+      dagsterApiGrpcArgs:
+        - "--module-name"
+        - "dagster_pipelines.definitions"
+      port: 3030
+      nodeSelector:
+        inference-club.com/box: a2
+      # Use a LOCAL model for the digest: no cloud cost, and pod-name hashes
+      # aren't routed through the Rampart PII guard (which redacts cloud-bound
+      # traffic and would mangle them). Overrides the image default without a
+      # rebuild. envConfigMaps (unlike env) is propagated to the run pods too.
+      envConfigMaps:
+        - name: dagster-pipelines-config
+      # Inject the LiteLLM master key (copied into the dagster ns as the
+      # dagster-litellm secret) so cluster_summary can call the gateway.
+      envSecrets:
+        - name: dagster-litellm

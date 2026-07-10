@@ -1177,3 +1177,27 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# Dagster (home-lab data pipeline orchestration). Helm chart + external Postgres
+# + dagster.lan ingress in clusters/home/dagster. The user-deployment image tag
+# is promoted from the brian/dagster-pipelines CI (see that repo's README).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-dagster
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/dagster
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dagster
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

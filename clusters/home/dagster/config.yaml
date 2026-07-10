@@ -1,0 +1,10 @@
+# Non-secret env for the pipelines code server + run pods (referenced via the
+# chart's dagster-user-deployments[].envConfigMaps, which propagates to both).
+# LITELLM_MODEL overrides the image's default model without rebuilding —
+# nemotron-omni is a local inference.club model (no cloud, no Rampart redaction).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dagster-pipelines-config
+data:
+  LITELLM_MODEL: nemotron-omni

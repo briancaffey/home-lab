@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Namespace for our own resources (database.yaml/ingress.yaml). NOTE: the Dagster
+# chart's templates don't hardcode .Release.Namespace, so kustomize does NOT
+# stamp a namespace onto the helm-inflated objects. Under Argo CD they land in
+# the Application's destination.namespace (dagster) — same as every other
+# home-services app. For a MANUAL apply you must pass -n dagster:
+#   kustomize build --enable-helm clusters/home/dagster | kubectl apply -n dagster -f -
+namespace: dagster
+
+# Build/apply with the STANDALONE kustomize v5 binary (kubectl's --enable-helm
+# is broken with Helm v4 — see CLAUDE.md Gotchas). Argo CD renders this via the
+# argocd-cm `kustomize.buildOptions: --enable-helm` patch.
+#   kustomize build --enable-helm clusters/home/dagster | kubectl apply -f -
+#
+# Secrets (created out-of-band, NOT in git):
+#   - dagster-postgres-secret  (key postgresql-password; see database.yaml)
+#   - dagster-tls              (scripts/lan-certs.sh)
+
+resources:
+  - namespace.yaml
+  - database.yaml
+  - ingress.yaml
+  - config.yaml
+
+helmCharts:
+  - name: dagster
+    repo: https://dagster-io.github.io/helm
+    version: 1.13.13 # Renovate tracks this
+    releaseName: dagster
+    namespace: dagster
+    valuesFile: values.yaml
