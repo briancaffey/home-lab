@@ -124,6 +124,10 @@ config:
             href: https://vault.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: vaultwarden.png
             description: Passwords & secrets
+        - Dagster:
+            href: https://dagster.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: dagster.png
+            description: Data pipeline orchestration
   bookmarks:
     - Homelab:
         - GitHub:
@@ -217,6 +221,7 @@ config:
       Infra: {}
       Cluster: {}
       AI: {}
+      Data / Orchestration: {}
       Observability: {}
       Network: {}
       Monitoring: {}

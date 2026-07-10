@@ -19,3 +19,4 @@ resources:
   - ingress-netdata.yaml
   - ingress-forgejo.yaml
   - ingress-phoenix.yaml
+  - ingress-dagster.yaml
