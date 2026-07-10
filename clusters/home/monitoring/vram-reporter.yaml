@@ -106,3 +106,16 @@ spec:
             httpGet: { path: /healthz, port: vram }
             initialDelaySeconds: 10
             periodSeconds: 15
+          # Self-heal the "Failed to initialize NVML: Unknown Error" that hits
+          # long-running GPU containers after a host `systemctl daemon-reload`
+          # (e.g. an NVIDIA driver update — how a2 silently stopped reporting).
+          # /healthz stays 200 in that state, so an exec probe is what catches
+          # it: nvidia-smi exits 255 when NVML is dead -> the container restarts
+          # and the nvidia runtime re-injects the GPU on start, restoring it.
+          livenessProbe:
+            exec:
+              command: [nvidia-smi, --query-gpu=name, --format=csv,noheader]
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
