@@ -17,7 +17,7 @@ spec:
         kubernetes.io/hostname: a2   # data PV is pinned to a2's E drive
       containers:
         - name: forgejo
-          image: codeberg.org/forgejo/forgejo:15.0.3
+          image: codeberg.org/forgejo/forgejo:15.0.4
           env:
             # Container app user = uid/gid 1000 (matches the E-drive dir owner).
             - { name: USER_UID, value: "1000" }
