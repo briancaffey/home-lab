@@ -107,10 +107,11 @@ spec:
             - { name: data, mountPath: /opt/data }
             - { name: vault-tools, mountPath: /vault-tools }
         # Install the hermes-otel plugin onto the PVC from a pinned ref. Right
-        # now that's the PR branch feat/weave-backend (adds the W&B Weave OTLP
-        # backend — briancaffey/hermes-otel#50); switch REF to a release tag once
-        # merged. Idempotent refresh each boot so plugin updates deploy on
-        # restart. (Same interim-install pattern as install-otel-libs.)
+        # now that's PR briancaffey/hermes-otel#50 (adds the W&B Weave OTLP
+        # backend), which lives on the contributor's fork ash0ts/hermes-otel
+        # branch feat/weave-backend. Once the PR merges, point TARBALL at a
+        # briancaffey/hermes-otel release tag. Idempotent refresh each boot so
+        # plugin updates deploy on restart. (Same pattern as install-otel-libs.)
         - name: install-hermes-otel
           image: nousresearch/hermes-agent:v2026.7.7
           command:
@@ -118,17 +119,17 @@ spec:
             - -c
             - |
               DEST=/opt/data/plugins/hermes_otel
-              REF=feat/weave-backend
+              TARBALL="https://api.github.com/repos/ash0ts/hermes-otel/tarball/feat/weave-backend"
               mkdir -p "$DEST"
               TMP=$(mktemp -d)
               # Resilient: on a fetch failure, KEEP the existing PVC plugin
               # rather than fail the pod (only fatal if no plugin exists at all).
-              if curl -fsSL "https://github.com/briancaffey/hermes-otel/archive/refs/heads/${REF}.tar.gz" | tar xz -C "$TMP" 2>/dev/null; then
-                SRC=$(echo "$TMP"/hermes-otel-*)
+              if curl -fsSL "$TARBALL" | tar xz -C "$TMP" 2>/dev/null; then
+                SRC=$(echo "$TMP"/*/)
                 cp "$SRC"/*.py "$SRC"/plugin.yaml "$DEST"/
-                echo "hermes-otel installed (ref ${REF}); weave refs in backends.py: $(grep -c weave "$DEST/backends.py")"
+                echo "hermes-otel installed from $TARBALL; weave refs in backends.py: $(grep -c weave "$DEST/backends.py")"
               else
-                echo "WARN: could not fetch hermes-otel@${REF}; keeping existing plugin"
+                echo "WARN: could not fetch hermes-otel plugin; keeping existing PVC copy"
                 [ -f "$DEST/backends.py" ] || { echo "FATAL: no existing plugin on PVC"; exit 1; }
               fi
               rm -rf "$TMP"
