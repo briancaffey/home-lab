@@ -23,6 +23,10 @@
     "message": "推理与 AI",
     "description": "The label for category 'Inference & AI' in sidebar 'docs'"
   },
+  "sidebar.docs.category.Data / Orchestration": {
+    "message": "数据 / 编排",
+    "description": "The label for category 'Data / Orchestration' in sidebar 'docs'"
+  },
   "sidebar.docs.category.Observability & Alerting": {
     "message": "可观测性与告警",
     "description": "The label for category 'Observability & Alerting' in sidebar 'docs'"

@@ -20,6 +20,9 @@ const sidebars: SidebarsConfig = {
     {type: 'category', label: 'Inference & AI', items: [
       'ai/inference-fleet', 'ai/litellm', 'ai/rampart', 'ai/hermes', 'ai/code-server',
     ]},
+    {type: 'category', label: 'Data / Orchestration', items: [
+      'data/dagster',
+    ]},
     {type: 'category', label: 'Observability & Alerting', items: [
       'observability/prometheus-grafana', 'observability/logs', 'observability/alerting', 'observability/scrutiny',
     ]},

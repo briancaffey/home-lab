@@ -59,6 +59,7 @@ Four GPU machines and one repurposed laptop, all on home WiFi (see [the hardware
 
 - **AI & inference** — vLLM model servers, image/video/speech generation, a [LiteLLM gateway](/ai/litellm) in front of them, a [PII-redaction guard](/ai/rampart), and [Hermes](/ai/hermes), an agent that runs inside the cluster with its own vault access.
 - **Platform & GitOps** — [Argo CD](/gitops/argocd), [Renovate](/gitops/renovate), and the [self-hosted trio](/gitops/the-trio) of Forgejo, Harbor, and Vaultwarden that the rest depends on.
+- **Data & orchestration** — [Dagster](/data/dagster), the lab's newest layer: scheduled pipelines that read my own Prometheus and write with my own LLM gateway. It's the programmable glue over everything else.
 - **Household services** — [Jellyfin](/media/jellyfin), [Immich](/media/immich), [Paperless](/media/paperless), music, audiobooks, and a [download pipeline](/media/downloads) that files finished downloads for the family.
 - **Monitoring** — [Prometheus & Grafana](/observability/prometheus-grafana), [alerts to my phone](/observability/alerting), [disk-health monitoring](/observability/scrutiny), and [nightly backups with tested restores](/platform/backups).
 
