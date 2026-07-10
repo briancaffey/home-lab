@@ -126,7 +126,7 @@ config:
             description: Passwords & secrets
         - Dagster:
             href: https://dagster.{{HOMEPAGE_VAR_TAILNET}}.ts.net
-            icon: dagster.png
+            icon: /icons/dagster.svg
             description: Data pipeline orchestration
   bookmarks:
     - Homelab:

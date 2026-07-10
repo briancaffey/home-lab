@@ -10,7 +10,7 @@ metadata:
     gethomepage.dev/name: "Dagster"
     gethomepage.dev/description: "Data pipeline orchestration"
     gethomepage.dev/group: "Data / Orchestration"
-    gethomepage.dev/icon: "dagster.png"
+    gethomepage.dev/icon: "/icons/dagster.svg"
     gethomepage.dev/pod-selector: "component=dagster-webserver"
 spec:
   ingressClassName: traefik

@@ -50,7 +50,7 @@ metadata:
     gethomepage.dev/name: "Karma"
     gethomepage.dev/description: "Alert dashboard (Alertmanager UI)"
     gethomepage.dev/group: "Observability"
-    gethomepage.dev/icon: "karma.png"
+    gethomepage.dev/icon: "/icons/karma.png"
     gethomepage.dev/href: "https://karma.lan/"
     gethomepage.dev/pod-selector: "app=karma"
 spec:
