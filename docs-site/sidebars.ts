@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
     ]},
     {type: 'category', label: 'Data / Orchestration', items: [
       'data/dagster',
+      'data/dagster-projects',
     ]},
     {type: 'category', label: 'Observability & Alerting', items: [
       'observability/prometheus-grafana', 'observability/logs', 'observability/alerting', 'observability/scrutiny',
