@@ -28,6 +28,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hermes
+  annotations:
+    # Auto-restart when any referenced ConfigMap/Secret changes (Reloader) —
+    # so editing hermes-otel-config.yaml (or the seed config) rolls the pod and
+    # the init container re-seeds the plugin config. No manual restart needed.
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: 1
   # Single writer over the sqlite-ish session/memory stores on the PVC —
