@@ -1,0 +1,36 @@
+# The ACTIVE hermes-otel plugin configuration — this is the file that decides
+# where Hermes agent traces go. It is the *plugin's own* config.yaml, which is
+# SEPARATE from Hermes's main config.yaml (clusters/home/hermes/configmap.yaml →
+# /opt/data/config.yaml), where the plugin is only *enabled*
+# (plugins: enabled: [hermes_otel]).
+#
+# The hermes-otel plugin reads this from ~/.hermes/plugins/hermes_otel/config.yaml.
+# We set HOME=/opt/data (deployment.yaml) so that path is /opt/data/.hermes/...
+# on the PVC, and an initContainer (install-hermes-otel) copies THIS file there
+# on every boot — so editing this file + restarting the pod is all it takes.
+# This mirrors the hermes-otel repo's own config.yaml format, so the same file
+# works whether you run the plugin standalone or here.
+#
+# SAFE FOR THE PUBLIC REPO — NO SECRETS. `api_key_env` names an environment
+# variable; the key VALUE lives only in the `hermes-secrets` Secret (and
+# Vaultwarden item `wandb-api-key`). The entity/project are public W&B
+# identifiers, not credentials.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-otel-config
+data:
+  config.yaml: |
+    # Backend selection uses this explicit `backends:` list (deterministic;
+    # evaluated before the plugin's env-var auto-detection). To ALSO send traces
+    # to the local Arize Phoenix, add a second entry:
+    #   - type: phoenix
+    #     endpoint: http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces
+    project_name: hermes-agent
+    backends:
+      # W&B Weave (W&B Cloud). The API key comes from the WANDB_API_KEY env var
+      # (injected from the hermes-secrets Secret) — NOT stored in this file.
+      - type: weave
+        api_key_env: WANDB_API_KEY
+        entity: briancaffey-united-states-of-america
+        project: hermes-agent

@@ -13,6 +13,7 @@ resources:
   - rbac.yaml
   - pvc.yaml
   - configmap.yaml
+  - hermes-otel-config.yaml
   - vault-tools.yaml
   - deployment.yaml
   - service.yaml
