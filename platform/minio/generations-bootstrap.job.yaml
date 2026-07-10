@@ -64,6 +64,31 @@ spec:
               mc admin policy create m generations-rw /tmp/pol.json || echo "policy exists"
               mc admin user add m "$SVC_ACCESS" "$SVC_SECRET" || echo "user exists"
               mc admin policy attach m generations-rw --user "$SVC_ACCESS" || echo "already attached"
+
+              # inference.club app media lives in its OWN bucket (the app is
+              # configured with OBJECT_STORAGE_BUCKET=inference-club-media and reuses
+              # this same service account via inference-club-secrets). Grant that SA
+              # read/write on inference-club-media too, else generated files fail to
+              # save with NoCredentials/AccessDenied while inference still runs.
+              mc mb --ignore-existing m/inference-club-media
+              cat >/tmp/icm.json <<'JSON'
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": ["s3:*"],
+                    "Resource": [
+                      "arn:aws:s3:::inference-club-media",
+                      "arn:aws:s3:::inference-club-media/*"
+                    ]
+                  }
+                ]
+              }
+              JSON
+              mc admin policy create m inference-club-media-rw /tmp/icm.json || echo "policy exists"
+              mc admin policy attach m inference-club-media-rw --user "$SVC_ACCESS" || echo "already attached"
+
               echo "=== result ==="
               mc ls m/generations/
               echo "BOOTSTRAP DONE"
