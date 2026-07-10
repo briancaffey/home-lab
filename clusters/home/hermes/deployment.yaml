@@ -166,15 +166,15 @@ spec:
             - name: HERMES_DASHBOARD_BASIC_AUTH_SECRET
               valueFrom:
                 secretKeyRef: { name: hermes-secrets, key: dashboard-session-secret }
-            # hermes-otel → Arize Phoenix, in its own Phoenix project so
-            # Hermes traces sit apart from the LiteLLM ones.
-            - { name: OTEL_PHOENIX_ENDPOINT, value: "http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces" }
             - { name: OTEL_PROJECT_NAME, value: "hermes-agent" }
-            # W&B Weave backend (briancaffey/hermes-otel#50). In the plugin's
-            # env-var single-backend mode weave outranks phoenix, so these route
-            # Hermes traces to Weave Cloud; OTEL_PHOENIX_ENDPOINT above remains
-            # the automatic fallback if the WANDB_* trio is incomplete. API key
-            # in hermes-secrets (also Vaultwarden item `wandb-api-key`).
+            # W&B Weave backend (briancaffey/hermes-otel#50). NOTE: an explicit
+            # OTEL_PHOENIX_ENDPOINT would short-circuit the plugin to Phoenix
+            # (tracer.py step 3) BEFORE env-var backend detection, so it is
+            # intentionally NOT set here — that lets env detection select Weave.
+            # To go back to Phoenix, drop the WANDB_* trio and restore
+            # OTEL_PHOENIX_ENDPOINT=http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces
+            # For BOTH at once, use the plugin's config.yaml `backends:` list.
+            # API key in hermes-secrets (also Vaultwarden item `wandb-api-key`).
             - name: WANDB_API_KEY
               valueFrom:
                 secretKeyRef: { name: hermes-secrets, key: wandb-api-key }
