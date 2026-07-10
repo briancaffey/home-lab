@@ -106,6 +106,34 @@ spec:
           volumeMounts:
             - { name: data, mountPath: /opt/data }
             - { name: vault-tools, mountPath: /vault-tools }
+        # Install the hermes-otel plugin onto the PVC from a pinned ref. Right
+        # now that's the PR branch feat/weave-backend (adds the W&B Weave OTLP
+        # backend — briancaffey/hermes-otel#50); switch REF to a release tag once
+        # merged. Idempotent refresh each boot so plugin updates deploy on
+        # restart. (Same interim-install pattern as install-otel-libs.)
+        - name: install-hermes-otel
+          image: nousresearch/hermes-agent:v2026.7.7
+          command:
+            - sh
+            - -c
+            - |
+              DEST=/opt/data/plugins/hermes_otel
+              REF=feat/weave-backend
+              mkdir -p "$DEST"
+              TMP=$(mktemp -d)
+              # Resilient: on a fetch failure, KEEP the existing PVC plugin
+              # rather than fail the pod (only fatal if no plugin exists at all).
+              if curl -fsSL "https://github.com/briancaffey/hermes-otel/archive/refs/heads/${REF}.tar.gz" | tar xz -C "$TMP" 2>/dev/null; then
+                SRC=$(echo "$TMP"/hermes-otel-*)
+                cp "$SRC"/*.py "$SRC"/plugin.yaml "$DEST"/
+                echo "hermes-otel installed (ref ${REF}); weave refs in backends.py: $(grep -c weave "$DEST/backends.py")"
+              else
+                echo "WARN: could not fetch hermes-otel@${REF}; keeping existing plugin"
+                [ -f "$DEST/backends.py" ] || { echo "FATAL: no existing plugin on PVC"; exit 1; }
+              fi
+              rm -rf "$TMP"
+          volumeMounts:
+            - { name: data, mountPath: /opt/data }
       containers:
         - name: hermes
           image: nousresearch/hermes-agent:v2026.7.7
@@ -141,6 +169,16 @@ spec:
             # Hermes traces sit apart from the LiteLLM ones.
             - { name: OTEL_PHOENIX_ENDPOINT, value: "http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces" }
             - { name: OTEL_PROJECT_NAME, value: "hermes-agent" }
+            # W&B Weave backend (briancaffey/hermes-otel#50). In the plugin's
+            # env-var single-backend mode weave outranks phoenix, so these route
+            # Hermes traces to Weave Cloud; OTEL_PHOENIX_ENDPOINT above remains
+            # the automatic fallback if the WANDB_* trio is incomplete. API key
+            # in hermes-secrets (also Vaultwarden item `wandb-api-key`).
+            - name: WANDB_API_KEY
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: wandb-api-key }
+            - { name: WANDB_ENTITY, value: "briancaffey-united-states-of-america" }
+            - { name: WANDB_PROJECT, value: "hermes-agent" }
           volumeMounts:
             - { name: data, mountPath: /opt/data }
             # Bot creds as files (not env) so a stray `env` in a terminal tool
