@@ -43,3 +43,23 @@ service:
 # occasionally, or wire up the OAuth ephemeral-key path so they self-reap.
 persistence:
   enabled: false
+
+# Cluster control center (PRD 21).
+image:
+  tag: prd21-scale
+controlToken:
+  enabled: true
+  secretName: agent-control-token-prod
+  secretKey: token
+# Keep the agent on the amd64 GPU boxes (a2/a3) and OFF the arm64 Spark: the
+# agent image is amd64, and Spark's VRAM is reserved for inference. nodeAffinity
+# (not a single nodeSelector) so it can still reschedule between a2 and a3 if one
+# node dies — preserving the emptyDir/no-PVC reschedulability this chart wants.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: [a2, a3]
