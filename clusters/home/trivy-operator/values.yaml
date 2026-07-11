@@ -5,6 +5,16 @@
 operator:
   # Gentle on the cluster: one scan job at a time.
   scanJobsConcurrentLimit: 1
+  # Run a single in-cluster trivy-server (ClientServer mode) instead of
+  # Standalone. In Standalone every scan job initializes its own trivy DB +
+  # fs cache and they deadlock on the cache lock — 100% of scans failed with
+  # "Failed to acquire cache or database lock … cache may be in use by another
+  # process: timeout" → BackoffLimitExceeded (home-lab#99). ClientServer
+  # centralizes the DB/cache in one trivy-server StatefulSet (its own PVC);
+  # scan jobs become thin clients, so no lock contention and no per-scan DB
+  # re-download. Setting this flag also overrides trivy.mode=ClientServer and
+  # trivy.serverURL to the built-in service automatically.
+  builtInTrivyServer: true
 excludeNamespaces: "kube-system,trivy-system,inference-club"
 # inference-club excluded for now: 10–20 GB CUDA/vLLM images make scan jobs
 # heavy (the issue's own warning). Revisit with resource limits + timeout
