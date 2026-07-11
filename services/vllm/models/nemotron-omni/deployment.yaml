@@ -1,0 +1,50 @@
+# Nemotron-3 Nano Omni 30B (A3B, NVFP4) — multimodal (text+image+audio+video)
+# MoE reasoning LLM. Ported from the standalone services/nemotron-omni.yaml.
+# vLLM NIGHTLY is required: NVFP4 (--quantization fp4) needs Blackwell (GB10
+# qualifies) + the Mamba/FlashInfer-MoE paths that aren't in a stable release yet.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-llm
+spec:
+  template:
+    spec:
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:nightly
+          env:
+            - name: VLLM_FLASHINFER_MOE_BACKEND
+              value: latency
+            - name: MAX_NUM_SEQS
+              value: "4"
+            - name: MAX_MODEL_LEN
+              value: "64000"
+            - name: GPU_MEM_UTIL
+              # Owns the GPU one-at-a-time → 0.75 (~91 GiB) with headroom. (0.85
+              # failed: only ~98 GiB free at startup on the unified GB10 memory.)
+              value: "0.75"
+          args:
+            - |
+              pip install -q nvidia-cuda-runtime-cu12 'vllm[audio]' && \
+              export LD_LIBRARY_PATH=/usr/local/lib/python3.12/dist-packages/nvidia/cuda_runtime/lib:$LD_LIBRARY_PATH && \
+              vllm serve nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4 \
+                --served-model-name nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-NVFP4 nemotron-3-nano-omni \
+                --tensor-parallel-size 1 \
+                --port 8000 --host 0.0.0.0 \
+                --max-model-len "$MAX_MODEL_LEN" \
+                --max-num-seqs "$MAX_NUM_SEQS" \
+                --max-num-batched-tokens 32768 \
+                --gpu-memory-utilization "$GPU_MEM_UTIL" \
+                --quantization fp4 \
+                --moe-backend marlin \
+                --kv-cache-dtype fp8 \
+                --mamba-ssm-cache-dtype float32 \
+                --enable-prefix-caching \
+                --reasoning-parser nemotron_v3 \
+                --enable-auto-tool-choice \
+                --tool-call-parser qwen3_coder \
+                --video-pruning-rate 0.5 \
+                --limit-mm-per-prompt '{"video":1,"image":1,"audio":1}' \
+                --media-io-kwargs '{"video":{"fps":2,"num_frames":256}}' \
+                --allowed-local-media-path / \
+                --trust-remote-code

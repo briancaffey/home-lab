@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-llm
+  annotations:
+    inference-club.com/models: |
+      - id: nvidia/Qwen3.6-27B-NVFP4
+        hf: nvidia/Qwen3.6-27B-NVFP4
+        name: Qwen3.6 27B (NVFP4)
+        input_modalities: [text, image]
+        output_modalities: [text]
+        features: [reasoning, tools]
+        context_length: 32768
+        quantization: nvfp4

@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# ── The ONE vLLM model currently loaded in the spark-llm slot ──────────────
+# Strict one-at-a-time: spark has a single GB10, so exactly one model lives
+# here. Swap models by pointing this at a different overlay and re-applying:
+#
+#   kubectl apply -k services/vllm/active   # rolls the spark-llm Deployment
+#
+# The Recreate strategy means the old pod frees the GPU before the new loads.
+# (Once wired to Argo, changing this line + push is the whole switch.)
+resources:
+  - ../models/qwen3_6-27b-nvfp4
+  # - ../models/nemotron-omni

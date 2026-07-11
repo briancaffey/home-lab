@@ -831,24 +831,28 @@ spec:
     syncOptions:
       - RespectIgnoreDifferences=true
 ---
+# The vLLM model SLOT (services/vllm/) — one reusable spark-llm Deployment,
+# each model a thin overlay; `active/` selects the one currently loaded on the
+# GB10. Supersedes the old standalone svc-nemotron-omni (Nemotron is now the
+# models/nemotron-omni overlay). See services/vllm/README.md.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: svc-nemotron-omni
+  name: svc-vllm
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://forgejo.lan/brian/home-lab.git
     targetRevision: main
-    path: services/nemotron-omni
+    path: services/vllm/active
   destination:
     server: https://kubernetes.default.svc
     namespace: inference-club
   ignoreDifferences:
     - group: apps
       kind: Deployment
-      jsonPointers: ["/spec/replicas"]
+      jsonPointers: ["/spec/replicas"] # lets us scale the slot by hand to swap
   syncPolicy:
     automated:
       prune: false

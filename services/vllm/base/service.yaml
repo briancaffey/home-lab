@@ -1,0 +1,28 @@
+# ClusterIP for in-cluster DNS (spark-llm.inference-club:8000) AND agent
+# discovery. The inference-club.com/managed label makes the agent auto-register
+# the currently-loaded model on prod inference.club; the per-model overlay
+# patches the `inference-club.com/models` annotation so the control center
+# always advertises exactly the model that's live in the spark-llm slot.
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-llm
+  namespace: inference-club
+  labels:
+    app: spark-llm
+    inference-club.com/managed: "true"
+    inference-club.com/type: llm
+    inference-club.com/engine: vllm
+  annotations:
+    inference-club.com/base-path: /v1
+    # Overridden by each models/<x> overlay with that model's real id/features.
+    inference-club.com/models: |
+      - id: none
+        name: (no model loaded)
+spec:
+  selector:
+    app: spark-llm
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

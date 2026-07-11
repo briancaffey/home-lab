@@ -1,0 +1,82 @@
+# Base skeleton for a single vLLM (OpenAI-compatible) model on spark's one GB10.
+# This is NOT applied directly — a models/<x> overlay patches in the three things
+# that actually vary per model:
+#   1. image      — the vLLM version (nightly vs a pinned stable)  [Deployment]
+#   2. args       — the `vllm serve <model> <flags>` recipe        [Deployment]
+#   3. models     — the inference-club discovery annotation        [Service]
+# (plus env-value overrides for the tunables below). Everything else — the
+# spark pin, nvidia runtime, hostIPC, HF cache, probes, ports — is shared here.
+#
+# STRICT ONE-AT-A-TIME: every overlay keeps the name `spark-llm`, so switching
+# models is a rolling Recreate of ONE Deployment — the old pod releases the GB10
+# before the new one starts. Swap the active model in services/vllm/active/.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-llm
+  namespace: inference-club
+  labels:
+    app: spark-llm
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # single GPU on spark; old pod must release it before the new one starts
+  selector:
+    matchLabels:
+      app: spark-llm
+  template:
+    metadata:
+      labels:
+        app: spark-llm
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      hostIPC: true # vLLM needs large /dev/shm (docker --ipc=host)
+      containers:
+        - name: vllm
+          # Overridden per model. Kept as :latest here only so `kustomize build
+          # base` renders; overlays ALWAYS set the real tag (nightly / pinned).
+          image: vllm/vllm-openai:latest
+          imagePullPolicy: Always
+          env:
+            - name: HF_HOME
+              value: /root/.cache/huggingface
+            # ---- Tunables: overlays override these values per model, and you
+            # ---- edit + `kubectl rollout restart` to iterate on a live model.
+            - name: MAX_NUM_SEQS # max concurrent/parallel requests
+              value: "4"
+            - name: MAX_MODEL_LEN # max context length (prompt + output)
+              value: "32768"
+            - name: GPU_MEM_UTIL # fraction of the 121.69 GiB UNIFIED GB10 memory
+              value: "0.75" # strict one-at-a-time → this model owns the GPU
+          command: ["bash", "-c"]
+          # Replaced wholesale by each overlay's serve recipe. If the base is
+          # ever applied on its own, fail loudly instead of serving nothing.
+          args:
+            - |
+              echo "spark-llm base has no model — apply a services/vllm/models/<x> overlay" >&2
+              exit 1
+          ports:
+            - name: http
+              containerPort: 8000
+              # host:8000 is taken by trellis2 on spark, so direct host access is
+              # at <spark-LAN-IP>:8001. In-cluster clients use the Service (8000).
+              hostPort: 8001
+          resources: {} # GPU shared via runtimeClassName; memory bounded by GPU_MEM_UTIL
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /root/.cache/huggingface
+          startupProbe:
+            # First run: (maybe pip install) + pull weights + load. Budget ~60 min.
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            failureThreshold: 240
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+      volumes:
+        - name: hf-cache
+          hostPath:
+            path: /home/brian/.cache/huggingface
+            type: Directory

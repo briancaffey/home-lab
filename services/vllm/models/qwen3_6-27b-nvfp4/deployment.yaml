@@ -1,0 +1,41 @@
+# Qwen3.6-27B (NVFP4) — dense, multimodal + reasoning + tools — served by vLLM
+# on the GB10. NVFP4 counterpart to the LM Studio GGUF path in
+# services/lmstudio-headless (qwen/qwen3.6-27b as GGUF). One at a time on the
+# single GB10: scale lmstudio-headless (and any other spark GPU user) to 0 first.
+#
+# vLLM version: :nightly for the first load — NVFP4 on Blackwell/GB10 is new and
+# best-supported on nightly (same reason as the Nemotron sibling). Once it loads
+# cleanly you can pin a stable :vX.Y.Z here.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-llm
+spec:
+  template:
+    spec:
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:nightly
+          env:
+            - name: MAX_NUM_SEQS
+              value: "4"
+            - name: MAX_MODEL_LEN
+              value: "32768"
+            - name: GPU_MEM_UTIL
+              value: "0.75" # owns the GPU one-at-a-time
+          args:
+            - |
+              vllm serve nvidia/Qwen3.6-27B-NVFP4 \
+                --served-model-name nvidia/Qwen3.6-27B-NVFP4 qwen3.6-27b \
+                --tensor-parallel-size 1 \
+                --port 8000 --host 0.0.0.0 \
+                --max-model-len "$MAX_MODEL_LEN" \
+                --max-num-seqs "$MAX_NUM_SEQS" \
+                --gpu-memory-utilization "$GPU_MEM_UTIL" \
+                --quantization modelopt_fp4 \
+                --kv-cache-dtype fp8 \
+                --enable-prefix-caching \
+                --enable-auto-tool-choice \
+                --tool-call-parser hermes \
+                --limit-mm-per-prompt '{"image":1}' \
+                --trust-remote-code
