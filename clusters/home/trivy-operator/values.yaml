@@ -31,3 +31,10 @@ trivy:
   # registry, so allow insecure TLS to harbor.lan only (home-lab#16).
   insecureRegistries:
     harborLan: harbor.lan
+
+# Pin the operator + built-in trivy-server to a2 (amd64, most disk headroom).
+# The server's DB cache is a local-path PVC (node-pinned), so it must NOT land
+# on spark — spark is arm64 and frequently offline, which would strand the PVC
+# and take all scanning down with it. a2 is a stable amd64 agent (home-lab#99).
+nodeSelector:
+  inference-club.com/box: a2
