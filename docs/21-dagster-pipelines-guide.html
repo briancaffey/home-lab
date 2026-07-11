@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  @page{size:A4;margin:0}
+  :root{
+    --bg:#1b2030; --bg2:#171b29; --card:#232b40; --soft:#1f263a; --line:#333d57;
+    --ink:#e9edf7; --mut:#9aa6bd; --dim:#6b7793;
+    --blue:#37b6e6; --purple:#a874d8; --grad:linear-gradient(120deg,#37b6e6,#a874d8);
+    --crit:#ff5d6c; --high:#ff9f43; --med:#ffd166; --low:#5ec8f0; --ok:#43c59e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);font-size:12.8px;line-height:1.46;
+       -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  code,.mono{font-family:'IBM Plex Mono',monospace;font-size:.9em}
+  .page{width:210mm;height:297mm;overflow:hidden;padding:11mm 13mm 12mm;background:var(--bg);
+        page-break-after:always;position:relative}
+  .page:last-child{page-break-after:auto}
+  h1{font-size:31px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:5px 0 4px}
+  h2{font-size:18px;font-weight:900;margin:13px 0 7px;display:flex;align-items:center;gap:10px}
+  h2 .bar{width:5px;height:20px;border-radius:3px;background:var(--grad)}
+  h3{font-size:14px;font-weight:800;margin:0 0 3px}
+  p{margin:0 0 7px} .mut{color:var(--mut)} .dim{color:var(--dim)} .small{font-size:12px}
+  b,strong{font-weight:800}
+  .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .kick{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.22em;
+        text-transform:uppercase;font-size:11px;color:var(--blue)}
+  .lead{font-size:14px;color:#c7d0e4;max-width:172mm}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:11.5px;color:var(--mut)}
+  .chip b{color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:9px 0 3px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);position:relative;overflow:hidden}
+  .stat .n{font-size:25px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .stat .d{font-size:10.5px;color:var(--mut);margin-top:5px;line-height:1.35}
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad)}
+  .stat.b::before{background:var(--blue)} .stat.p::before{background:var(--purple)}
+  .stat.g::before{background:var(--ok)} .stat.o::before{background:var(--high)}
+  .stat .n.blue{color:var(--blue)} .stat .n.purp{color:var(--purple)} .stat .n.okc{color:var(--ok)} .stat .n.orng{color:var(--high)}
+  .box{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px 14px;margin:9px 0;break-inside:avoid}
+  .posture{border:1px solid var(--line);border-left:4px solid var(--purple);background:var(--soft);border-radius:0 13px 13px 0;padding:12px 15px;margin:11px 0}
+  .note{border:1px solid rgba(67,197,158,.35);background:rgba(67,197,158,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .note h3{color:var(--ok)}
+  .warnbox{border:1px solid rgba(255,159,67,.38);background:rgba(255,159,67,.10);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .warnbox h3{color:var(--high)}
+  .myth{border:1px solid rgba(255,93,108,.38);background:rgba(255,93,108,.09);border-radius:12px;padding:10px 14px;margin:9px 0}
+  .myth h3{color:var(--crit)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11.6px}
+  th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:800}
+  td b{color:var(--ink)}
+  .tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);border:1px solid var(--line);color:var(--blue)}
+  .tag.g{color:var(--ok)} .tag.o{color:var(--high)} .tag.p{color:var(--purple)} .tag.r{color:var(--crit)}
+  pre{background:#11151f;border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin:8px 0;overflow:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;color:#cdd6ea}
+  pre .c{color:var(--dim)} pre .k{color:var(--blue)} pre .s{color:var(--ok)}
+  .flow{display:flex;align-items:stretch;gap:0;margin:10px 0;font-size:11px}
+  .col{flex:1;display:flex;flex-direction:column;gap:7px}
+  .node{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:8px 10px;text-align:center}
+  .node.hub{background:var(--grad);color:#0b1220;font-weight:900;border:none;display:flex;align-items:center;justify-content:center;min-height:100%}
+  .node b{display:block;font-size:11.5px} .node span{font-size:10px;color:var(--mut)}
+  .arrow{display:flex;align-items:center;justify-content:center;padding:0 9px;color:var(--dim);font-size:20px;font-weight:900}
+  ul{margin:3px 0 7px 17px} li{margin:3px 0;font-size:12.2px;color:#cbd4e8}
+  ol{margin:3px 0 7px 18px} ol li{margin:5px 0;font-size:12.3px}
+  .rank{display:flex;gap:11px;align-items:flex-start;margin:7px 0;break-inside:avoid}
+  .rank .num{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:14px;color:#0b1220;background:var(--grad);border-radius:9px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank .num.b{background:var(--soft);color:var(--mut);border:1px solid var(--line)}
+  .rank h3{font-size:13px} .rank p{font-size:11.8px;color:#c2cbe0;margin:2px 0 0}
+  .foot{position:absolute;bottom:9mm;left:13mm;right:13mm;display:flex;justify-content:space-between;font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace;border-top:1px solid var(--line);padding-top:6px}
+  .verdict{border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,rgba(55,182,230,.10),rgba(168,116,216,.10));padding:13px 16px;margin:9px 0}
+  .verdict h3{font-size:15px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style></head><body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="page">
+  <div class="kick">Data · Orchestration · Home Cluster · k3s</div>
+  <h1>Dagster, in plain terms<br><span class="grad">the programmable glue that runs code I write, on a schedule, against my own platform</span></h1>
+  <p class="lead">Dagster is the lab's <b>data orchestrator</b> — the first service whose whole job is to
+  <i>use</i> the other services. You write pipelines as Python <b>assets</b> (a thing you want to exist —
+  a table, a report, a file), declare their dependencies, and Dagster works out the order, runs them on a
+  schedule or trigger, records every run in Postgres, and gives you a UI to watch it all. It's in the Airflow
+  family but <b>asset-first</b> and far nicer to look at. Mine lives on <b>a2</b> at <b>dagster.lan</b>, and
+  the neat part is <b>every run executes as its own Kubernetes Job</b>.</p>
+
+  <div class="meta">
+    <div class="chip"><b>Chart</b> dagster/dagster v1.13.13</div>
+    <div class="chip"><b>Namespace</b> dagster (pinned to a2)</div>
+    <div class="chip"><b>UI</b> https://dagster.lan/</div>
+    <div class="chip"><b>Argo app</b> home-dagster</div>
+    <div class="chip"><b>Manifests</b> clusters/home/dagster/</div>
+  </div>
+
+  <div class="cards">
+    <div class="stat b"><div class="n blue">3</div><div class="l">Nouns to know</div><div class="d">Asset, Job, Schedule — the whole mental model</div></div>
+    <div class="stat p"><div class="n purp">1 Job</div><div class="l">per run</div><div class="d">K8sRunLauncher spawns a fresh pod for every run</div></div>
+    <div class="stat g"><div class="n okc">4</div><div class="l">Demo assets</div><div class="d">A GPU digest that tours the whole lab in one job</div></div>
+    <div class="stat o"><div class="n orng">6</div><div class="l">Step ship loop</div><div class="d">Write → wire → validate → push → promote → verify</div></div>
+  </div>
+
+  <h2><span class="bar"></span>Dagster in one minute (the whole mental model)</h2>
+  <div class="posture">
+    <p style="margin:0 0 4px"><b>You only need three nouns:</b></p>
+    <ul style="margin:6px 0 0">
+      <li><b>Asset</b> — a materializable output, an <code>@asset</code> function. <i>Its arguments are its
+        dependencies</i>, so the DAG is inferred from the function signatures — no wiring by hand.</li>
+      <li><b>Job</b> — a selection of assets you run together (<code>define_asset_job</code>).</li>
+      <li><b>Schedule / Sensor</b> — <i>when</i> a job runs: a cron, or a reaction to an event.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>The one idea that makes everything click</h3>
+    <p style="margin:3px 0 0" class="small">Split the world in two: <b>platform = the home-lab repo</b>
+    (<code>clusters/home/dagster/</code> — UI, daemon, Postgres, run launcher, deployed by Argo) and
+    <b>pipeline code = the <code>dagster-pipelines</code> repo</b> (my assets, built into a container image and
+    loaded over gRPC). You edit the <b>platform rarely</b> and the <b>pipeline code often</b>. Everything below
+    follows from that split.</p>
+  </div>
+  <div class="myth">
+    <h3>"An orchestrator needs a big always-on worker pool." — Unlearn this</h3>
+    <p style="margin:3px 0 0" class="small">Nothing runs inside a long-lived worker here. The
+    <b>K8sRunLauncher</b> asks the cluster for a <b>fresh pod per run</b> and hands execution straight to the
+    scheduler — you watch them come and go in <code>kubectl get jobs -n dagster</code>. It's a genuinely nice
+    demonstration of k8s-native orchestration: the orchestrator delegates, the cluster executes.</p>
+  </div>
+
+  <div class="foot"><span>Dagster — Building Pipelines</span><span>1 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>How it's deployed here</h2>
+  <p class="small mut">The platform is the official <code>dagster/dagster</code> Helm chart
+  (<b>v1.13.13</b>) inflated through kustomize <code>helmCharts:</code> — the same no-helm-CLI pattern as
+  open-webui — deployed by the Argo CD app <b>home-dagster</b>. Four moving parts, plus an external Postgres.</p>
+
+  <div class="flow">
+    <div class="col">
+      <div class="node"><b>Webserver</b><span>the UI · dagster.lan</span></div>
+      <div class="node"><b>Daemon</b><span>runs schedules + sensors</span></div>
+      <div class="node"><b>Code server</b><span>my pipelines · gRPC</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col" style="flex:.9">
+      <div class="node hub">K8sRunLauncher<br>1 Job per run</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="node"><b>k8s Job</b><span>one ephemeral pod</span></div>
+      <div class="node"><b>k8s Job</b><span>materializes assets</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col" style="flex:.85">
+      <div class="node hub">postgres 16<br>metadata store</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>Component</th><th>What it does</th></tr>
+    <tr><td><b>Webserver</b></td><td>The Dagster UI at <code>dagster.lan</code> — asset graph, run history, launch buttons.</td></tr>
+    <tr><td><b>Daemon</b></td><td>The thing that decides "it's time, go" — drives schedules and sensors.</td></tr>
+    <tr><td><b>K8sRunLauncher</b></td><td><b>Every pipeline run executes as its own Kubernetes Job.</b> Fresh pod per run; watch them in <code>kubectl get jobs -n dagster</code>.</td></tr>
+    <tr><td><b>User-deployments gRPC code server</b></td><td>A separate pod holding <i>my</i> pipeline code, serving it over gRPC so new pipelines ship <b>without restarting Dagster itself</b>.</td></tr>
+    <tr><td><b>Postgres</b></td><td>Plain <code>postgres:16-alpine</code> Deployment (repo convention — <i>not</i> the chart's bundled subchart), on a <code>local-path</code> PVC pinned to <b>a2</b>.</td></tr>
+  </table>
+
+  <div class="warnbox">
+    <h3>Two sharp edges worth writing down</h3>
+    <p style="margin:3px 0 0" class="small"><b>Postgres password ownership.</b> The chart wants to generate its
+    own password Secret, which would let Argo clobber the out-of-band <code>dagster-postgres-secret</code> on
+    every sync. Set <code>generatePostgresqlPasswordSecret: false</code> — the credential is created once, out of
+    band, and the chart is told to keep its hands off (secrets never live in git).<br>
+    <b>Why everything is pinned to a2.</b> Run and code images live in <code>harbor.lan/apps/</code>, and pulling
+    them requires trusting the Harbor mkcert CA. a2 is Harbor-trusted, amd64, has the roomy e-disk, and
+    co-locates with Postgres — the natural home. (t430 can't host run Jobs yet only because it doesn't trust the
+    Harbor CA — a known follow-up.)</p>
+  </div>
+
+  <div class="note">
+    <h3>Access &amp; auth — mind the exposure</h3>
+    <p style="margin:3px 0 0" class="small"><code>dagster.lan</code> gets a Traefik ingress with the mkcert
+    <code>dagster-tls</code> cert and is Homepage-discovered under the new <b>Data / Orchestration</b> group; it's
+    also exposed remotely at <code>dagster.&lt;tailnet&gt;.ts.net</code> via the Tailscale operator. Critical
+    caveat: <b>Dagster OSS has no built-in authentication</b> — no login screen. Access is gated entirely by being
+    on the LAN or the default-deny tailnet. Acceptable for a single-operator lab; <b>never expose it more broadly
+    without an auth proxy in front.</b></p>
+  </div>
+
+  <div class="foot"><span>Dagster — Building Pipelines</span><span>2 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>The demonstration project: "GPU digest"</h2>
+  <p class="small mut">The <code>dagster-pipelines</code> repo ships one real, end-to-end pipeline plus a warm-up
+  asset, so there's something working to learn from. It's deliberately a tour of the whole lab in one job: it
+  reads my own <b>Prometheus</b>, thinks with my own <b>LiteLLM</b> gateway, and was shipped through my own
+  <b>Forgejo + Harbor</b>. That's the pattern every new pipeline follows.</p>
+
+  <table>
+    <tr><th>Asset</th><th>What it does</th></tr>
+    <tr><td><code>hello_dagster</code></td><td>Trivial smoke-test — the first thing to materialize in the UI.</td></tr>
+    <tr><td><code>gpu_snapshot</code></td><td>Queries the lab's <b>Prometheus</b> (dcgm-exporter <code>DCGM_FI_DEV_*</code>) for per-GPU utilization, VRAM, power, temperature.</td></tr>
+    <tr><td><code>vram_by_pod</code></td><td>Top GPU-memory consumers by pod, from the custom <b>vram-reporter</b> metric.</td></tr>
+    <tr><td><code>cluster_summary</code></td><td>Feeds those numbers to the <b>LiteLLM gateway</b> and gets back a natural-language "state of the GPU fleet" digest — with a <b>templated fallback if the gateway is down</b>.</td></tr>
+  </table>
+
+  <div class="flow">
+    <div class="col">
+      <div class="node"><b>gpu_snapshot</b><span>Prometheus / dcgm</span></div>
+      <div class="node"><b>vram_by_pod</b><span>vram-reporter</span></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col" style="flex:1.1">
+      <div class="node hub">cluster_summary<br>LiteLLM digest</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="node"><b>daily_gpu_digest</b><span>schedule · 07:00</span></div>
+      <div class="node"><b>Markdown in UI</b><span>rich run metadata</span></div>
+    </div>
+  </div>
+  <p class="small mut" style="margin-top:2px"><code>gpu_snapshot</code> and <code>vram_by_pod</code> fan into
+  <code>cluster_summary</code>, and the job runs on a <b>daily schedule</b> (<code>daily_gpu_digest</code>, 07:00).
+  The model is configurable via a <code>LITELLM_MODEL</code> env (no image rebuild to switch); it defaults to the
+  local <b>nemotron-omni</b>. So the digest is my own hardware, described by my own model, orchestrated by my own
+  scheduler — no cloud in the loop at all.</p>
+
+  <h3>The repo shape (worth copying)</h3>
+  <table>
+    <tr><th>Path</th><th>Role</th></tr>
+    <tr><td><code>dagster_pipelines/resources.py</code></td><td>The <b>seams</b> to the cluster: <code>PrometheusResource</code> and <code>LiteLLMResource</code>. New external systems get a new resource here — never a URL hard-coded in an asset.</td></tr>
+    <tr><td><code>dagster_pipelines/assets.py</code></td><td>The assets themselves.</td></tr>
+    <tr><td><code>dagster_pipelines/definitions.py</code></td><td>Wires assets + resources + the schedule.</td></tr>
+    <tr><td><code>Dockerfile</code> + <code>.forgejo/workflows/build.yaml</code></td><td>The code-server image and its CI.</td></tr>
+  </table>
+
+  <div class="warnbox">
+    <h3>War story — the digest that named a GPU pod <code>DRIVERS_LICENSE_1</code></h3>
+    <p style="margin:3px 0 0" class="small">The first digest described utilization for a pod called
+    <code>DRIVERS_LICENSE_1</code>. Nothing was broken — that was <b>Rampart</b>, the PII-redaction guard, doing
+    its job. Every prompt to LiteLLM passes through Rampart, and a hashed pod name looks enough like an ID number
+    that the redactor swapped it for a placeholder before the model saw it. Great proof the security layer is
+    really in the path; the obvious next refinement is normalizing pod names before they hit the gateway.</p>
+  </div>
+
+  <div class="foot"><span>Dagster — Building Pipelines</span><span>3 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>The workflow for a new pipeline</h2>
+  <p class="small mut">Same GitOps machinery as every other app in the lab — push code, CI builds, Argo deploys —
+  with one Dagster-specific twist: <b>promoting the image tag</b>. The platform lives in the home-lab repo; the
+  pipelines live in <code>brian/dagster-pipelines</code> on Forgejo.</p>
+
+  <div class="rank"><div class="num">1</div><div><h3>Write the module</h3><p>New <code>dagster_pipelines/&lt;name&gt;.py</code> — the assets, plus a new resource in <code>resources.py</code> if it talks to something new.</p></div></div>
+  <div class="rank"><div class="num">2</div><div><h3>Wire it into <code>definitions.py</code></h3><p>Add a job and, if it's scheduled, a schedule.</p></div></div>
+  <div class="rank"><div class="num">3</div><div><h3>Validate locally</h3><p><code>dagster definitions validate -m dagster_pipelines.definitions</code> — catches import and wiring errors before CI.</p></div></div>
+  <div class="rank"><div class="num">4</div><div><h3>Push → Forgejo Actions builds the image</h3><p>Pushing the <code>dagster-pipelines</code> repo triggers the runner (a2, dind) to build and push <code>harbor.lan/apps/dagster-pipelines:&lt;sha&gt;</code>.</p></div></div>
+  <div class="rank"><div class="num">5</div><div><h3>Promote — bump the tag in <code>values.yaml</code></h3><p>Set the <code>dagster-user-deployments</code> image tag in <code>clusters/home/dagster/values.yaml</code> to that <code>&lt;sha&gt;</code> and push home-lab. Argo rolls the code server onto the new image.</p></div></div>
+  <div class="rank"><div class="num">6</div><div><h3>Verify with a K8s-Job run</h3><p>The new code location loads in the UI; launch the job and watch its Kubernetes Job appear in <code>kubectl get jobs -n dagster</code>.</p></div></div>
+
+  <div class="warnbox">
+    <h3>The version rule CI enforces for you</h3>
+    <p style="margin:3px 0 0" class="small">Pin <b><code>dagster==1.13.13</code></b>, and remember the
+    integration libraries use the <code>0.X.Y</code> scheme that trails core by a fixed offset — so
+    <b><code>dagster-postgres</code> / <code>dagster-k8s</code> are <code>0.29.13</code></b> for core
+    <code>1.13.13</code>. They have to be in the image or the run pods <b>fail to import</b>.</p>
+  </div>
+
+  <div class="note">
+    <h3>Pin an explicit tag, don't chase <code>:latest</code></h3>
+    <p style="margin:3px 0 0" class="small">Promoting by pinning the exact <code>&lt;sha&gt;</code> (rather than
+    following a moving <code>:latest</code>) keeps deploys reviewable in git and trivially rollback-able — the same
+    discipline as every other GitOps app in the lab.</p>
+  </div>
+
+  <div class="foot"><span>Dagster — Building Pipelines</span><span>4 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>The easy button: just ask Claude</h2>
+  <p class="small mut">Because this is my repo and Claude has the context, I don't do the six steps by hand — I
+  describe the pipeline and let Claude run the loop. This repo carries a <b>Claude skill</b> at
+  <code>.claude/skills/dagster-project/</code> that encodes every convention: where code goes, the resource
+  patterns, the credentials (<code>forgejo-bot</code>, <code>harbor-robot-apps-ci</code> via
+  <code>scripts/vault-secret.sh</code>), the a2 pinning, and the push → build → promote → verify loop.</p>
+
+  <div class="posture">
+    <p style="margin:0 0 4px"><b>So the prompt is just the <i>idea</i>:</b></p>
+    <pre style="margin:6px 0 0"><span class="c">"Make a Dagster project that pulls the top Hacker News stories, runs each</span>
+<span class="c"> headline through LiteLLM for a one-line sentiment, and materializes a daily</span>
+<span class="c"> table. Put it in the dagster-pipelines repo and ship it."</span></pre>
+  </div>
+
+  <p class="small mut">Claude will scaffold the module, wire the job and schedule, validate it, push it, watch the
+  Harbor build, bump the tag in <code>values.yaml</code>, let Argo roll it, and launch a verification run — then
+  report the result. Good things to include in the prompt:</p>
+
+  <table>
+    <tr><th>Say this</th><th>So Claude knows…</th></tr>
+    <tr><td><b>The data source</b></td><td>"read Prometheus / hit this API / list this MinIO bucket" — what to build a resource for.</td></tr>
+    <tr><td><b>The output</b></td><td>"a daily table", "a Slack message", "a Markdown report in the UI".</td></tr>
+    <tr><td><b>The cadence</b></td><td>"daily at 7am", "on demand only" — whether to add a schedule.</td></tr>
+    <tr><td><b>Where it goes</b></td><td>Default is a new module in <code>dagster-pipelines</code>; say so if you want a whole separate code location instead.</td></tr>
+  </table>
+
+  <h3>Starter ideas worth trying</h3>
+  <div class="two">
+    <div class="box" style="margin:4px 0"><h3 style="color:var(--blue)">HN → sentiment</h3><p class="small mut" style="margin:2px 0 0">Top Hacker News stories, one-line LLM sentiment per headline, materialized to a daily table.</p></div>
+    <div class="box" style="margin:4px 0"><h3 style="color:var(--purple)">MinIO bucket catalog</h3><p class="small mut" style="margin:2px 0 0">Counts, sizes, and newest objects per bucket — a lightweight inventory that runs on a schedule.</p></div>
+    <div class="box" style="margin:4px 0"><h3 style="color:var(--ok)">Backup-freshness check</h3><p class="small mut" style="margin:2px 0 0">Verify the nightly restic targets are recent; alert through the existing Telegram / Alertmanager stack.</p></div>
+    <div class="box" style="margin:4px 0"><h3 style="color:var(--high)">GPU digest (shipped)</h3><p class="small mut" style="margin:2px 0 0">The flagship — Prometheus + vram-reporter → LiteLLM narrative, daily. The template to copy.</p></div>
+  </div>
+
+  <div class="foot"><span>Dagster — Building Pipelines</span><span>5 / 6</span></div>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="page">
+  <h2><span class="bar"></span>Conventions to keep</h2>
+
+  <div class="rank"><div class="num b">A</div><div><h3>Resources for anything external</h3><p>Put URLs and clients in <code>resources.py</code>, not in assets. Assets stay pure and testable; the cluster seams live in one place.</p></div></div>
+  <div class="rank"><div class="num b">B</div><div><h3>Degrade gracefully</h3><p>Never fail a run because an <i>optional</i> dependency (the LLM, a flaky API) is down — catch it and fall back, like <code>cluster_summary</code> does.</p></div></div>
+  <div class="rank"><div class="num b">C</div><div><h3>Rich UI metadata</h3><p>Emit Markdown tables via <code>context.add_output_metadata</code> so a run tells its story in the UI, not just in logs.</p></div></div>
+  <div class="rank"><div class="num b">D</div><div><h3>Local models by default</h3><p>LLM steps default to the local <code>nemotron-omni</code> (set via <code>LITELLM_MODEL</code> — no rebuild to switch). Cloud models route through the <b>Rampart</b> PII guard, which can redact identifiers.</p></div></div>
+  <div class="rank"><div class="num b">E</div><div><h3>No auth — mind the exposure</h3><p>Dagster OSS has no login. Fine on the LAN and default-deny tailnet; never put it anywhere more public without an auth proxy.</p></div></div>
+
+  <div class="verdict">
+    <h3>Bottom line</h3>
+    <p style="margin:5px 0 0" class="small">Dagster is the lab's <b>programmable glue</b> — the layer that runs
+    code you write, on a schedule, against the platform you already built. The platform is a handful of pods in
+    <code>clusters/home/dagster/</code> deployed by Argo; the pipelines live in <code>dagster-pipelines</code> and
+    ride the same Forgejo → Harbor → Argo loop as every other app, with one twist (promote the image tag). The
+    GPU digest proves the whole loop end-to-end: Prometheus in, LiteLLM narrative out, shipped through your own
+    forge. And for the next pipeline, you don't run the six steps by hand — you describe the idea and let the
+    <code>dagster-project</code> skill do it.</p>
+  </div>
+
+  <h2><span class="bar"></span>Quick reference</h2>
+  <table>
+    <tr><th>Thing</th><th>Value</th></tr>
+    <tr><td>UI</td><td><code>https://dagster.lan/</code> · remote <code>dagster.&lt;tailnet&gt;.ts.net</code></td></tr>
+    <tr><td>Platform manifests</td><td><code>clusters/home/dagster/</code> — Argo app <code>home-dagster</code></td></tr>
+    <tr><td>Pipeline code</td><td><code>brian/dagster-pipelines</code> (Forgejo) → <code>harbor.lan/apps/dagster-pipelines:&lt;sha&gt;</code></td></tr>
+    <tr><td>Promote a build</td><td>bump image tag in <code>clusters/home/dagster/values.yaml</code>, push home-lab</td></tr>
+    <tr><td>Validate</td><td><code>dagster definitions validate -m dagster_pipelines.definitions</code></td></tr>
+    <tr><td>Versions</td><td><code>dagster==1.13.13</code>; <code>dagster-postgres</code>/<code>dagster-k8s==0.29.13</code></td></tr>
+    <tr><td>Watch runs</td><td><code>kubectl get jobs -n dagster</code></td></tr>
+    <tr><td>Just ask Claude</td><td>skill at <code>.claude/skills/dagster-project/</code></td></tr>
+  </table>
+
+  <div class="foot"><span>Dagster — Building Pipelines · home-cluster/docs/21</span><span>6 / 6</span></div>
+</div>
+
+</body></html>
