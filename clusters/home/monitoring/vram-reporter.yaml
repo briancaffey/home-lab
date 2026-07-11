@@ -113,8 +113,16 @@ spec:
           # it: nvidia-smi exits 255 when NVML is dead -> the container restarts
           # and the nvidia runtime re-injects the GPU on start, restoring it.
           livenessProbe:
+            # NOTE: block style (one item per line), NOT a flow array. A flow
+            # array `[nvidia-smi, --query-gpu=name, --format=csv,noheader]`
+            # splits on the comma inside `csv,noheader`, so nvidia-smi gets a
+            # stray `noheader` arg, exits non-zero, and the probe crashloops
+            # every GPU node (home-lab#98).
             exec:
-              command: [nvidia-smi, --query-gpu=name, --format=csv,noheader]
+              command:
+                - nvidia-smi
+                - --query-gpu=name
+                - --format=csv,noheader
             initialDelaySeconds: 30
             periodSeconds: 60
             timeoutSeconds: 10
