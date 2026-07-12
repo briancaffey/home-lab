@@ -41,7 +41,7 @@ spec:
         inference-club.com/box: a2
       containers:
         - name: navidrome
-          image: deluan/navidrome:0.63.0
+          image: deluan/navidrome:0.63.2
           env:
             - name: ND_MUSICFOLDER
               value: /music
