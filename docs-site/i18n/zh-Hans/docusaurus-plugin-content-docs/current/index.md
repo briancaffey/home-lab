@@ -59,7 +59,7 @@ flowchart TB
 
 - **AI 与推理** —— vLLM 模型服务器、图像/视频/语音生成、位于前端的 [LiteLLM 网关](/ai/litellm)、[PII 脱敏守卫](/ai/rampart)，以及 [Hermes](/ai/hermes)——一个运行在集群内、拥有自己保险库权限的智能体。
 - **平台与 GitOps** —— [Argo CD](/gitops/argocd)、[Renovate](/gitops/renovate)，以及其余部分所依赖的基础：Forgejo、Harbor 和 Vaultwarden 组成的[自托管三件套](/gitops/the-trio)。
-- **数据与编排** —— [Dagster](/data/dagster)，实验室最新的一层：定时流水线，读我自己的 Prometheus，用我自己的 LLM 网关写报告。它是覆盖在其他一切之上的可编程黏合层。
+- **数据与编排** —— [Dagster](/data/dagster) 跑定时流水线，读我自己的 Prometheus、用我自己的 LLM 网关写报告；[n8n](/data/n8n) 跑事件驱动的 webhook / 集成工作流。它俩合起来，是覆盖在其他一切之上的可编程黏合层。
 - **家庭服务** —— [Jellyfin](/media/jellyfin)、[Immich](/media/immich)、[Paperless](/media/paperless)、音乐、有声书，以及一条为家人整理下载文件的[下载流水线](/media/downloads)。
 - **监控** —— [Prometheus 与 Grafana](/observability/prometheus-grafana)、[发送到手机的告警](/observability/alerting)、[磁盘健康监控](/observability/scrutiny)，以及[每晚执行、经过恢复测试的备份](/platform/backups)。
 
