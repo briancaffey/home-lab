@@ -20,7 +20,7 @@ spec:
                                     # harbor.lan image pulls (ImagePullBackOff)
       containers:
         - name: docs
-          image: harbor.lan/apps/home-lab-docs:a67d1cbd4941
+          image: harbor.lan/apps/home-lab-docs:6a6d18cc9456
           ports:
             - { name: http, containerPort: 80 }
           readinessProbe:
