@@ -1205,3 +1205,28 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# n8n (workflow automation / LLM & agent flows). Helm chart (community-charts) +
+# our own external Postgres + n8n.lan ingress in clusters/home/n8n. Single-main,
+# no queue mode. Out-of-band secrets (NOT in git): n8n-encryption-key,
+# n8n-postgres-secret, n8n-litellm, n8n-tls (scripts/lan-certs.sh).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-n8n
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/n8n
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: n8n
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -20,3 +20,4 @@ resources:
   - ingress-forgejo.yaml
   - ingress-phoenix.yaml
   - ingress-dagster.yaml
+  - ingress-n8n.yaml

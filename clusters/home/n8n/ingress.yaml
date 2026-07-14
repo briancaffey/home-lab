@@ -1,0 +1,45 @@
+# https://n8n.lan/ (Traefik + mkcert n8n-tls). n8n emits absolute https URLs
+# (editor/webhook base = https://n8n.lan/), so force HTTP->HTTPS via the same
+# redirect-https Middleware pattern used by litellm. gethomepage annotations
+# register it on the Homepage dashboard under an "Automation" group.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: n8n
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n
+  namespace: n8n
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: n8n-redirect-https@kubernetescrd
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "n8n"
+    gethomepage.dev/description: "Workflow automation — LLM/agent flows, webhooks, integrations"
+    gethomepage.dev/group: "Automation"
+    gethomepage.dev/icon: "sh-n8n"
+    gethomepage.dev/href: "https://n8n.lan/"
+    gethomepage.dev/pod-selector: "app.kubernetes.io/name=n8n"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: n8n.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n
+                port:
+                  number: 5678
+  tls:
+    - secretName: n8n-tls
+      hosts:
+        - n8n.lan

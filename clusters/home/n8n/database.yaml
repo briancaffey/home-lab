@@ -1,0 +1,85 @@
+# n8n metadata store. Plain postgres:16-alpine (repo convention — no bitnami
+# subchart), local-path PVC pinned to a2 (disk headroom; co-located with the n8n
+# main pod, which is also pinned to a2 in values.yaml).
+#
+# The n8n Helm chart reads the password from the SAME secret/key it expects via
+# externalPostgresql.existingSecret / existingSecretPasswordKey:
+#   secret: n8n-postgres-secret   key: postgres-password
+# Secret is created out-of-band (NOT committed — public repo):
+#   kubectl -n n8n create secret generic n8n-postgres-secret \
+#     --from-literal=postgres-password="$(openssl rand -hex 24)"
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: n8n-postgres
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: n8n-postgres
+  template:
+    metadata:
+      labels:
+        app: n8n-postgres
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: n8n
+            - name: POSTGRES_USER
+              value: n8n
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-postgres-secret
+                  key: postgres-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "n8n", "-d", "n8n"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 30
+          resources:
+            requests:
+              cpu: "100m"
+              memory: 256Mi
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim:
+            claimName: n8n-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n-postgres
+spec:
+  selector:
+    app: n8n-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

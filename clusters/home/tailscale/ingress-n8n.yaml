@@ -1,0 +1,21 @@
+# https://n8n.<tailnet>.ts.net  ->  n8n/n8n:5678
+# Remote access to the n8n editor over the tailnet (default-deny ACL; the
+# operator proxy carries tag:k8s). n8n has its own user-management/login, but
+# keep it tailnet-only anyway. NOTE: WEBHOOK_URL is pinned to https://n8n.lan/
+# (values.yaml) — if you want inbound webhooks to use the tailnet host instead,
+# set WEBHOOK_URL to https://n8n.<tailnet>.ts.net/.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n-ts
+  namespace: n8n
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: n8n
+      port:
+        number: 5678
+  tls:
+    - hosts:
+        - n8n

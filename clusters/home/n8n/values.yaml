@@ -1,0 +1,81 @@
+# n8n (community-charts/n8n). Single-main, internal task runner — no queue mode,
+# no Redis (this is a LAN experimentation instance, not a 50k-exec/mo fleet).
+# DB = our own postgres:16-alpine (database.yaml), NOT the bitnami subchart.
+image:
+  pullPolicy: IfNotPresent
+
+# Co-locate the main pod with its Postgres on a2 (local-path PVC lives on a2).
+nodeSelector:
+  inference-club.com/box: a2
+
+# --- Database: bring-your-own external Postgres --------------------------------
+db:
+  type: postgresdb
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+externalPostgresql:
+  host: n8n-postgres.n8n.svc.cluster.local
+  port: 5432
+  username: n8n
+  database: n8n
+  existingSecret: n8n-postgres-secret
+  existingSecretPasswordKey: postgres-password
+
+# --- Stable encryption key from an out-of-band secret --------------------------
+# Public repo: the key is NEVER in git. Secret key name must be N8N_ENCRYPTION_KEY.
+# Losing this key = losing every stored credential. Back it up in Vaultwarden.
+existingEncryptionKeySecret: n8n-encryption-key
+
+timezone: "Etc/UTC"
+
+# --- Public API on, so workflows can be pushed from git/CI (community GitOps) ---
+api:
+  enabled: true
+  swagger:
+    enabled: true
+
+main:
+  count: 1
+  editorBaseUrl: "https://n8n.lan/"
+  # Persist /home/node/.n8n (installed community nodes, logs, settings). local-path
+  # PVC -> pinned to a2 by the nodeSelector above.
+  persistence:
+    enabled: true
+    mountPath: "/home/node/.n8n"
+    accessMode: ReadWriteOnce
+    size: 8Gi
+  extraEnvVars:
+    # N8N_PORT and N8N_EDITOR_BASE_URL are set by the chart (service.port /
+    # main.editorBaseUrl) — don't duplicate them here.
+    N8N_HOST: "n8n.lan"
+    N8N_PROTOCOL: "https"
+    WEBHOOK_URL: "https://n8n.lan/"
+    N8N_DIAGNOSTICS_ENABLED: "false"
+    # Let expressions / Code nodes read pod env (e.g. $env.LITELLM_BASE_URL).
+    N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    # "Write code" freedom: the Code node may require any built-in + external npm
+    # module, and n8n auto-installs missing community packages on demand.
+    NODE_FUNCTION_ALLOW_BUILTIN: "*"
+    NODE_FUNCTION_ALLOW_EXTERNAL: "*"
+    N8N_REINSTALL_MISSING_PACKAGES: "true"
+    # Convenience handle for the in-cluster LiteLLM gateway (OpenAI-compatible).
+    LITELLM_BASE_URL: "http://litellm.observability.svc.cluster.local:4000/v1"
+  extraEnv:
+    - name: LITELLM_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: n8n-litellm
+          key: api-key
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+
+# We provide our own Traefik ingress (ingress.yaml) with the mkcert n8n-tls cert.
+ingress:
+  enabled: false
