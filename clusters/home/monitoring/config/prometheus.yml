@@ -60,7 +60,7 @@ scrape_configs:
         labels: { node: spark }
       - targets: ["192.168.5.174:9100"]   # x1
         labels: { node: x1 }
-      - targets: ["192.168.4.33:9100"]    # t430 (CPU agent, .4.x subnet)
+      - targets: ["192.168.4.35:9100"]    # t430 (CPU agent, .4.x subnet)
         labels: { node: t430 }
 
   # NOTE: no LiteLLM /metrics scrape. LiteLLM's native Prometheus endpoint is an

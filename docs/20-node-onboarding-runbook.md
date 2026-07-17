@@ -73,7 +73,7 @@ sudo du -x -h --max-depth=2 / 2>/dev/null | sort -rh | head -20   # hunt leftove
 
 - Add a **DHCP reservation** so the node's IP is stable. Any of the LAN subnets
   works — a3/others are `192.168.5.x`, spark is `192.168.6.19`, t430 is
-  `192.168.4.33`. The eero routes between them, so a different `/24` is fine (§6).
+  `192.168.4.35`. The eero routes between them, so a different `/24` is fine (§6).
 - Give it a nickname matching the hostname.
 
 ## 4. Prep scripts — run BEFORE the join, in this order
