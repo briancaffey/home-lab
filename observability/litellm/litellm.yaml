@@ -129,11 +129,15 @@ data:
   config.yaml: |
     model_list:
       # ── In-cluster (primary, free, private) ───────────────────────────────
-      # vLLM nemotron-omni on spark. vLLM ignores auth, so api_key is a stub.
+      # The in-cluster vLLM "active slot" on spark (Service always spark-llm;
+      # currently loaded: Qwen3.6-27B). "nemotron-omni" is kept as the stable
+      # public alias so callers (Dagster LITELLM_MODEL, the fallbacks below)
+      # don't churn on model swaps — only model/api_base below track the live
+      # model. vLLM ignores auth, so api_key is a stub.
       - model_name: nemotron-omni
         litellm_params:
-          model: openai/nemotron-3-nano-omni
-          api_base: http://nemotron-omni.inference-club.svc.cluster.local:8000/v1
+          model: openai/qwen3.6-27b
+          api_base: http://spark-llm.inference-club.svc.cluster.local:8000/v1
           api_key: "vllm-local"
       # LM Studio host process (scaled to 0 today). Wildcard passthrough so
       # whichever model LM Studio has loaded just works when it's up.

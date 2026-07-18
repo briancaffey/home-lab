@@ -18,27 +18,31 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: lan-nemotron-omni
+  # The model-agnostic "active vLLM slot" on spark (Deployment/Service always
+  # named spark-llm; the services/vllm/active overlay decides which model is
+  # loaded). Host stays stable at llm.lan across model swaps — only the tile
+  # name/description below track the model currently loaded.
+  name: lan-spark-llm
   namespace: inference-club
   annotations:
     gethomepage.dev/enabled: "true"
-    gethomepage.dev/name: "nemotron-omni"
-    gethomepage.dev/description: "vLLM omni LLM (spark)"
+    gethomepage.dev/name: "qwen3.6-27b"
+    gethomepage.dev/description: "vLLM Qwen3.6-27B — reasoning + tools (spark)"
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-brain"
-    gethomepage.dev/href: "https://omni.lan/docs"
-    gethomepage.dev/pod-selector: "app=nemotron-omni"
-    gethomepage.dev/siteMonitor: "http://nemotron-omni.inference-club:8000/health"
+    gethomepage.dev/href: "https://llm.lan/docs"
+    gethomepage.dev/pod-selector: "app=spark-llm"
+    gethomepage.dev/siteMonitor: "http://spark-llm.inference-club:8000/health"
 spec:
   ingressClassName: traefik
-  tls: [{ hosts: ["omni.lan"], secretName: inference-tls }]
+  tls: [{ hosts: ["llm.lan"], secretName: inference-tls }]
   rules:
-    - host: omni.lan
+    - host: llm.lan
       http:
         paths:
           - path: /
             pathType: Prefix
-            backend: { service: { name: nemotron-omni, port: { number: 8000 } } }
+            backend: { service: { name: spark-llm, port: { number: 8000 } } }
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

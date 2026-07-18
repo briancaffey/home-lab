@@ -140,9 +140,9 @@ config:
     # OpenAPI (/docs) pages for the long-lived inference services — the same
     # hostnames scripts/containers should target (clusters/home/inference-lan).
     - Inference API Docs:
-        - nemotron-omni:
-            - abbr: OM
-              href: https://omni.lan/docs
+        - qwen3.6-27b:
+            - abbr: Q3
+              href: https://llm.lan/docs
         - nemotron-asr:
             - abbr: ASR
               href: https://asr.lan/docs

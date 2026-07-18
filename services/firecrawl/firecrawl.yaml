@@ -232,9 +232,9 @@ spec:
             - { name: POSTGRES_PASSWORD, value: postgres }
             - { name: POSTGRES_DB, value: postgres }
             # LLM under the hood → the in-cluster vLLM (OpenAI-compatible).
-            - { name: OPENAI_BASE_URL, value: http://nemotron-omni.inference-club.svc.cluster.local:8000/v1 }
+            - { name: OPENAI_BASE_URL, value: http://spark-llm.inference-club.svc.cluster.local:8000/v1 }
             - { name: OPENAI_API_KEY, value: "vllm-local" }  # vLLM ignores auth
-            - { name: MODEL_NAME, value: "nemotron-3-nano-omni" }
+            - { name: MODEL_NAME, value: "qwen3.6-27b" }
           # hostPort exposes the scrape API on the node's LAN IP
           # (a3 = 192.168.5.173:3002) so an out-of-cluster agent (e.g. the
           # local dev agent) can reach it, matching how flux/dia/ltx/vllm are
