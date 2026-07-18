@@ -16,6 +16,13 @@ spec:
       containers:
         - name: vllm
           image: vllm/vllm-openai:nightly
+          # Overrides the base's Always: on spark the anonymous Docker Hub
+          # re-pull of :nightly is rate-limited and can wedge a pod roll for
+          # 10+ min while the SAME image is already cached locally — and with
+          # the Recreate strategy that means an outage. IfNotPresent uses the
+          # cached image; to intentionally pull a newer nightly, delete the
+          # cached image on spark (crictl rmi) or bump to a pinned :vX.Y.Z.
+          imagePullPolicy: IfNotPresent
           env:
             - name: MAX_NUM_SEQS
               value: "4"
