@@ -201,6 +201,10 @@ metadata:
   labels: { app: firecrawl-api }
 spec:
   replicas: 1
+  # Recreate (like the sibling firecrawl-* deployments): single replica pinned
+  # to a3 with a node hostPort (:3002), so RollingUpdate can never surge — the
+  # new pod can't bind the port the old one still holds and the roll deadlocks.
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: firecrawl-api }
   template:
