@@ -9,7 +9,7 @@
 #   ghcr.io/firecrawl/playwright-service headless-chromium fetcher
 #   ghcr.io/firecrawl/nuq-postgres       postgres + pg_cron + nuq queue schema
 #   redis:alpine                         queue / rate-limit store
-#   rabbitmq:3-management                nuq message bus
+#   rabbitmq:4-management                nuq message bus
 #
 # Whole stack pinned to a3 (co-located; CPU-only — no GPU, no runtimeClassName).
 # All cross-talk is in-cluster DNS. The api's OPENAI_BASE_URL targets the cluster
@@ -79,7 +79,7 @@ spec:
       nodeSelector: { inference-club.com/box: a3 }
       containers:
         - name: rabbitmq
-          image: rabbitmq:3-management
+          image: rabbitmq:4-management
           ports:
             - { name: amqp, containerPort: 5672 }
             - { name: mgmt, containerPort: 15672 }
