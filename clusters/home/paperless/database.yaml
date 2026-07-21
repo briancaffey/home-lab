@@ -28,7 +28,7 @@ spec:
         inference-club.com/box: a2
       containers:
         - name: postgres
-          image: postgres:16-alpine
+          image: postgres:18-alpine
           env:
             - name: POSTGRES_DB
               value: paperless
