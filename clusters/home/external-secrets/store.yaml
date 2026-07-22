@@ -1,0 +1,22 @@
+# ClusterSecretStore: the single Vaultwarden source for every ExternalSecret in
+# the cluster. Uses ESO's webhook provider pointed at the bw-serve bridge.
+#
+# Convention (keeps one jsonPath working for all secrets):
+#   - one Vaultwarden item per k8s Secret, named exactly = remoteRef.key
+#   - each k8s Secret data key is a CUSTOM FIELD on that item
+#     (field name = remoteRef.property, field value = the secret value)
+#
+# The URL searches by item name; the jsonPath then exact-matches the item by
+# name (search is substring) and pulls the field whose name == the property.
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: vaultwarden
+spec:
+  provider:
+    webhook:
+      url: "http://vaultwarden-bridge.external-secrets.svc:8087/list/object/items?search={{ .remoteRef.key }}"
+      headers:
+        Content-Type: application/json
+      result:
+        jsonPath: '$.data.data[?@.name=="{{ .remoteRef.key }}"].fields[?@.name=="{{ .remoteRef.property }}"].value'

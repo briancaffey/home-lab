@@ -1,0 +1,95 @@
+# Vaultwarden bridge for ESO — runs `bw serve` (Bitwarden CLI REST API) against
+# Vaultwarden, so ESO's webhook provider can read items. This is the in-cluster
+# equivalent of scripts/vault-secret.sh: same bot API-key + master password
+# (the out-of-band `vaultwarden-bot` Secret), same mkcert home-tls CA trust
+# (the out-of-band `home-ca` ConfigMap). Talks to Vaultwarden over HTTPS at
+# vault.lan (the bw CLI refuses plain-HTTP URLs). amd64-pinned off spark.
+#
+# SECURITY: `bw serve` exposes the UNLOCKED vault with no auth on :8087, so the
+# NetworkPolicy below restricts ingress to the external-secrets controller only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultwarden-bridge
+  namespace: external-secrets
+  labels: { app: vaultwarden-bridge }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: vaultwarden-bridge }
+  template:
+    metadata:
+      labels: { app: vaultwarden-bridge }
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      containers:
+        - name: bw
+          image: ghcr.io/charlesthomas/bitwarden-cli:2026.3.0
+          env:
+            - { name: NODE_EXTRA_CA_CERTS, value: /ca/rootCA.pem }
+          envFrom:
+            - secretRef: { name: vaultwarden-bot }
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              bw config server "$BW_HOST"
+              export BW_CLIENTID BW_CLIENTSECRET
+              bw login --apikey
+              export BW_SESSION="$(bw unlock --passwordenv BW_PASSWORD --raw)"
+              bw sync
+              echo "bridge: serving on :8087"
+              exec bw serve --hostname 0.0.0.0 --port 8087
+          ports:
+            - { name: http, containerPort: 8087 }
+          readinessProbe:
+            httpGet: { path: /status, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+          livenessProbe:
+            httpGet: { path: /status, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources:
+            requests: { cpu: 25m, memory: 96Mi }
+            limits: { memory: 384Mi }
+          volumeMounts:
+            - { name: ca, mountPath: /ca, readOnly: true }
+      volumes:
+        - name: ca
+          configMap: { name: home-ca }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vaultwarden-bridge
+  namespace: external-secrets
+spec:
+  selector: { app: vaultwarden-bridge }
+  ports:
+    - { name: http, port: 8087, targetPort: http }
+---
+# Only the ESO controller may reach the unlocked-vault bridge.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vaultwarden-bridge-lockdown
+  namespace: external-secrets
+spec:
+  podSelector:
+    matchLabels: { app: vaultwarden-bridge }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: external-secrets
+      ports:
+        - { protocol: TCP, port: 8087 }
