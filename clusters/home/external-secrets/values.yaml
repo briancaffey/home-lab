@@ -1,0 +1,28 @@
+# External Secrets Operator — home-lab values.
+# Reconciles cluster Secrets from Vaultwarden (via a bw-serve webhook bridge —
+# see bridge.yaml + the `vaultwarden` ClusterSecretStore). CRDs install by
+# default. Kept off the flaky arm64 spark node (amd64 only).
+replicaCount: 1
+installCRDs: true
+
+nodeSelector:
+  kubernetes.io/arch: amd64
+resources:
+  requests: { cpu: 10m, memory: 64Mi }
+  limits: { memory: 256Mi }
+
+webhook:
+  replicaCount: 1
+  nodeSelector:
+    kubernetes.io/arch: amd64
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
+
+certController:
+  replicaCount: 1
+  nodeSelector:
+    kubernetes.io/arch: amd64
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }
