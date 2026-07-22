@@ -41,6 +41,13 @@ spec:
               bw login --apikey
               export BW_SESSION="$(bw unlock --passwordenv BW_PASSWORD --raw)"
               bw sync
+              # Periodic re-sync so newly-added / rotated Vaultwarden items
+              # appear without a restart. bw serve caches in memory, so we hit
+              # its own POST /sync endpoint (node is present — bw is a node app).
+              ( while true; do
+                  sleep 300
+                  node -e "require('http').request({host:'localhost',port:8087,path:'/sync',method:'POST'},r=>r.resume()).on('error',()=>{}).end()" 2>/dev/null || true
+                done ) &
               echo "bridge: serving on :8087"
               exec bw serve --hostname 0.0.0.0 --port 8087
           ports:
