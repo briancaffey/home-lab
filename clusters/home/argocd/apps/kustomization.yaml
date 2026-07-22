@@ -11,3 +11,4 @@ resources:
   - clusterscape.yaml
   - home-services.yaml
   - inference-club.yaml
+  - external-secrets.yaml
