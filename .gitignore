@@ -15,6 +15,10 @@ secret*.yaml
 secrets*.yaml
 *-secret.yaml
 *.secret.yaml
+# EXCEPTION: ESO ExternalSecret manifests are value-less pointers (they reference
+# Vaultwarden items, never contain secret data), so they're safe despite the
+# "-secret" in many names. This dir must ONLY ever hold ExternalSecrets.
+!clusters/home/external-secrets/secrets/*.yaml
 
 # kustomize `--enable-helm` pulls charts here on build; re-pulled each time,
 # so we don't vendor them.
