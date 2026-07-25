@@ -26,7 +26,7 @@ resources:
 helmCharts:
   - name: n8n
     repo: https://community-charts.github.io/helm-charts
-    version: 1.24.10 # Renovate tracks this
+    version: 1.24.18 # Renovate tracks this
     releaseName: n8n
     namespace: n8n
     valuesFile: values.yaml
