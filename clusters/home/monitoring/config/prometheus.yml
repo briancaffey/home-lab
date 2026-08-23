@@ -28,7 +28,7 @@ scrape_configs:
   # a2 is parked (NVML mismatch) and spark needs an arm64 tag — add when ready.
   - job_name: dcgm
     static_configs:
-      - targets: ["192.168.5.253:9400"]   # a1
+      - targets: ["192.168.4.25:9400"]   # a1
         labels: { node: a1 }
       - targets: ["192.168.5.173:9400"]   # a3
         labels: { node: a3 }
@@ -42,7 +42,7 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets:
-          - "192.168.5.253:9401"   # a1
+          - "192.168.4.25:9401"   # a1
           - "192.168.5.96:9401"    # a2
           - "192.168.5.173:9401"   # a3
           - "192.168.6.19:9401"    # spark (GB10)
@@ -50,7 +50,7 @@ scrape_configs:
   # node-exporter — host metrics (DaemonSet, hostPort 9100, all nodes).
   - job_name: node
     static_configs:
-      - targets: ["192.168.5.253:9100"]   # a1
+      - targets: ["192.168.4.25:9100"]   # a1
         labels: { node: a1 }
       - targets: ["192.168.5.96:9100"]    # a2
         labels: { node: a2 }
