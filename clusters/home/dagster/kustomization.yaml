@@ -27,7 +27,7 @@ resources:
 helmCharts:
   - name: dagster
     repo: https://dagster-io.github.io/helm
-    version: 1.13.13 # Renovate tracks this
+    version: 1.13.20 # Renovate tracks this
     releaseName: dagster
     namespace: dagster
     valuesFile: values.yaml
