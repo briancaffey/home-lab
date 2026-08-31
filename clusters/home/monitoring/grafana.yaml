@@ -61,14 +61,19 @@ spec:
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
-            limits:
               memory: 512Mi
+            limits:
+              # Grafana 13 runs the unified-storage apiserver with bleve search
+              # indexing; 512Mi left ~360Mi of irreducible heap fighting the
+              # binary's own page cache, thrashing instead of OOM-killing.
+              memory: 1Gi
           readinessProbe:
             httpGet:
               path: /api/health
               port: http
             initialDelaySeconds: 10
+            # Default 1s flaps on any GC pause
+            timeoutSeconds: 5
           volumeMounts:
             - name: data
               mountPath: /var/lib/grafana
