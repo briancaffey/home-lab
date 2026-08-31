@@ -101,7 +101,7 @@ spec:
               set -e
               mkdir -p /opt/data/.local/bin
               if [ ! -x /opt/data/.local/bin/bw ]; then
-                curl -fsSL -o /tmp/bw.zip https://github.com/bitwarden/clients/releases/download/cli-v2026.6.0/bw-linux-2026.6.0.zip
+                curl -fsSL -o /tmp/bw.zip https://github.com/bitwarden/clients/releases/download/cli-v2026.8.0/bw-linux-2026.8.0.zip
                 python3 -m zipfile -e /tmp/bw.zip /opt/data/.local/bin/
                 chmod +x /opt/data/.local/bin/bw
               fi
