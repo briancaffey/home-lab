@@ -20,11 +20,16 @@ nodeSelector:
   kubernetes.io/arch: amd64
   inference-club.com/box: a2
 
-# LLM goes through LiteLLM in-cluster by default (fallbacks, budgets, Phoenix
-# traces). To bypass it for LM Studio on spark, as the Mac .env does during a
-# gateway outage:
+# LLM goes through LiteLLM in-cluster as route `spark-omni` (chart default):
+# LM Studio on the spark box, no fallbacks, so nothing paid can be substituted.
+# To bypass the gateway during an outage, as the Mac .env does, the model must
+# switch to the id LM Studio itself reports:
 #   inference:
-#     llm: { baseUrl: http://192.168.6.19:1234/v1 }
+#     llm:
+#       baseUrl: http://192.168.6.19:1234/v1
+#       model: nvidia/nemotron-3-nano-omni
+#       triageModel: nvidia/nemotron-3-nano-omni
+#       visionModel: nvidia/nemotron-3-nano-omni
 
 features:
   video: true
