@@ -12,3 +12,4 @@ resources:
   - home-services.yaml
   - inference-club.yaml
   - external-secrets.yaml
+  - hnfm.yaml

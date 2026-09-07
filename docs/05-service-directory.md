@@ -91,6 +91,7 @@ run `mkcert -install` once per client to trust the CA).
 | Speedtest | WAN/ISP speed tracker (a2) → Grafana | https://speedtest.lan/ · dash "Speedtest — WAN/ISP" |
 | Pi-hole | Network-wide DNS ad-blocker (a2) | https://pihole.lan/admin · **DNS → `192.168.5.96:53`** (hostPort) |
 | Hermes Agent | Nous Research agent — dashboard + OpenAI-compatible API, LiteLLM-driven (x1) | https://hermes.lan/ · API `https://hermes.lan/v1` (bearer key) |
+| hn.fm | Hacker News → scored, scripted, voiced, rendered; Celery lanes + HyperFrames sidecar, GitOps-deployed (a2) | https://hnfm.lan/ · API `/api`, Flower `/flower`, media `/hnfm-media` |
 
 ---
 

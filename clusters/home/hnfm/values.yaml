@@ -1,0 +1,37 @@
+# hn.fm environment overlay for the home cluster. Chart defaults live with the
+# app: github.com/briancaffey/hn.fm → charts/hnfm/values.yaml. Only what
+# differs from those defaults belongs here.
+#
+# Secrets come from Vaultwarden item `hnfm-hnfm-secrets` via External Secrets
+# (one custom field per key). Nothing sensitive goes in this file.
+
+image:
+  # CI writes this line on every push to hn.fm main (12-char commit SHA).
+  # Do not edit by hand — the next build overwrites it.
+  tag: latest
+
+secrets:
+  create: false
+externalSecret:
+  enabled: true
+
+# Everything shares one node (local-path outputs volume). a2 has the disk.
+nodeSelector:
+  kubernetes.io/arch: amd64
+  inference-club.com/box: a2
+
+# LLM goes through LiteLLM in-cluster by default (fallbacks, budgets, Phoenix
+# traces). To bypass it for LM Studio on spark, as the Mac .env does during a
+# gateway outage:
+#   inference:
+#     llm: { baseUrl: http://192.168.6.19:1234/v1 }
+
+features:
+  video: true
+  music: false          # acestep is parked at 0 replicas
+  hyperframes: true
+  metaSequencer: true
+  digestSchedule: false # flip on once Kindle secrets are in Vaultwarden
+
+flower:
+  enabled: true         # https://hnfm.lan/flower

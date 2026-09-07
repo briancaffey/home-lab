@@ -1,0 +1,35 @@
+# hn.fm (github.com/briancaffey/hn.fm, Forgejo copy brian/hn.fm): Hacker News
+# stories → scored, scripted, voiced, rendered. FastAPI + Celery lanes + Nuxt +
+# a HyperFrames render sidecar, with chart-owned Postgres/Redis/MinIO.
+#
+# Multi-source: the chart lives with the app (charts/hnfm in the hn.fm repo),
+# the environment values live here (clusters/home/hnfm/values.yaml). The app
+# repo's CI builds the three images, pushes them to harbor.lan/apps, and
+# commits the new image.tag into that values file — that commit is the rollout.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hnfm
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://forgejo.lan/brian/hn.fm.git
+      targetRevision: main
+      path: charts/hnfm
+      helm:
+        releaseName: hnfm   # object names derive from this; keep it stable
+        valueFiles:
+          - $values/clusters/home/hnfm/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hnfm
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

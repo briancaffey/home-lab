@@ -43,6 +43,13 @@
       "enabled": false
     },
     {
+      "description": "App images built by the Forgejo runner (harbor.lan/apps/*): CI writes these tags (hello-gitops, hnfm, docs, ...); Renovate can't resolve them and would only add noise",
+      "matchPackageNames": [
+        "harbor.lan/apps/**"
+      ],
+      "enabled": false
+    },
+    {
       "description": "jellyfin: pinned to a daily (see jellyfin.yaml); daily tags would spam PRs. Re-enable when back on stable 10.11.12+",
       "matchPackageNames": [
         "jellyfin/jellyfin"
