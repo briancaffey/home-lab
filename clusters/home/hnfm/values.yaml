@@ -8,7 +8,7 @@
 image:
   # CI writes this line on every push to hn.fm main (12-char commit SHA).
   # Do not edit by hand — the next build overwrites it.
-  tag: f796a6213f50
+  tag: 5d080af1b74b
 
 secrets:
   create: false
