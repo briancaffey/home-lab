@@ -38,6 +38,8 @@ The cluster's nodes get the same treatment via split DNS: only the `lan` zone ro
 
 Away from home, a handful of services are reachable over [Tailscale](https://tailscale.com) — each exposed service gets its own tailnet hostname with a real Let's Encrypt certificate. The tailnet ACL is **default-deny**: nothing is reachable until explicitly granted, and only the few services worth remote access are exposed at all. Nothing is ever open to the internet.
 
+One thing the second hostname taught me: **an Ingress is only half of exposing a service on two names.** The other half is the app itself. When I put [hn.fm](../media/hnfm.md) on the tailnet, the tailnet page loaded and then broke three ways at once — the frontend called the API on an absolute `https://hnfm.lan` URL, CORS allowed only that origin, and MinIO's presigned media URLs were signed for that host and rejected on any other. Every fix was in the app, not the cluster: relative same-origin URLs, a server-side proxy for SSR, and signed URLs derived from the host the request arrived on. My rule now for anything I write that might get a second name: never bake a public hostname into an environment variable; derive it from the request.
+
 And the decision I keep *not* making, on purpose: pointing the household router's DHCP at Pi-hole so every family device resolves `.lan` automatically. It sounds obviously good until you notice the CA is per-device anyway — family phones would resolve the names and then hit certificate warnings. `.lan` is an operator fabric; the day it should be a household one, the answer is a real domain with Let's Encrypt, not router surgery.
 
 ## Daily life with it

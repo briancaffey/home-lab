@@ -29,7 +29,7 @@ const sidebars: SidebarsConfig = {
       'observability/prometheus-grafana', 'observability/logs', 'observability/alerting', 'observability/scrutiny',
     ]},
     {type: 'category', label: 'Media & Life', items: [
-      'media/jellyfin', 'media/immich', 'media/paperless', 'media/music-and-books', 'media/downloads',
+      'media/jellyfin', 'media/immich', 'media/paperless', 'media/music-and-books', 'media/hnfm', 'media/downloads',
     ]},
     {type: 'category', label: 'Platform Services', items: [
       'platform/vaultwarden', 'platform/backups', 'platform/harbor', 'platform/forgejo', 'platform/mailpit',
