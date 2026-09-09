@@ -1,0 +1,80 @@
+# https://hnfm.<tailnet>.ts.net  ->  hn.fm (path-routed like the .lan ingress)
+#   /api /docs /redoc /openapi.json /health -> hnfm-web:8000      (FastAPI)
+#   /hnfm-media                             -> hnfm-minio:9000    (media bucket)
+#   /flower                                 -> hnfm-flower:5555   (Celery UI)
+#   /                                       -> hnfm-frontend:3000 (Nuxt)
+#
+# Mirrors charts/hnfm/templates/ingress.yaml in the hn.fm repo; if a path is
+# added there, add it here too. The app is hostname-agnostic (relative API
+# base, media URLs signed for the requesting host), so the same deployment
+# answers on both names. Remote-only intent: hn.fm has no login of its own,
+# the tailnet ACL is the gate.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hnfm-ts
+  namespace: hnfm
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - hnfm
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-web
+                port:
+                  number: 8000
+          - path: /docs
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-web
+                port:
+                  number: 8000
+          - path: /redoc
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-web
+                port:
+                  number: 8000
+          - path: /openapi.json
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-web
+                port:
+                  number: 8000
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-web
+                port:
+                  number: 8000
+          - path: /hnfm-media
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-minio
+                port:
+                  number: 9000
+          - path: /flower
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-flower
+                port:
+                  number: 5555
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hnfm-frontend
+                port:
+                  number: 3000

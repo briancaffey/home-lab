@@ -128,6 +128,10 @@ config:
             href: https://dagster.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: /icons/dagster.svg
             description: Data pipeline orchestration
+        - hn.fm:
+            href: https://hnfm.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: mdi-podcast
+            description: Hacker News, watchable
   bookmarks:
     - Homelab:
         - GitHub:
