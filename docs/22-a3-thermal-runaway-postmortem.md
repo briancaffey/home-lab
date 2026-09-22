@@ -94,9 +94,25 @@ Delivered by Argo CD (`home-monitoring` app) → Reloader restarts Prometheus.
 - `docs/20` onboarding runbook lists `node-lockup-guard.sh` as a mandatory prep script.
 - `CLAUDE.md`: incident noted under known constraints; a1's LAN IP corrected to `192.168.4.25`.
 
-## Verification
+## Verification (2026-09-22 18:49–18:56 EDT)
 
-See the "Verification" section at the end (filled after the reboot).
+```
+a3   kernel 7.0.0-34-generic        microcode 0x133 ("Updated early from: 0x0000011d")
+     taint 12289 = P O E             (S = out-of-spec and L = soft lockup are gone)
+     sysctl softlockup_panic=1 watchdog_thresh=30 panic=15
+     systemd: "Using hardware watchdog 'iTCO_wdt', version 6, device /dev/watchdog0"
+              "Watchdog running with a timeout of 2min."
+     nvidia-smi: RTX 4090, driver 580.173.02, 34 °C     k3s active, node Ready, 71 pods Running
+     CPU package 34 °C idle (75 °C on some cores right after the hard power-off)
+t430 rebooted to prove the boot path: hw-watchdog.service active, "Watchdog running
+     with a timeout of 2min" at 18:55:09 — the guard arms itself without a human.
+a1/a2/t430: sysctls live, /dev/watchdog0 armed at 2min, intel-microcode installed.
+Argo CD home-monitoring: Synced at 92eabee; rule group node-runaway loaded in Prometheus.
+```
+
+Pods still unhealthy on a3 afterwards (`minio` ImagePullBackOff, `clusterscape` and
+`local-studio-frontend` CrashLoopBackOff, `langfuse-web` image pull) were already
+failing before the incident and are unrelated.
 
 ## Follow-ups (ranked)
 
