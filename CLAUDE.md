@@ -86,6 +86,10 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
 ## Storage
 - **`local-path`** (node-local disk) only. PVCs are therefore **pinned to a node**
   via `nodeSelector` (e.g. Grafana/Prometheus on a3). No mobility, no redundancy.
+  On **a3** the local-path dir is a bind mount from the SSD (`/opt/k3s-storage`);
+  three bulk PVs (platform MinIO, audiobookshelf media, langfuse S3) bind back
+  to the HDD (`storage.hdd/`). New bulk PVs on a3 need the same treatment or
+  they land on the 228 GB SSD next to the cluster DB — see docs/22 addendum.
 - **No replicated storage and no NAS yet.** Free disk: a2 ~527 GB, a3 ~75 GB,
   a1 ~49 GB (small). Longhorn (2-replica on a2+a3 to start) is the planned next
   step for redundancy/mobility — see the bin-packing goal.

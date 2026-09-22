@@ -119,17 +119,51 @@ failing before the incident and are unrelated.
 1. **BIOS update on a3** (ASUS ROG STRIX Z790-E GAMING WIFI II is on 0220 from
    2023). Newer BIOS carries the 0x12B+ microcode natively and the Intel
    default power profile for 14900K. Manual, needs a monitor + USB stick.
-2. **Move a3's hot storage off the HDD.** Same bind-mount trick already used
-   for the SQLite DB: rsync `/mnt/d/k3s-data/storage` (14 GB of databases) to
-   the SSD and bind-mount it back; consider containerd's root too if the SSD
-   (68 GB free) can hold the image store. Do it in a planned window (k3s
-   stopped, final rsync, fstab, reboot).
+2. ~~Move a3's hot storage off the HDD.~~ **Done 2026-09-22 19:39** — see
+   the addendum below. containerd's image store (132 GB on disk) stays on the
+   HDD: it does not fit a 228 GB SSD with headroom, and image layers are
+   read once then cached in RAM, so it is the wrong thing to spend SSD on.
 3. **Kernel meta-packages on a2 and t430**: a2 is on the 22.04 HWE 6.8 line,
    t430 on a bare 6.14 — run the guard with `--kernel` when convenient.
 4. **HA control plane** (already on the roadmap): the 9-hour outage was the
    whole cluster's API because a3 is the only server.
 5. **Stale docs:** `README.md` and `docs/05` still list a1 at `192.168.5.253`
    (left untouched because those files had uncommitted edits in progress).
+
+## Addendum — a3 local-path volumes moved to the SSD (2026-09-22 19:39)
+
+Measured first: 16 PVs pinned to a3, 15 GB on disk (ClickHouse 4.6, Phoenix
+Postgres 4.4, Prometheus 4.4, MinIO 0.6, the rest under 250 MB each).
+containerd's store is 132 GB; the SSD had 66 GB free. So: volumes yes,
+images no.
+
+Layout now (same bind-mount pattern as the SQLite DB in `/opt/k3s-db`):
+
+```
+/opt/k3s-storage  (SSD)  --bind-->  /mnt/d/k3s-data/storage      all local-path PVs
+/mnt/d/k3s-data/storage.hdd/<pv>  --bind-->  …/storage/<pv>      3 bulk-capable PVs stay on the HDD:
+                                                                  platform/minio-data (50Gi cap, media landing zone)
+                                                                  audiobookshelf/audiobookshelf-media (100Gi cap)
+                                                                  observability/langfuse-s3-all-in-one-data (50Gi cap)
+```
+
+Why the split: a media dump into MinIO must never fill the root SSD, which
+also holds the cluster's SQLite datastore. Databases (random writes + fsync)
+go to the SSD; blobs stay on spinning rust. `fstab` carries the four bind
+mounts; `k3s.service.d/11-require-storage-mount.conf` refuses to start k3s if
+the main bind is missing (otherwise every database would initialise empty
+on the HDD directory). The pre-move HDD copy of the non-bulk PVs is still in
+`storage.hdd/` as a rollback until ~2026-09-29; after that it can be deleted.
+
+Procedure that worked: warm rsync while running (15 GB, ~10 min) → stop k3s →
+**stop the containers explicitly** (`k3s-killall.sh` did not find the shims
+under the custom data-dir; `cgroup.kill` on `kubepods.slice` did) → final
+`rsync --delete` + a dry-run pass that must report zero changes → `mv`,
+`fstab`, `mount -a`, guard drop-in → start k3s. API downtime: 19:36 → 19:39.
+
+Follow-up idea: a `local-path-hdd` StorageClass (local-path-provisioner
+`nodePath` parameter pointing at `storage.hdd`) so future bulk PVs on a3 can
+opt into the HDD instead of needing a hand-added bind mount.
 
 ## Appendix — key kernel traces
 
