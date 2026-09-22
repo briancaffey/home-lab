@@ -17,7 +17,7 @@ private values (see "Secrets & privacy").
 | node  | LAN IP        | tailnet role | arch  | GPU              | k3s role |
 |-------|---------------|--------------|-------|------------------|----------|
 | a3    | 192.168.5.173 | online       | amd64 | RTX 4090         | **server (sole control plane)** + workloads |
-| a1    | 192.168.5.253 | online       | amd64 | RTX 4090         | agent |
+| a1    | 192.168.4.25  | online       | amd64 | RTX 4090         | agent |
 | a2    | 192.168.5.96  | online       | amd64 | RTX 4090         | agent |
 | spark | 192.168.6.19  | (often offline) | arm64 | DGX Spark GB10 (128 GB unified) | agent |
 
@@ -29,6 +29,11 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
 - **a1 has flaky USB WiFi** (no wired link): it corrupts multi-GB image pulls and
   is a poor fit for network-heavy roles (etcd, storage replication).
   **Build images elsewhere, not on a1.**
+- **a3 had a kernel-lockup thermal runaway (2026-09-22, docs/22):** two CPUs
+  spun in the kernel for 9h on 6.17.0-14, box hot + unreachable. Every node
+  now runs `scripts/node-lockup-guard.sh` (lockup ⇒ panic-reboot, iTCO
+  watchdog, microcode). Keep nodes on a kernel *meta-package* so they get
+  fixes; a3 is on the 24.04 HWE (7.0) line like a1.
 - **a2 GPU** has periodically hit an NVML driver mismatch (needs reboot) — dcgm
   is scoped to a1+a3 for that reason.
 - **spark** is arm64 + on a different subnet (192.168.6.x); keep it as an agent,

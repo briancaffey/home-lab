@@ -81,7 +81,7 @@ sudo du -x -h --max-depth=2 / 2>/dev/null | sort -rh | head -20   # hunt leftove
 From your laptop repo (`~/git/home-cluster`), against `<ip>`:
 
 ```bash
-for s in node-sudoers node-powersave node-sysctls node-hosts; do
+for s in node-sudoers node-powersave node-sysctls node-lockup-guard node-hosts; do
   ssh brian@<ip> "sudo bash -s" < scripts/$s.sh
 done
 scp "$(mkcert -CAROOT)/rootCA.pem" brian@<ip>:/tmp/lan-rootCA.pem
@@ -93,6 +93,7 @@ ssh brian@<ip> "sudo bash -s" < scripts/trust-lan-ca.sh
 | `node-sudoers.sh` | passwordless sudo for `brian` | run first — makes the rest unattended |
 | `node-powersave.sh` | ⭐ **mask sleep/suspend, lid=ignore, WiFi power-save off** | **the reason t430 went NotReady.** Mandatory on every laptop. |
 | `node-sysctls.sh` | inotify limits (jellyfin crashloop fix) | |
+| `node-lockup-guard.sh` | ⭐ **kernel lockup ⇒ panic-reboot, chipset watchdog, CPU microcode** | **the a3 thermal runaway (docs/22).** `--kernel` also installs the HWE kernel meta. |
 | `node-hosts.sh` | static `harbor.lan → 192.168.5.173` | breaks the Pi-hole-outage pull deadlock |
 | `trust-lan-ca.sh` | mkcert CA in OS trust + `.lan` split-DNS → Pi-hole | self-verifies against `home.lan` |
 
@@ -263,7 +264,7 @@ server / API : https://192.168.5.173:6443   (a3, sole control plane)
 node token   : a3:/mnt/d/k3s-data/server/node-token   (data-dir was moved off root)
 k3s version  : v1.35.5+k3s1   (pin INSTALL_K3S_VERSION to match)
 box label    : inference-club.com/box=<hostname>
-prep scripts : scripts/node-{sudoers,powersave,sysctls,hosts}.sh, trust-lan-ca.sh, k3s-registries.sh
+prep scripts : scripts/node-{sudoers,powersave,sysctls,lockup-guard,hosts}.sh, trust-lan-ca.sh, k3s-registries.sh
 tailnet      : tailscale up on the host (out of band, §8) — needed for off-LAN reach
 manual/node  : Prometheus static_config · Dozzle restart · gpu-fleet temp mapping (§10)
 ```

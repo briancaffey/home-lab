@@ -29,3 +29,46 @@ groups:
         labels: { severity: warning }
         annotations:
           summary: "{{ $labels.instance }} under 5% memory available for 10m"
+
+  # a3 thermal-runaway incident, 2026-09-22 (docs/22): two CPUs soft-locked
+  # inside the kernel for 9 hours — box hot to the touch, SSH dead, nobody
+  # paged. Nodes now panic+reboot on lockups (scripts/node-lockup-guard.sh);
+  # these rules catch the cases the kernel watchdog can't, and tell us when
+  # the guard fired.
+  - name: node-runaway
+    rules:
+      - alert: NodeCPUStuckInKernel
+        # A CPU spending >95% of its time in kernel mode for 10 minutes is
+        # not doing work for anyone — it is spinning (the 2026-09-22 lockup
+        # looked exactly like this, on two cores, for 9 hours).
+        expr: max by (instance, cpu) (rate(node_cpu_seconds_total{mode="system"}[5m])) > 0.95
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.instance }} CPU {{ $labels.cpu }} pinned in kernel mode for 10m"
+          description: "Likely kernel spin/lockup. Check `journalctl -k | grep -E 'soft lockup|hung task'` and expect heat. Guard should have rebooted the node."
+      - alert: NodeHighTemperature
+        # Desktop CPUs (14900K on a3) throttle at 100°C; sustained >95 means
+        # the fans have lost and something is burning cycles.
+        expr: max by (instance) (node_hwmon_temp_celsius{chip=~"platform_coretemp.*"}) > 95
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} CPU above 95°C for 10m"
+      - alert: NodeIOStalled
+        # PSI "full" = every non-idle task on the node is blocked on disk.
+        # >50% for 30m means the storage (a3: 5400rpm HDD, Longhorn over
+        # WiFi) is saturated and probes/DBs will start timing out.
+        expr: rate(node_pressure_io_stalled_seconds_total[10m]) > 0.5
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} all tasks I/O-stalled >50% of the time for 30m"
+      - alert: NodeRebooted
+        # Fires once after any reboot — including the lockup guard's
+        # panic-reboot, so a self-healed lockup is still a visible event.
+        expr: changes(node_boot_time_seconds[30m]) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} rebooted"
+          description: "Unplanned? Check `journalctl -b -1 -k | tail` for a panic / soft lockup / watchdog reset."
