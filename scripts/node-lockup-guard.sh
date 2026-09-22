@@ -42,8 +42,37 @@ echo "sysctl: softlockup_panic=$(sysctl -n kernel.softlockup_panic) watchdog_thr
 
 # 2. Hardware watchdog (Intel PCH TCO). Laptops/AMD boards may lack it —
 #    that's fine, the sysctl guard still works.
+#    Ubuntu kernel packages deny-list every watchdog driver
+#    (/lib/modprobe.d/blacklist_linux*.conf) and systemd-modules-load honours
+#    the deny-list, so a modules-load.d entry never loads at boot (found the
+#    hard way on a3's first reboot). An explicit `modprobe` ignores the
+#    blacklist, so a tiny oneshot unit does the loading; systemd arms the
+#    device as soon as it appears.
 if modprobe iTCO_wdt 2>/dev/null && [ -e /dev/watchdog0 ]; then
-  echo iTCO_wdt > /etc/modules-load.d/iTCO_wdt.conf
+  rm -f /etc/modules-load.d/iTCO_wdt.conf
+  cat > /etc/systemd/system/hw-watchdog.service <<'UNIT'
+# Managed by scripts/node-lockup-guard.sh (docs/22, a3 thermal runaway).
+# Ubuntu kernel packages deny-list every watchdog driver in
+# /lib/modprobe.d/blacklist_linux*.conf and systemd-modules-load honours
+# that list, so load the Intel PCH TCO watchdog with an explicit modprobe.
+# systemd (RuntimeWatchdogSec in system.conf.d) arms it as soon as it appears.
+[Unit]
+Description=Load Intel PCH TCO hardware watchdog (iTCO_wdt)
+DefaultDependencies=no
+After=systemd-modules-load.service
+Before=sysinit.target
+ConditionPathExists=/sys/bus/pci/devices
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/modprobe iTCO_wdt
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target
+UNIT
+  systemctl daemon-reload
+  systemctl enable --now hw-watchdog.service >/dev/null 2>&1
   mkdir -p /etc/systemd/system.conf.d
   cat > /etc/systemd/system.conf.d/10-hw-watchdog.conf <<'WDT'
 # Managed by scripts/node-lockup-guard.sh (docs/22). If PID 1 cannot pet the
