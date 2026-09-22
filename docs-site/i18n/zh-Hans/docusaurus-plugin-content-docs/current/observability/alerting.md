@@ -21,6 +21,17 @@ description: 从规则朝虚空开火，到手机嗡嗡作响——完整的告�
 
 **这套规则包是挣来的，不是抄来的。** 每条规则都能追溯到一个真实事件：5 分钟触发的 `NodeDown` 之所以存在，是因为 x1（一台笔记本节点）曾在凌晨 5:40 耗尽电池，十二个小时无人知晓。磁盘将满的规则存在，是因为这里的每个字节都住在节点本地磁盘上。而推理舰队适用一套截然不同的哲学——见下文。
 
+**`node-runaway` 规则组（2026-09-22 新增）。** 最新的这几条规则是代价最高的。控制平面[在一次内核锁死里空转了九个小时](/hardware/nodes#a3--control-plane)——两个核心 100% 处于*内核态*，机器摸上去发烫——却没有一条告警触发，因为 `NodeDown` 盯的是"节点不再应答"，而 a3 始终没有完全不应答：node-exporter 还活着，只是从一台网络栈已被卡住的机器上慢吞吞地回话。缺口在于我没有一条规则描述"节点活着，但卡住了"。现在有四条，都由 node-exporter 提供数据：
+
+- `NodeCPUStuckInKernel`（**critical**）——任意单个 CPU 内核态占比超过 95% 持续十分钟。这是软锁死的指纹，那天早上它会在 09:25 触发，而不是等我 18:22 才发现。
+- `NodeHighTemperature`——任意核心温度传感器超过 95 °C 持续十分钟。把我真正注意到的那个症状写成规则。
+- `NodeIOStalled`——压力停滞（PSI）的 I/O "full" 超过 50% 持续三十分钟，因为 a3 的数据目录在机械盘上，每次重启后都有一刻钟的 I/O 饱和，让 Pod 看起来坏了，其实只是在等。
+- `NodeRebooted`——启动时间变了。节点现在会[在锁死时自行重启](/foundations/k3s#nodes-that-reboot-themselves)，这正是我要的，但一次自我触发的重启绝不该是个意外。
+
+这些规则和其他规则一起放在 [`clusters/home/monitoring/config/homelab-alerts.yml`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/monitoring/config/homelab-alerts.yml)，按老路子到达 Prometheus：Argo CD 同步配置，Reloader 重启 Prometheus。
+
+{/* screenshot: observability/node-runaway-cpu-graph.png — a3's per-CPU system-mode graph from 2026-09-22, two flat lines at 100% */}
+
 **"停放不等于宕机。"** 这里的模型服务器为了共享四块 GPU 而频繁缩容到零——那是一种运维节奏，不是故障。所以推理舰队完全豁免*存在性*告警；取而代之的是**行为**规则（KV-cache 压力、请求积压、首 token 变慢），它们只在模型正经服务时*才可能*触发，停放时自动沉默。每个服务零配置，两个方向都正确。
 
 三个告警源共享同样两条通道：Prometheus/Alertmanager（指标）、**Gatus**（18 个端点健康检查——`jellyfin.lan` 真的在应答吗？）、**Scrutiny**（磁盘健康）。一部手机，一份书面记录，谁先发现谁上报。

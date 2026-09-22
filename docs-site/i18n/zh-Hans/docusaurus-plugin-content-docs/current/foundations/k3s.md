@@ -28,11 +28,15 @@ graph TD
     spark --> a3
 ```
 
-主要的限制：**a3 是唯一的控制平面，而且运行在 SQLite 上，而不是 etcd。**如果 a3 宕机，正在运行的 Pod 会继续运行，但在它恢复之前，什么都不能调度、不能变更。这是一个刻意的取舍。在家用硬件加 WiFi 上运行三节点 etcd 控制平面，会带来我目前还不需要的韧性，代价却是每天都要承担的复杂度。目前单控制平面是正确的选择，但迁移到高可用是计划中的下一步。
+主要的限制：**a3 是唯一的控制平面，而且运行在 SQLite 上，而不是 etcd。**如果 a3 宕机，正在运行的 Pod 会继续运行，但在它恢复之前，什么都不能调度、不能变更。这是一个刻意的取舍。在家用硬件加 WiFi 上运行三节点 etcd 控制平面，会带来我目前还不需要的韧性，代价却是每天都要承担的复杂度。目前单控制平面是正确的选择，但迁移到高可用是计划中的下一步——而这个理由在 2026 年 9 月变得具体得多：[一个内核 bug 把 a3 卡死了九个小时](/hardware/nodes#a3--control-plane)，集群 API 也跟着一起没了。其他节点上的工作负载整段时间都在照常运行，这正是 k3s 承诺的；我做不到的只是改变任何东西。
 
-添加节点很简单：为 server 运行一次 `scripts/install-k3s-server.sh`，再为每个 agent 运行 `scripts/install-k3s-agent.sh`。连另一个子网上的 arm64 DGX Spark 也无需特殊处理就加入了。但要注意，*加入*只是简单的那 10%——token 能让节点变成 `Ready`，可真正让它保持健康的主机准备工作（禁用笔记本睡眠、WiFi 省电、inotify 上限、局域网 CA 信任、镜像仓库固定）是另一回事，而跳过它是无声的。最新的 agent t430 就是几乎什么都没做就 `Ready` 加入的；那段经历见[六台机器](/hardware/nodes)。
+添加节点很简单：为 server 运行一次 `scripts/install-k3s-server.sh`，再为每个 agent 运行 `scripts/install-k3s-agent.sh`。连另一个子网上的 arm64 DGX Spark 也无需特殊处理就加入了。但要注意，*加入*只是简单的那 10%——token 能让节点变成 `Ready`，可真正让它保持健康的主机准备工作（禁用笔记本睡眠、WiFi 省电、inotify 上限、局域网 CA 信任、镜像仓库固定，以及 2026 年 9 月起新增的**内核锁死守卫**）是另一回事，而跳过它是无声的。最新的 agent t430 就是几乎什么都没做就 `Ready` 加入的；那段经历见[六台机器](/hardware/nodes)。这些准备脚本全是仓库里的 `scripts/node-*.sh`，上线运行手册是 [`docs/20`](https://github.com/briancaffey/home-lab/blob/main/docs/20-node-onboarding-runbook.md)。
 
-## 迁移到高可用的计划
+## 会自己重启的节点 {#nodes-that-reboot-themselves}
+
+锁死守卫值得单独一段，因为它改变了"节点卡住了"在这里的含义。在它之前，任何节点上的 Linux 内核软锁死都是无声且永久的：内核每隔几分钟记一条抱怨，机器就那么滚烫、失联地待着，直到我注意到为止。现在每台 amd64 节点都把内核的锁死检测器设为 **panic**，配一个很短的 panic 超时，让机器在某个核心卡住后大约 75 秒就自行重启；再由 systemd 喂着 Intel 芯片组的硬件看门狗作为第二道防线，以防连 PID 1 都停了。这个取舍是刻意的：一次计划外的两分钟重启，好过九小时的故障，而 Kubernetes 正是为这种小抖动而生——Pod 会重新调度，节点回到 `Ready`，一条 `NodeRebooted` 告警告诉我发生过这件事。同一个脚本还确保 `intel-microcode` 装着，并可以用一个参数把节点放到 HWE 内核元包上，让它真的收得到内核更新。细节见[六台机器](/hardware/nodes#a3--control-plane)和 [`docs/22`](https://github.com/briancaffey/home-lab/blob/main/docs/22-a3-thermal-runaway-postmortem.md)。
+
+## 迁移到高可用的计划 {#plans-to-migrate-to-ha}
 
 单控制平面是这个实验室里最大的可用性缺口，计划是迁移到高可用的控制平面。k3s 直接支持这一点：它可以用内嵌的 etcd 数据存储替代 SQLite，让多个 server 共享控制平面。标准配置是三个 server，这样 etcd 在丢失一个节点后仍能保持法定人数（quorum）。
 
