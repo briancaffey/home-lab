@@ -62,3 +62,16 @@ database:
   # Auto-expire traces after 30 days so Postgres can't grow unbounded and fill
   # a3's disk (the local-path PVC size is NOT enforced as a hard cap).
   defaultRetentionPolicyDays: 30
+
+# Phoenix takes ~4 minutes to come up against the Postgres-backed store (measured
+# 2026-09-17: ~3m55s from container start to /healthz on a3 with a 1 CPU limit).
+# The chart's default startup probe allows only 30s (30 x 1s), which kills the
+# container with exit 137 before it binds :6006 -> permanent CrashLoopBackOff
+# (146 restarts before this was found). Allow 10 minutes.
+healthChecks:
+  startupProbe:
+    enabled: true
+    initialDelaySeconds: 1
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 120

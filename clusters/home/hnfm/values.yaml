@@ -36,7 +36,7 @@ features:
   music: false          # acestep is parked at 0 replicas
   hyperframes: true
   metaSequencer: true
-  digestSchedule: false # flip on once Kindle secrets are in Vaultwarden
+  schedule: true        # beat: fetch /new + /top, digests to Kindle, one video per 6h
 
 flower:
   enabled: true         # https://hnfm.lan/flower

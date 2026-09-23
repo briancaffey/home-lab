@@ -146,6 +146,27 @@ data:
           model: openai/*
           api_base: http://lmstudio.inference-club.svc.cluster.local:1234/v1
           api_key: "lm-studio"
+      # nemotron omni on the spark box (192.168.6.19), served by LM Studio on
+      # the LAN rather than in-cluster — the in-cluster slots above are at 0.
+      # This is the only multimodal route currently reachable, which hn.fm's
+      # sequence.plan needs (it sends a rendered frame). 192.168. matches
+      # LOCAL_MARKERS, so the rampart PII guard skips it and names in story
+      # text reach the model intact instead of arriving as [GIVEN_NAME_1].
+      # Deliberately absent from router_settings.fallbacks: a caller asking
+      # for this route wants *this* model, and silently answering from a
+      # text-only cloud backend is worse than failing.
+      - model_name: spark-omni
+        litellm_params:
+          model: openai/nvidia/nemotron-3-nano-omni
+          api_base: http://192.168.6.19:1234/v1
+          # litellm_settings.drop_params is true, and this model is not in
+          # LiteLLM's model map, so it strips `reasoning_effort` as
+          # "unsupported" — measured: 33 reasoning tokens through the gateway
+          # either way, versus 0 sending it straight to LM Studio. Whitelisting
+          # it here lets the caller keep control of reasoning per request
+          # rather than baking one value into the route.
+          allowed_openai_params: ["reasoning_effort"]
+          api_key: os.environ/SPARK_LM_API_KEY
 
       # ── Free cloud providers (backup / burst capacity) ────────────────────
       # Keys are optional: if the env var is empty the model simply errors at
@@ -254,6 +275,20 @@ spec:
             - name: NVIDIA_API_KEY
               valueFrom:
                 secretKeyRef: { name: litellm-providers, key: nvidia-api-key, optional: true }
+            # LM Studio on the spark box. In a Secret rather than inline in the
+            # ConfigMap above so the token stays out of git history.
+            #
+            # Its own Secret, NOT litellm-providers: that one is an
+            # ExternalSecret with creationPolicy Owner, synced hourly from
+            # Vaultwarden, so a key added to it by hand is reconciled away
+            # within minutes. This Secret is created directly and therefore
+            # survives — but it is also untracked cluster state, so a rebuilt
+            # cluster needs it recreated. To make it durable, add the token to
+            # the `observability-litellm-providers` item in Vaultwarden, map it
+            # in that ExternalSecret, and point this back at litellm-providers.
+            - name: SPARK_LM_API_KEY
+              valueFrom:
+                secretKeyRef: { name: litellm-spark-lm, key: api-key, optional: true }
             # OTLP → Phoenix (same namespace).
             - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://phoenix-svc.observability.svc.cluster.local:4317" }
             - { name: OTEL_EXPORTER_OTLP_PROTOCOL, value: "grpc" }
