@@ -1,0 +1,135 @@
+# Single-node ClickHouse for Langfuse (the chart's clickhouse.deploy is false).
+# The chart's own path renders ClickHouseCluster + KeeperCluster CRs for the
+# upstream ClickHouse operator; one box does not need that. This mirrors the
+# docker-compose layout Langfuse ships (clickhouse-server, no Keeper).
+#
+# Password comes from the langfuse-secrets Secret (key clickhouse-password);
+# the official image creates the user with full privileges on first start.
+# Server config overrides. ClickHouse's default self-profiling
+# (system.trace_log: sampled stack traces every ms) had written 4 GB in three
+# days on one idle instance and its background merges ate the whole memory
+# limit. Nobody here reads it — drop it, and keep the useful system logs short.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: langfuse-clickhouse-config
+  namespace: observability
+data:
+  homelab.xml: |
+    <clickhouse>
+      <trace_log remove="1"/>
+      <latency_log remove="1"/>
+      <processors_profile_log remove="1"/>
+      <query_thread_log remove="1"/>
+      <query_log><ttl>event_date + INTERVAL 7 DAY</ttl></query_log>
+      <text_log><ttl>event_date + INTERVAL 3 DAY</ttl></text_log>
+      <metric_log><ttl>event_date + INTERVAL 3 DAY</ttl></metric_log>
+      <asynchronous_metric_log><ttl>event_date + INTERVAL 3 DAY</ttl></asynchronous_metric_log>
+      <part_log><ttl>event_date + INTERVAL 3 DAY</ttl></part_log>
+    </clickhouse>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langfuse-clickhouse
+  namespace: observability
+  labels:
+    app: langfuse-clickhouse
+spec:
+  type: ClusterIP
+  selector:
+    app: langfuse-clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: native
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: langfuse-clickhouse
+  namespace: observability
+spec:
+  serviceName: langfuse-clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langfuse-clickhouse
+  template:
+    metadata:
+      labels:
+        app: langfuse-clickhouse
+    spec:
+      nodeSelector:
+        inference-club.com/box: a3
+      containers:
+        - name: clickhouse
+          # Langfuse v4 needs ClickHouse >= 25.12 (26.4 recommended): its
+          # events_full table uses TEXT skip indexes (tokenizer = splitByNonAlpha)
+          # that 25.3 rejects with "Only literals can be skip index arguments"
+          # (migration 0039 failed on the first install, 2026-09-22).
+          image: docker.io/clickhouse/clickhouse-server:26.4.5
+          env:
+            - name: CLICKHOUSE_DB
+              value: default
+            - name: CLICKHOUSE_USER
+              value: clickhouse
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: langfuse-secrets
+                  key: clickhouse-password
+          ports:
+            - name: http
+              containerPort: 8123
+            - name: native
+              containerPort: 9000
+          # Memory: ClickHouse caps itself at 90% of the cgroup limit. At 4Gi a
+          # background merge of its own system.text_log (27k parts after ten
+          # restarts) pinned RSS at 3.6 GiB and every CREATE TABLE in the
+          # Langfuse migrations failed with MEMORY_LIMIT_EXCEEDED (2026-09-22).
+          # a3 has 64 GB; give it real headroom.
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              memory: 8Gi
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: logs
+              mountPath: /var/log/clickhouse-server
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/homelab.xml
+              subPath: homelab.xml
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: langfuse-clickhouse-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 30Gi

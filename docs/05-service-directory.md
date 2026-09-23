@@ -57,6 +57,7 @@ and containers at these instead of IP:port. `/docs` on each = OpenAPI UI.
 | **Grafana** | Dashboards (GPU, host, vLLM) | http://192.168.5.173:30030 |
 | Prometheus | Metrics store + scraper | http://192.168.5.173:30090 |
 | Phoenix | LLM traces & evals (OTLP) | UI http://192.168.5.173:30606 · OTLP grpc `:4317` |
+| Langfuse | LLM tracing, prompts & evals (OTLP) | https://langfuse.lan · OTLP http `/api/public/otel` (project keys in `langfuse-secrets`) |
 | dcgm-exporter | Per-GPU metrics → Prometheus | (feeds Grafana) |
 | node-exporter | Host CPU/RAM/disk → Prometheus | (feeds Grafana) |
 

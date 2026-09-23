@@ -1,0 +1,31 @@
+# https://langfuse.lan/  ->  langfuse-web:3000 (Langfuse UI + public API + OTLP)
+# TLS via the per-namespace mkcert secret `langfuse-tls` (create with
+# scripts/lan-certs.sh). gethomepage.dev annotations let Homepage auto-discover it.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: langfuse
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Langfuse"
+    gethomepage.dev/description: "LLM tracing, prompts & evals (OTLP from hermes-otel)"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "sh-langfuse"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: langfuse.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: langfuse-web
+                port:
+                  number: 3000
+  tls:
+    - secretName: langfuse-tls
+      hosts:
+        - langfuse.lan

@@ -19,6 +19,7 @@ resources:
   - ingress-netdata.yaml
   - ingress-forgejo.yaml
   - ingress-phoenix.yaml
+  - ingress-langfuse.yaml
   - ingress-dagster.yaml
   - ingress-n8n.yaml
   - ingress-hnfm.yaml

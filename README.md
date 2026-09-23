@@ -57,7 +57,7 @@ clusters/home/ cluster-scoped config + per-service bases:
                jellyfin, audiobookshelf, vaultwarden, loki). README.md there has apply steps.
 services/      one kustomize base per GPU inference service (vLLM, etc.)
 mcp/           MCP backends for Claude (searxng, excalidraw, browserless)
-observability/ litellm gateway, phoenix
+observability/ litellm gateway, phoenix, langfuse
 platform/      postgres, redis, minio, qdrant
 scripts/       install-k3s-*.sh (node bootstrap) · lan-certs.sh (TLS Secrets)
 article/       "from docker sprawl to k3s" write-up
