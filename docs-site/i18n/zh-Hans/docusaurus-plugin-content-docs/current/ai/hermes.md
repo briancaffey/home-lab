@@ -21,12 +21,13 @@ flowchart TD
     H -->|"kubectl 之手<br/>（受限 RBAC）"| K["全集群只读<br/>只能写 inference-club"]
     H -->|"保险库之手<br/>（机器人账号）"| V["Vaultwarden<br/>Automation 集合"]
     H -->|"LLM 调用"| L["LiteLLM<br/>独立密钥、独立预算"]
-    H -.链路追踪.-> P["Phoenix"]
+    H -.经 hermes-otel 的链路追踪.-> P["Langfuse / Phoenix"]
 ```
 
 - **kubectl 之手：** 一个 ServiceAccount，全集群*只读*，写权限*仅限*推理命名空间——它可以停放和唤醒模型、重启卡死的 vLLM、诊断任何问题，但碰不了监控栈、数据库，也碰不了它自己。
 - **保险库之手：** 一个 `vault-secret` 命令，接到人类工具链所用的同一个 Vaultwarden 机器人账号上——技能里写死了行为守则：绝不打印秘密值、用*使用*凭据的方式证明访问成功、只用精确条目名。（完整故事在[信任体系](../tissue/trust-fabric.md)。）
 - **技能：** 操作集群、取凭据、hyperframes 视频渲染——镜像自带 Node、ffmpeg 和无头 Chromium，所以"给我做个关于 X 的视频"完全在 Pod 内渲染完成。
+- **链路追踪：** 每次运行都经 hermes-otel 导出到 [Langfuse](../observability/langfuse.md)，所以"它为什么这么做？"有一棵 span 树可以指着看，而不是翻日志。
 
 ## SOUL.md，或者说：用文本编辑器编辑一个性格
 

@@ -9,7 +9,7 @@ repo_path: observability/
 
 **这是什么：** [LiteLLM](https://github.com/BerriAI/litellm) 是一个 LLM 网关——一个单一的 OpenAI 兼容端点，挡在我能触达的*所有*模型前面：跑在自家 GPU 上的本地 vLLM 舰队，加上云服务商（Groq、OpenRouter、NVIDIA），供任务超出家里算力时使用。一个 URL，一种 API 形态，所有模型。
 
-**我为什么推荐它：** 没有网关的话，每个应用、每个智能体都得认识每一个模型——它的地址、密钥、各种怪癖。那是 N×M 个集成点，而且毫无可见性。有了 LiteLLM，消费者只需要*一扇*门，而我得到了房东想要的一切：**按消费者发放的虚拟密钥和预算**（Hermes 智能体有自己的密钥和月度上限）、**降级链**（本地优先，需要时才上云）、存进真数据库的**开销跟踪**，以及每次调用都进 Phoenix 的**链路追踪**。新模型上线时，我把它加进网关，所有消费者立刻就能用——没有任何人的配置需要改动。
+**我为什么推荐它：** 没有网关的话，每个应用、每个智能体都得认识每一个模型——它的地址、密钥、各种怪癖。那是 N×M 个集成点，而且毫无可见性。有了 LiteLLM，消费者只需要*一扇*门，而我得到了房东想要的一切：**按消费者发放的虚拟密钥和预算**（Hermes 智能体有自己的密钥和月度上限）、**降级链**（本地优先，需要时才上云）、存进真数据库的**开销跟踪**，以及每次调用都进 OTLP 后端的**链路追踪**（今天是 Phoenix；[Langfuse](../observability/langfuse.md) 是更新的存储，可以接收同一份导出）。新模型上线时，我把它加进网关，所有消费者立刻就能用——没有任何人的配置需要改动。
 
 {/* screenshot: ai/litellm-ui-models.png — the admin UI model list, local + cloud side by side */}
 {/* screenshot: ai/litellm-ui-spend.png — spend dashboard by key */}
@@ -29,7 +29,7 @@ flowchart LR
     gw -->|本地优先| vllm["vLLM 舰队<br/>omni 和伙伴们"]
     gw -->|发往云端| rampart["Rampart<br/>PII 脱敏<br/>（故障即关闭）"]
     rampart --> cloud["Groq · OpenRouter · NVIDIA"]
-    gw -.链路追踪.-> phoenix["Phoenix<br/>可观测性"]
+    gw -.链路追踪.-> phoenix["Phoenix / Langfuse<br/>可观测性"]
 ```
 
 我最得意的细节：**发往云端的流量会先经过 [Rampart](./rampart.md)**——一个本地 PII 脱敏服务——而且这个耦合是*故障即关闭*（fail-closed）的。如果 Rampart 挂了，云端调用会被直接拦下，而不是不加清洗地发出去。本地调用永远不出家门，所以完全不用过这道安检。

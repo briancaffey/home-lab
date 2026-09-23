@@ -61,7 +61,7 @@ Four GPU machines and one repurposed laptop, all on home WiFi (see [the hardware
 - **Platform & GitOps** — [Argo CD](/gitops/argocd), [Renovate](/gitops/renovate), and the [self-hosted trio](/gitops/the-trio) of Forgejo, Harbor, and Vaultwarden that the rest depends on.
 - **Data & orchestration** — [Dagster](/data/dagster) for scheduled pipelines that read my own Prometheus and write with my own LLM gateway, and [n8n](/data/n8n) for event-driven webhook/integration workflows. Together they're the programmable glue over everything else.
 - **Household services** — [Jellyfin](/media/jellyfin), [Immich](/media/immich), [Paperless](/media/paperless), music, audiobooks, and a [download pipeline](/media/downloads) that files finished downloads for the family.
-- **Monitoring** — [Prometheus & Grafana](/observability/prometheus-grafana), [alerts to my phone](/observability/alerting), [disk-health monitoring](/observability/scrutiny), and [nightly backups with tested restores](/platform/backups).
+- **Monitoring** — [Prometheus & Grafana](/observability/prometheus-grafana), [alerts to my phone](/observability/alerting), [disk-health monitoring](/observability/scrutiny), [LLM tracing with Langfuse](/observability/langfuse), and [nightly backups with tested restores](/platform/backups).
 
 ## A 3D view of the cluster
 

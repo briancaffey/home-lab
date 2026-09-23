@@ -21,12 +21,13 @@ flowchart TD
     H -->|"kubectl hand<br/>(scoped RBAC)"| K["read everywhere<br/>write ONLY inference-club"]
     H -->|"vault hand<br/>(bot account)"| V["Vaultwarden<br/>Automation collection"]
     H -->|"LLM calls"| L["LiteLLM<br/>own key, own budget"]
-    H -.traces.-> P["Phoenix"]
+    H -.traces via hermes-otel.-> P["Langfuse / Phoenix"]
 ```
 
 - **kubectl hand:** a ServiceAccount with cluster-wide *read* and write *only* in the inference namespace — it can park and unpark models, restart a wedged vLLM, and diagnose anything, but it cannot touch the monitoring stack, the databases, or itself.
 - **vault hand:** a `vault-secret` command wired to the same Vaultwarden bot account the human tooling uses — with ground rules baked into its skill: never print secret values, prove access by *using* a credential, exact item names only. (The full story is in [The Trust Fabric](../tissue/trust-fabric.md).)
 - **Skills:** operate-the-cluster, fetch-secrets, and hyperframes video rendering — the image ships Node, ffmpeg, and headless Chromium, so "make me a video about X" renders entirely in-pod.
+- **Traces:** every run is exported through hermes-otel into [Langfuse](../observability/langfuse.md), so "why did it do that?" has a span tree to point at instead of a log scroll.
 
 ## SOUL.md, or: editing a personality with a text editor
 

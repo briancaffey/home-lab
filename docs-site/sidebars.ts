@@ -26,7 +26,7 @@ const sidebars: SidebarsConfig = {
       'data/n8n',
     ]},
     {type: 'category', label: 'Observability & Alerting', items: [
-      'observability/prometheus-grafana', 'observability/logs', 'observability/alerting', 'observability/scrutiny',
+      'observability/prometheus-grafana', 'observability/logs', 'observability/langfuse', 'observability/alerting', 'observability/scrutiny',
     ]},
     {type: 'category', label: 'Media & Life', items: [
       'media/jellyfin', 'media/immich', 'media/paperless', 'media/music-and-books', 'media/hnfm', 'media/downloads',

@@ -9,7 +9,7 @@ repo_path: observability/
 
 **What it is:** [LiteLLM](https://github.com/BerriAI/litellm) is an LLM gateway — a single OpenAI-compatible endpoint that sits in front of *every* model I can reach: the local vLLM fleet on my own GPUs, plus cloud providers (Groq, OpenRouter, NVIDIA) for when a task outgrows the house. One URL, one API shape, every model.
 
-**Why I recommend it:** without a gateway, every app and agent needs to know about every model — its address, its key, its quirks. That's N×M integrations and no visibility. With LiteLLM, consumers get *one* door, and I get the things a landlord wants: **per-consumer virtual keys with budgets** (the Hermes agent has its own key with a monthly cap), **fallback chains** (local first, cloud when needed), **spend tracking** in a real database, and **tracing** of every call into Phoenix. When a new model shows up, I add it to the gateway and every consumer can use it instantly — nobody's config changes.
+**Why I recommend it:** without a gateway, every app and agent needs to know about every model — its address, its key, its quirks. That's N×M integrations and no visibility. With LiteLLM, consumers get *one* door, and I get the things a landlord wants: **per-consumer virtual keys with budgets** (the Hermes agent has its own key with a monthly cap), **fallback chains** (local first, cloud when needed), **spend tracking** in a real database, and **tracing** of every call into an OTLP backend (Phoenix today; [Langfuse](../observability/langfuse.md) is the newer store and can take the same export). When a new model shows up, I add it to the gateway and every consumer can use it instantly — nobody's config changes.
 
 {/* screenshot: ai/litellm-ui-models.png — the admin UI model list, local + cloud side by side */}
 {/* screenshot: ai/litellm-ui-spend.png — spend dashboard by key */}
@@ -29,7 +29,7 @@ flowchart LR
     gw -->|local first| vllm["vLLM fleet<br/>omni · and friends"]
     gw -->|cloud-bound| rampart["Rampart<br/>PII redaction<br/>(fail-closed)"]
     rampart --> cloud["Groq · OpenRouter · NVIDIA"]
-    gw -.traces.-> phoenix["Phoenix<br/>observability"]
+    gw -.traces.-> phoenix["Phoenix / Langfuse<br/>observability"]
 ```
 
 The detail I'm proudest of: **cloud-bound traffic passes through [Rampart](./rampart.md) first**, a local PII-redaction service — and the coupling is *fail-closed*. If Rampart is down, cloud calls are blocked rather than sent unscrubbed. Local calls never leave the house, so they skip the bouncer entirely.
