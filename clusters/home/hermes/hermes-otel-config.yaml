@@ -4,12 +4,10 @@
 # /opt/data/config.yaml), where the plugin is only *enabled*
 # (plugins: enabled: [hermes_otel]).
 #
-# The hermes-otel plugin reads this from ~/.hermes/plugins/hermes_otel/config.yaml.
-# We set HOME=/opt/data (deployment.yaml) so that path is /opt/data/.hermes/...
-# on the PVC, and an initContainer (install-hermes-otel) copies THIS file there
-# on every boot — so editing this file + restarting the pod is all it takes.
-# This mirrors the hermes-otel repo's own config.yaml format, so the same file
-# works whether you run the plugin standalone or here.
+# The ConfigMap is mounted into the hermes container at /etc/hermes-otel/ and
+# HERMES_OTEL_CONFIG points the plugin at it (deployment.yaml), so editing this
+# file + pushing is all it takes (Reloader restarts the pod). Same format as
+# the plugin's own hermes_otel.yaml, so the file works standalone too.
 #
 # SAFE FOR THE PUBLIC REPO — NO SECRETS. `*_env` fields and `${VAR}` references
 # name environment variables; the values live in the `hermes-secrets` Secret

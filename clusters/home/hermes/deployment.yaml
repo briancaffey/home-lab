@@ -145,22 +145,15 @@ spec:
                 [ -f "$DEST/backends.py" ] || { echo "FATAL: no existing plugin on PVC"; exit 1; }
               fi
               rm -rf "$TMP"
-              # Copy the committed hermes-otel plugin config onto the PVC so
-              # backend selection is DETERMINISTIC: config.backends (tracer.py
-              # step 2) is evaluated before env-var auto-detection (step 4),
-              # which is unreliable under this agent's plugin-init path. The
-              # source is the hermes-otel-config ConfigMap
-              # (clusters/home/hermes/hermes-otel-config.yaml) mounted at
-              # /seed-otel — edit that file + restart to change the backend.
-              # HOME=/opt/data (container env) makes the plugin's
-              # ~/.hermes/plugins/hermes_otel/config.yaml land here on the PVC.
-              CFG=/opt/data/.hermes/plugins/hermes_otel
-              mkdir -p "$CFG"
-              cp /seed-otel/config.yaml "$CFG/config.yaml"
-              echo "seeded hermes-otel config.yaml from ConfigMap at $CFG"
+              # The plugin's config is NOT seeded onto the PVC any more: the
+              # main container points HERMES_OTEL_CONFIG straight at the
+              # hermes-otel-config ConfigMap mount (see env below), which is
+              # the plugin's highest-precedence config path. Stale copies from
+              # the old seeding path (HERMES_HOME=/opt/data made them land in
+              # /opt/data/.hermes/..., which the plugin never read) are removed.
+              rm -rf /opt/data/.hermes/plugins/hermes_otel /opt/data/hermes_otel.yaml 2>/dev/null || true
           volumeMounts:
             - { name: data, mountPath: /opt/data }
-            - { name: otel-config, mountPath: /seed-otel, readOnly: true }
       containers:
         - name: hermes
           image: nousresearch/hermes-agent:v2026.7.7
@@ -172,12 +165,15 @@ spec:
           env:
             # See install-otel-libs above; only OTel packages live there.
             - { name: PYTHONPATH, value: "/opt/data/otel-libs" }
-            # Point HOME at the PVC so the hermes-otel plugin's config path
-            # (~/.hermes/plugins/hermes_otel/config.yaml) persists across
-            # restarts — that config drives deterministic Weave selection
-            # (see install-hermes-otel init container). Also persists the bw
-            # (vault) login cache on the PVC as a side benefit.
+            # HOME on the PVC persists the bw (vault) login cache across restarts.
             - { name: HOME, value: "/opt/data" }
+            # The hermes-otel plugin config (backends fan-out list) comes straight
+            # from the hermes-otel-config ConfigMap, mounted below. HERMES_OTEL_CONFIG
+            # is the plugin's highest-precedence config path, so backend selection
+            # is deterministic (config.backends beats env-var auto-detection).
+            # Edit clusters/home/hermes/hermes-otel-config.yaml + push; Reloader
+            # rolls the pod.
+            - { name: HERMES_OTEL_CONFIG, value: "/etc/hermes-otel/config.yaml" }
             - { name: HERMES_DASHBOARD, value: "1" }
             # The API server is env-only config (not yet in config.yaml).
             - { name: API_SERVER_ENABLED, value: "true" }
@@ -239,6 +235,7 @@ spec:
             # mkcert root CA (public cert) — bw validates https://vault.lan
             # via NODE_EXTRA_CA_CERTS. ConfigMap kept fresh by lan-certs.sh.
             - { name: mkcert-ca, mountPath: /etc/mkcert, readOnly: true }
+            - { name: otel-config, mountPath: /etc/hermes-otel, readOnly: true }
           resources:
             requests:
               cpu: "500m"

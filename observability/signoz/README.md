@@ -8,8 +8,12 @@ Job. Everything pinned to **a2**, PVCs on local-path (ClickHouse 30Gi). The
 heaviest of the new backends (~2–3 GB RAM idle).
 
 ## Access
-- LAN: https://signoz.lan/ (Traefik, `signoz-tls`, Homepage-discovered). The
-  first visit registers the admin account (self-hosted: no ingestion key).
+- LAN: https://signoz.lan/ (Traefik, `signoz-tls`, Homepage-discovered).
+- Login: `admin@signoz.lan` / password in Vaultwarden item `observability-signoz-admin`
+  (registered once via `POST /api/v1/register`; self-hosted ingest needs no key).
+  **Until the first user/org exists the collector accepts nothing**: its OpAMP
+  registration fails (`failed to find or create agent` in `signoz-0`) and port
+  4318 stays closed — register first, then ingest.
 - OTLP: `signoz-otel-collector.observability.svc.cluster.local:4318` (HTTP) / `:4317` (gRPC).
 
 ## Deploy / remove
