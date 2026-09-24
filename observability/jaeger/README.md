@@ -30,4 +30,6 @@ backends:
   - type: jaeger
     endpoint: http://jaeger.observability.svc.cluster.local:4318/v1/traces
 ```
-Verify: UI → service `hermes-agent` → Find Traces.
+Verify: UI → service `hermes-agent` → Find Traces. Jaeger v2 serves the query
+API under `/api/v3/…` (`/api/v3/services`, `/api/v3/traces?query.service_name=hermes-agent&query.start_time_min=…`);
+the v1 `/api/services` path is gone (404).

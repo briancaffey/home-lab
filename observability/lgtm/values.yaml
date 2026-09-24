@@ -11,6 +11,10 @@
 #   logs    -> Loki       (pending the Loki 3 migration, home-lab#14; the
 #              cluster's Loki 2.9 has no OTLP endpoint and collector-contrib
 #              no longer ships a `loki` exporter — logs are dropped for now)
+#   all 3   -> Parseable  (observability/parseable) re-encoded as OTLP/JSON:
+#              Parseable OSS rejects protobuf ("Protobuf ingestion is not
+#              supported in Parseable OSS"), which is all the Python OTLP
+#              exporter speaks, so the gateway is how Parseable gets fed.
 # Service: lgtm.observability.svc.cluster.local:4318
 
 fullnameOverride: lgtm
@@ -22,6 +26,14 @@ image:
 
 nodeSelector:
   inference-club.com/box: a2
+
+# base64(admin:<password>) for Parseable, from the ESO-managed chart secret.
+extraEnvs:
+  - name: PARSEABLE_BASIC_AUTH
+    valueFrom:
+      secretKeyRef:
+        name: parseable-env-secret
+        key: basic_auth_b64
 
 resources:
   requests:
@@ -75,17 +87,39 @@ config:
       endpoint: http://prometheus.monitoring.svc.cluster.local:9090/api/v1/otlp
       tls:
         insecure: true
+    # Parseable OSS: OTLP/JSON only, one dataset per signal (X-P-Stream).
+    otlphttp/parseable-traces:
+      endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80
+      encoding: json
+      headers:
+        Authorization: "Basic ${env:PARSEABLE_BASIC_AUTH}"
+        X-P-Stream: hermes-traces
+        X-P-Log-Source: otel-traces
+    otlphttp/parseable-metrics:
+      endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80
+      encoding: json
+      headers:
+        Authorization: "Basic ${env:PARSEABLE_BASIC_AUTH}"
+        X-P-Stream: hermes-metrics
+        X-P-Log-Source: otel-metrics
+    otlphttp/parseable-logs:
+      endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80
+      encoding: json
+      headers:
+        Authorization: "Basic ${env:PARSEABLE_BASIC_AUTH}"
+        X-P-Stream: hermes-logs
+        X-P-Log-Source: otel-logs
   service:
     pipelines:
       traces:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [otlphttp/tempo]
+        exporters: [otlphttp/tempo, otlphttp/parseable-traces]
       metrics:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [otlphttp/prometheus]
+        exporters: [otlphttp/prometheus, otlphttp/parseable-metrics]
       logs:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [debug]
+        exporters: [debug, otlphttp/parseable-logs]

@@ -12,37 +12,19 @@ first ingest; hermes-otel uses `hermes-traces`, `hermes-metrics`, `hermes-logs`.
 - OTLP/HTTP: `http://parseable-standalone-service.observability.svc.cluster.local:80/v1/{traces,metrics,logs}`
   with `X-P-Stream: <dataset>` + `X-P-Log-Source: otel-{traces,metrics,logs}` headers.
 
-## Auth gotcha (OSS)
-hermes-otel's `type: parseable` authenticates with `X-API-Key` only. Parseable
-**OSS 3.2 has no API keys** (`/api/v1/apikeys` → 404) and rejects any request that
-carries the header, so the explicit type does not work against this instance
-(tracked upstream: briancaffey/hermes-otel — Parseable OSS Basic auth). Until
-that lands, use three generic `otlp` entries with Basic auth, one per signal:
-```yaml
-backends:
-  - type: otlp
-    name: parseable-traces
-    endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80/v1/traces
-    headers: { Authorization: "Basic ${PARSEABLE_BASIC_AUTH}", X-P-Stream: hermes-traces, X-P-Log-Source: otel-traces }
-    metrics: false
-    logs: false
-  - type: otlp
-    name: parseable-metrics
-    endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80/v1/traces
-    headers: { Authorization: "Basic ${PARSEABLE_BASIC_AUTH}", X-P-Stream: hermes-metrics, X-P-Log-Source: otel-metrics }
-    traces: false
-    metrics: true
-    logs: false
-  - type: otlp
-    name: parseable-logs
-    endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80/v1/traces
-    headers: { Authorization: "Basic ${PARSEABLE_BASIC_AUTH}", X-P-Stream: hermes-logs, X-P-Log-Source: otel-logs }
-    traces: false
-    metrics: false
-    logs: true
-```
-`PARSEABLE_BASIC_AUTH` = base64(`admin:<password>`), field `basic_auth_b64` on the
-same Vaultwarden item, synced into `hermes-secrets/parseable-basic-auth`.
+## OSS gotchas (why Hermes goes through the collector)
+Two things make the direct `type: parseable` backend unusable against **Parseable OSS** (3.2):
+1. **No API keys.** The explicit type authenticates with `X-API-Key` only;
+   OSS has no `/api/v1/apikeys` (404) and rejects any request carrying the header (401).
+2. **No protobuf.** OSS answers `400 Protobuf ingestion is not supported in
+   Parseable OSS` to OTLP/protobuf, which is all the Python OTLP exporter sends.
+
+So Hermes does not talk to Parseable directly. The **lgtm collector gateway**
+(`observability/lgtm`) has three `otlphttp` exporters with `encoding: json`,
+Basic auth and the `X-P-Stream` / `X-P-Log-Source` headers, one per signal, so
+everything hermes-otel sends to `type: lgtm` also lands in `hermes-traces`,
+`hermes-metrics` and `hermes-logs`. Datasets are created on first ingest.
+(Upstream: the hermes-otel Parseable docs assume Parseable Cloud/Enterprise.)
 
 ## Deploy / remove
 ```bash

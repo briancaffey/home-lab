@@ -39,4 +39,8 @@ backends:
     metrics: true
     metrics_temporality: delta
 ```
-Verify: UI → project hermes-agent → Traces → service `hermes-agent`.
+Verify: UI → project hermes-agent → Traces → service `hermes-agent`, or
+`clickhouse-client -u uptrace -q "select service_name, count() from uptrace.spans_index group by 1"`
+in `uptrace-clickhouse-0`. On every restart Uptrace logs one
+`fixture.Load failed … bills_org_id_start_date_end_date_unq` (seed_data re-applied
+over an existing org); it carries on serving and can be ignored.

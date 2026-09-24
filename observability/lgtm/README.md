@@ -12,6 +12,7 @@ version is an **OpenTelemetry Collector gateway** (official chart
 | traces  | Tempo (`observability/tempo`) | `otlphttp` → `tempo:4318`; view in Grafana Explore → Tempo |
 | metrics | Prometheus (`clusters/home/monitoring`) | `otlphttp` → `prometheus:9090/api/v1/otlp` (`--web.enable-otlp-receiver`) |
 | logs    | Loki | **not yet** — Loki 2.9 (`loki-stack`) has no OTLP endpoint and collector-contrib dropped its `loki` exporter; the `logs` pipeline goes to the `debug` exporter until home-lab#14 (Loki 3) |
+| all three | Parseable (`observability/parseable`) | `otlphttp` with `encoding: json` + Basic auth + `X-P-Stream` per signal — Parseable OSS rejects protobuf, so this is its only feed |
 
 ## Deploy / remove
 ```bash

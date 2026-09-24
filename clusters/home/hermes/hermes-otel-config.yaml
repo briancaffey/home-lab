@@ -71,35 +71,8 @@ data:
         dsn_env: UPTRACE_DSN
         metrics: true
         metrics_temporality: delta
-      # Parseable OSS — one generic entry per signal with Basic auth, because
-      # `type: parseable` only speaks X-API-Key and Parseable OSS has no API
-      # keys (observability/parseable/README.md). https://parseable.lan
-      - type: otlp
-        name: parseable-traces
-        endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80/v1/traces
-        headers:
-          Authorization: "Basic ${PARSEABLE_BASIC_AUTH}"
-          X-P-Stream: hermes-traces
-          X-P-Log-Source: otel-traces
-        metrics: false
-        logs: false
-      - type: otlp
-        name: parseable-metrics
-        endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80/v1/traces
-        headers:
-          Authorization: "Basic ${PARSEABLE_BASIC_AUTH}"
-          X-P-Stream: hermes-metrics
-          X-P-Log-Source: otel-metrics
-        traces: false
-        metrics: true
-        logs: false
-      - type: otlp
-        name: parseable-logs
-        endpoint: http://parseable-standalone-service.observability.svc.cluster.local:80/v1/traces
-        headers:
-          Authorization: "Basic ${PARSEABLE_BASIC_AUTH}"
-          X-P-Stream: hermes-logs
-          X-P-Log-Source: otel-logs
-        traces: false
-        metrics: false
-        logs: true
+      # Parseable OSS is NOT listed here: it only accepts OTLP/JSON
+      # ("Protobuf ingestion is not supported in Parseable OSS") and has no API
+      # keys, while this plugin's exporter is protobuf-only. It is fed by the
+      # lgtm collector gateway above, which re-encodes to JSON with Basic auth
+      # (observability/lgtm/values.yaml, observability/parseable/README.md).
