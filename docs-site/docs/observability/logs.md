@@ -33,4 +33,6 @@ flowchart LR
     DZ --> B[Browser: dozzle.lan]
 ```
 
+**The unfinished edge — Loki and OpenTelemetry:** the Loki here is 2.9 from the old `loki-stack` chart, and it has no native OTLP endpoint. That didn't matter until the [OTLP backends](./otel-backends.md) arrived: the OTel Collector gateway that fronts Tempo and Prometheus would happily forward Hermes' logs to Loki too, but collector-contrib has dropped its `loki` exporter and Loki 2.9 can't take OTLP directly. So the gateway's log pipeline goes to a `debug` exporter for now, and the fix is a Loki 3 migration (tracked as a home-lab issue) — Loki 3 speaks OTLP natively. Until then, agent logs live in OpenObserve, SigNoz, Uptrace and Parseable, and pod logs live here.
+
 **When to reach for which:** if the thing is happening *now*, Dozzle. If the thing *happened*, Loki. If you don't know when it happened, start with the alert in Mailpit — it has a timestamp, and that timestamp is a Loki query away from the whole story.

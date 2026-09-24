@@ -68,3 +68,4 @@ flowchart LR
 - **[Hermes](../ai/hermes.md)** 的链路经 hermes-otel 到达这里，它是第一个、目前也是主要的导出方。它的仪表盘也从 Langfuse *读取*数据，所以两者是一对搭档。
 - **[LiteLLM](../ai/litellm.md)** 今天的 OTLP 导出去的是 Phoenix；把它指向 Langfuse 的 OTLP/HTTP 端点同样轻而易举，那样每一次网关调用——不只是智能体运行——都会进同一个追踪存储。等我决定了两个后端里哪个是长期的家，这就是显而易见的下一步。
 - **Phoenix** 继续留着。两个追踪后端比一个家庭实验室需要的多了一个，我会合并——但要等到把两个都用够了、有了观点而不只是偏好之后。
+- **然后变成了九个。** 当 hermes-otel 支持的每一个可自托管后端都搬到隔壁之后——OpenObserve、Jaeger、Tempo、SigNoz、Uptrace、Parseable 和一个 OTel Collector 网关——两个变成了九个。Langfuse 仍然是我真正会打开来*读*链路的两个之一；其余的是对照组，它们有[自己的页面](./otel-backends.md)。

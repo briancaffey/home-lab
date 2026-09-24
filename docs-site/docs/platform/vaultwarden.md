@@ -34,6 +34,12 @@ flowchart LR
     C --> K["Kubernetes Secrets<br/>created out-of-band,<br/>recipes in manifest headers"]
 ```
 
+**Secrets into the cluster, without hands:** the out-of-band recipe above is how it started; most workload secrets now arrive through **External Secrets**, which reads Vaultwarden through a tiny in-cluster bridge — a pod running `bw serve` logged in as the same bot account. Add an item to the vault, commit an `ExternalSecret` that names it, and the Kubernetes Secret materialises on its own. The bridge is in [`clusters/home/external-secrets/`](https://github.com/briancaffey/home-lab/tree/main/clusters/home/external-secrets).
+
+:::warning[🔥 War story]
+For as long as the bridge had existed, a *new* Vaultwarden item never showed up in the cluster until somebody restarted the bridge pod. `bw serve` caches the vault in memory, so the bridge runs a little loop that pokes its own `/sync` endpoint every five minutes — and that loop called `node`, which does not exist on the image's PATH. It failed silently, every five minutes, forever; the readiness probe was green the whole time because serving the *stale* vault is still serving. I only noticed while standing up [seven observability backends](../observability/otel-backends.md) in one evening, each with its own new item, each mysteriously absent. The loop now uses `wget`, which the image does have. Cheap lesson, expensive to find: a background loop that swallows its own errors is indistinguishable from one that works.
+:::
+
 **The tricky part I actually hit:** giving an *agent* access safely. The answer was a dedicated bot account scoped to one collection, bootstrap credentials in the macOS Keychain, and strict item-naming rules — the full story (including the substring-matching trap that once broke everything named `forgejo…`) lives in [The Trust Fabric](../tissue/trust-fabric.md).
 
 **The stakes, honestly stated:** the entire vault is a **760 KB SQLite file**. It is the most precious 760 KB in the cluster — lose it and every other recovery procedure dies with it. Which is why it's the first target of the nightly [backup system](./backups.md), and the one whose restore has actually been drilled: decrypt, `integrity_check: ok`, every credential readable.

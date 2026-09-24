@@ -21,13 +21,19 @@ flowchart TD
     H -->|"kubectl 之手<br/>（受限 RBAC）"| K["全集群只读<br/>只能写 inference-club"]
     H -->|"保险库之手<br/>（机器人账号）"| V["Vaultwarden<br/>Automation 集合"]
     H -->|"LLM 调用"| L["LiteLLM<br/>独立密钥、独立预算"]
-    H -.经 hermes-otel 的链路追踪.-> P["Langfuse / Phoenix"]
+    H -.经 hermes-otel 的链路追踪.-> P["Langfuse · Phoenix<br/>+ 另外七个 OTLP 后端"]
 ```
 
 - **kubectl 之手：** 一个 ServiceAccount，全集群*只读*，写权限*仅限*推理命名空间——它可以停放和唤醒模型、重启卡死的 vLLM、诊断任何问题，但碰不了监控栈、数据库，也碰不了它自己。
 - **保险库之手：** 一个 `vault-secret` 命令，接到人类工具链所用的同一个 Vaultwarden 机器人账号上——技能里写死了行为守则：绝不打印秘密值、用*使用*凭据的方式证明访问成功、只用精确条目名。（完整故事在[信任体系](../tissue/trust-fabric.md)。）
 - **技能：** 操作集群、取凭据、hyperframes 视频渲染——镜像自带 Node、ffmpeg 和无头 Chromium，所以"给我做个关于 X 的视频"完全在 Pod 内渲染完成。
-- **链路追踪：** 每次运行都经 hermes-otel 导出到 [Langfuse](../observability/langfuse.md)，所以"它为什么这么做？"有一棵 span 树可以指着看，而不是翻日志。
+- **链路追踪：** 每次运行都经 hermes-otel 导出到 [Langfuse](../observability/langfuse.md)——而且从九月起，还会扇出到插件支持的每一个其他可自托管后端（[一轮对话，九个后端](../observability/otel-backends.md)）以及云端的 W&B Weave——所以"它为什么这么做？"有一棵 span 树可以指着看，而不是翻日志。
+
+## 钉住版本的追踪插件
+
+hermes-otel 是我自己的插件，有一段时间 Hermes 跑的是一个和正式发布渐行渐远的 fork 分支。现在一个 init 容器每次启动都从一个**钉住的 release 标签**安装插件包，所以 Hermes 跑的是哪个版本，就是 [`deployment.yaml`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/hermes/deployment.yaml) 里的一行，升级就是一次提交。插件的配置——后端列表，以及每个后端接收哪些信号——是一个挂载进 Pod 的 ConfigMap，通过 `HERMES_OTEL_CONFIG`（插件优先级最高的配置路径）交给插件。改文件、push，Reloader 滚动 Pod。这些后端需要的密钥以环境变量的形式来自 `hermes-secrets`，由 External Secrets 从 Vaultwarden 填充；提交进 git 的配置只会写变量名。
+
+上面最后那句话之所以存在，是因为一次失败：一份种下的配置副本落在了 1.x 插件不再读取的目录里，后端列表被悄悄忽略，插件反而从散落的环境变量里自动检测出了一个*云端*后端。完整故事在[后端页面的战地故事](../observability/otel-backends.md)里。
 
 ## SOUL.md，或者说：用文本编辑器编辑一个性格
 

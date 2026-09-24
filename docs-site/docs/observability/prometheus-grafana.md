@@ -24,6 +24,8 @@ description: Metrics without an operator — a monitoring stack you can read top
 
 **The tax on legibility:** the flip side of hand-rolled `static_configs` is that a new node is a manual edit, not a discovery. When t430 joined, its node-exporter DaemonSet started running instantly, but Prometheus wouldn't scrape it until I added the target to `prometheus.yml` by hand — and its temperature row stayed blank until I added its IP to the node-label mapping baked into the fleet dashboard JSON. An Operator would have found the node on its own. I still take the trade: I'd rather edit one readable file per node than run a system I can't read the rest of the time. But it's an honest cost, and it's exactly the kind of step that's easy to forget when a node "just works" after joining.
 
+**Traces in the same Grafana:** since the [OTLP backends](./otel-backends.md) moved in, Prometheus runs with `--web.enable-otlp-receiver`, so an OpenTelemetry Collector can *push* metrics to it instead of waiting to be scraped — that's how Hermes' token counters land here via the LGTM gateway. And Grafana has a **Tempo** datasource pointed at the Tempo release in the `observability` namespace, so a Hermes trace is a TraceQL query in Explore (`{resource.service.name="hermes-agent"}`), in the same Grafana as the GPU dashboards. Both are file-provisioned like everything else here: the flag in the Prometheus manifest, the datasource in `grafana-datasources.yml`.
+
 The one genuinely tricky bit: config files live in ConfigMaps with **stable names** (no content-hash suffixes), which used to mean editing a dashboard required manually restarting Grafana. That era ended when [Reloader](https://github.com/briancaffey/home-lab/tree/main/clusters/home/reloader) joined the cluster — now a config commit rolls the right pods automatically, and the whole loop (edit JSON → push → Argo syncs → Reloader restarts → dashboard live) involves zero kubectl.
 
 ```mermaid
@@ -32,6 +34,8 @@ flowchart LR
     DC[dcgm-exporter GPUs] --> P
     VR[vram-reporter] --> P
     VL[vLLM /metrics] --> P
+    OC[OTel Collector gateway] -->|OTLP push| P
+    TP[Tempo traces] --> G
     P --> G[Grafana dashboards]
     P --> AM[Alertmanager]
     GIT[(git: prometheus.yml + dashboards)] -.Argo + Reloader.-> P

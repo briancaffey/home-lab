@@ -24,6 +24,8 @@ description: 不用 Operator 的指标监控——一套你能从头读到尾的
 
 **可读性的代价：** 手写 `static_configs` 的另一面是，加一个新节点是一次手工编辑，而不是自动发现。t430 加入时，它的 node-exporter DaemonSet 立刻就跑起来了，但在我手动把目标加进 `prometheus.yml` 之前，Prometheus 不会去抓它——而在我把它的 IP 加进烤进 fleet 仪表盘 JSON 里的节点标签映射之前，它的温度那一行一直是空的。换成 Operator，它会自己发现这个节点。我仍然接受这个取舍：我宁愿每加一个节点就编辑一个读得懂的文件，也不想在其余所有时间里运行一套我读不懂的系统。但这是实打实的成本，而且恰恰是那种在节点加入后"就这么好用了"时最容易忘掉的步骤。
 
+**同一个 Grafana 里看链路：** 自从 [OTLP 后端](./otel-backends.md)搬进来以后，Prometheus 带着 `--web.enable-otlp-receiver` 运行，这样 OpenTelemetry Collector 可以把指标*推*给它，而不用等着被抓取——Hermes 的 token 计数器就是这样经 LGTM 网关落到这里的。Grafana 也多了一个 **Tempo** 数据源，指向 `observability` 命名空间里的 Tempo release，所以一条 Hermes 链路就是 Explore 里的一句 TraceQL 查询（`{resource.service.name="hermes-agent"}`），和 GPU 仪表盘在同一个 Grafana 里。两者和这里的其他东西一样都是文件供给的：开关在 Prometheus 的清单里，数据源在 `grafana-datasources.yml` 里。
+
 真正有点绕的只有一处：配置文件放在**名字固定**的 ConfigMap 里（没有内容哈希后缀），这曾经意味着改一个仪表盘就得手动重启 Grafana。那个时代在 [Reloader](https://github.com/briancaffey/home-lab/tree/main/clusters/home/reloader) 加入集群后结束了——现在一次配置提交会自动滚动重启对的 Pod，整个闭环（改 JSON → push → Argo 同步 → Reloader 重启 → 仪表盘上线）零 kubectl。
 
 ```mermaid
@@ -32,6 +34,8 @@ flowchart LR
     DC[dcgm-exporter GPU] --> P
     VR[vram-reporter] --> P
     VL[vLLM /metrics] --> P
+    OC[OTel Collector 网关] -->|OTLP 推送| P
+    TP[Tempo 链路] --> G
     P --> G[Grafana 仪表盘]
     P --> AM[Alertmanager]
     GIT[(git：prometheus.yml + 仪表盘)] -.Argo + Reloader.-> P

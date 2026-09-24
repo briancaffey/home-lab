@@ -33,4 +33,6 @@ flowchart LR
     DZ --> B[浏览器：dozzle.lan]
 ```
 
+**没做完的那条边——Loki 与 OpenTelemetry：** 这里的 Loki 是旧 `loki-stack` chart 里的 2.9，没有原生的 OTLP 端点。在 [OTLP 后端](./otel-backends.md)到来之前这无所谓：挡在 Tempo 和 Prometheus 前面的那个 OTel Collector 网关本来也乐意把 Hermes 的日志转发给 Loki，但 collector-contrib 已经删掉了它的 `loki` 导出器，而 Loki 2.9 又不能直接接收 OTLP。所以网关的日志管道暂时送到一个 `debug` 导出器，解决办法是一次 Loki 3 迁移（已作为 home-lab issue 跟踪）——Loki 3 原生会说 OTLP。在那之前，智能体的日志住在 OpenObserve、SigNoz、Uptrace 和 Parseable 里，Pod 的日志住在这里。
+
 **什么时候用哪个：** 事情*正在*发生，用 Dozzle。事情*已经*发生，用 Loki。不知道什么时候发生的，先去 Mailpit 里找那条告警——它带时间戳，而那个时间戳离完整故事只差一条 Loki 查询。

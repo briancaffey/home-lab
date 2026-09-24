@@ -34,6 +34,12 @@ flowchart LR
     C --> K["Kubernetes Secrets<br/>带外创建，<br/>配方写在清单头部"]
 ```
 
+**密钥进集群，不经人手：** 上面那套带外配方是起点；如今大多数工作负载的密钥是通过 **External Secrets** 送达的，它经由一个很小的集群内桥接来读取 Vaultwarden——一个以同一个机器人账号登录、跑着 `bw serve` 的 Pod。往保险库里加一个条目，提交一个写明条目名的 `ExternalSecret`，Kubernetes Secret 就会自己出现。桥接在 [`clusters/home/external-secrets/`](https://github.com/briancaffey/home-lab/tree/main/clusters/home/external-secrets)。
+
+:::warning[🔥 War story]
+从桥接存在的第一天起，一个*新*的 Vaultwarden 条目在有人重启桥接 Pod 之前，从来不会出现在集群里。`bw serve` 把保险库缓存在内存里，所以桥接跑着一个小循环，每五分钟敲一次自己的 `/sync` 端点——而这个循环调用的是 `node`，镜像的 PATH 上根本没有它。它每五分钟悄悄失败一次，永远如此；readiness 探针全程是绿的，因为提供一份*过期的*保险库仍然算在提供服务。我是在一个晚上立起[七个可观测性后端](../observability/otel-backends.md)时才注意到的——每一个都有自己的新条目，每一个都莫名其妙地缺席。现在循环用的是镜像里确实有的 `wget`。教训便宜，找到却贵：一个吞掉自己错误的后台循环，和一个正常工作的循环看起来一模一样。
+:::
+
 **我真正踩过的坑：** 如何安全地给一个*代理*授权。答案是一个只限定到单个集合的专用机器人账号、放在 macOS Keychain 里的引导凭据，外加严格的条目命名规则——完整的故事（包括那个曾让所有以 `forgejo…` 开头的条目集体罢工的子串匹配陷阱）写在[信任织物](../tissue/trust-fabric.md)里。
 
 **坦白地说清风险：** 整个保险库就是一个 **760 KB 的 SQLite 文件**。它是集群里最珍贵的 760 KB——丢了它，其他所有恢复流程都会跟着一起死。这就是为什么它是每晚[备份系统](./backups.md)的第一号目标，也是唯一真正演练过恢复的对象：解密、`integrity_check: ok`、每条凭据都可读。

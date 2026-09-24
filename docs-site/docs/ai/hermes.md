@@ -21,13 +21,19 @@ flowchart TD
     H -->|"kubectl hand<br/>(scoped RBAC)"| K["read everywhere<br/>write ONLY inference-club"]
     H -->|"vault hand<br/>(bot account)"| V["Vaultwarden<br/>Automation collection"]
     H -->|"LLM calls"| L["LiteLLM<br/>own key, own budget"]
-    H -.traces via hermes-otel.-> P["Langfuse / Phoenix"]
+    H -.traces via hermes-otel.-> P["Langfuse · Phoenix<br/>+ seven more OTLP backends"]
 ```
 
 - **kubectl hand:** a ServiceAccount with cluster-wide *read* and write *only* in the inference namespace — it can park and unpark models, restart a wedged vLLM, and diagnose anything, but it cannot touch the monitoring stack, the databases, or itself.
 - **vault hand:** a `vault-secret` command wired to the same Vaultwarden bot account the human tooling uses — with ground rules baked into its skill: never print secret values, prove access by *using* a credential, exact item names only. (The full story is in [The Trust Fabric](../tissue/trust-fabric.md).)
 - **Skills:** operate-the-cluster, fetch-secrets, and hyperframes video rendering — the image ships Node, ffmpeg, and headless Chromium, so "make me a video about X" renders entirely in-pod.
-- **Traces:** every run is exported through hermes-otel into [Langfuse](../observability/langfuse.md), so "why did it do that?" has a span tree to point at instead of a log scroll.
+- **Traces:** every run is exported through hermes-otel into [Langfuse](../observability/langfuse.md) — and, since September, fanned out to every other self-hostable backend the plugin supports ([one turn, nine backends](../observability/otel-backends.md)) plus W&B Weave in the cloud — so "why did it do that?" has a span tree to point at instead of a log scroll.
+
+## The tracing plugin, pinned
+
+hermes-otel is my own plugin, and for a while Hermes ran it from a fork branch that drifted from the releases. Now an init container installs the plugin package from a **pinned release tag** on every boot, so the version Hermes runs is one line in [`deployment.yaml`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/hermes/deployment.yaml) and a bump is a commit. The plugin's config — the list of backends and which signals each gets — is a ConfigMap mounted into the pod and handed to the plugin via `HERMES_OTEL_CONFIG`, its highest-precedence config path. Edit the file, push, Reloader rolls the pod. The secrets those backends need arrive as environment from `hermes-secrets`, which External Secrets fills from Vaultwarden; the committed config only ever names the variables.
+
+That last sentence exists because of a failure: a seeded copy of the config landed in a directory the 1.x plugin no longer reads, the backends list was silently ignored, and the plugin auto-detected a *cloud* backend from stray environment variables instead. The full story is in the [backends page's war story](../observability/otel-backends.md).
 
 ## SOUL.md, or: editing a personality with a text editor
 
