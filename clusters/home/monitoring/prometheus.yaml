@@ -47,6 +47,9 @@ spec:
             - "--storage.tsdb.path=/prometheus"
             - "--storage.tsdb.retention.time=15d"
             - "--web.enable-lifecycle"
+            # OTLP metrics ingest (POST /api/v1/otlp/v1/metrics) — used by the
+            # lgtm collector gateway (observability/lgtm) for hermes-otel metrics.
+            - "--web.enable-otlp-receiver"
             # Alert Source links (generatorURL) render as clickable
             # prometheus.lan URLs in Telegram/Mailpit instead of the pod
             # hostname.

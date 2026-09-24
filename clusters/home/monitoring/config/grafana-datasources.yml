@@ -16,3 +16,15 @@ datasources:
     url: http://loki:3100
     jsonData:
       maxLines: 1000
+  # Grafana Tempo (observability/tempo) — traces from hermes-otel (type: tempo)
+  # and from the lgtm collector gateway (type: lgtm). Query API :3200.
+  - name: Tempo
+    type: tempo
+    access: proxy
+    uid: tempo
+    url: http://tempo.observability.svc.cluster.local:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+      serviceMap:
+        datasourceUid: prometheus
