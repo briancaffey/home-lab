@@ -1,0 +1,80 @@
+# Small Postgres for Uptrace's metadata (users, projects, dashboards, alerts).
+# values.yaml sets postgresql.enabled=false because the chart renders a
+# CloudNativePG `Cluster` CR (3 instances, needs the CNPG operator).
+# Password from the ESO-managed Secret `uptrace-secrets` (PG_PASSWORD).
+apiVersion: v1
+kind: Service
+metadata:
+  name: uptrace-postgres
+  namespace: observability
+  labels:
+    app: uptrace-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: uptrace-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: uptrace-postgres
+  namespace: observability
+spec:
+  serviceName: uptrace-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uptrace-postgres
+  template:
+    metadata:
+      labels:
+        app: uptrace-postgres
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: postgres
+          image: docker.io/library/postgres:17-alpine
+          env:
+            - name: POSTGRES_DB
+              value: uptrace
+            - name: POSTGRES_USER
+              value: uptrace
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: uptrace-secrets
+                  key: PG_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "uptrace", "-d", "uptrace"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes: []
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi

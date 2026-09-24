@@ -1,0 +1,13 @@
+# Badger data for Jaeger v2 (observability/jaeger/values.yaml mounts it at /badger).
+# local-path binds on first use to the node the pod lands on (a2 via nodeSelector).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jaeger-badger
+  namespace: observability
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi

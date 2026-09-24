@@ -1,0 +1,91 @@
+# "LGTM" for hermes-otel (type: lgtm) — an OpenTelemetry Collector gateway in
+# front of the cluster's Grafana stack, from the official chart:
+#   helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+#   helm upgrade --install lgtm open-telemetry/opentelemetry-collector --version 0.173.1 \
+#     -n observability -f observability/lgtm/values.yaml
+# The grafana/otel-lgtm single container is a laptop demo image (no chart, no
+# durable storage), so the k3s equivalent is the real pieces: this collector
+# receives OTLP on :4318 and fans out
+#   traces  -> Tempo      (observability/tempo, Grafana Explore)
+#   metrics -> Prometheus (clusters/home/monitoring, --web.enable-otlp-receiver)
+#   logs    -> Loki       (pending the Loki 3 migration, home-lab#14; the
+#              cluster's Loki 2.9 has no OTLP endpoint and collector-contrib
+#              no longer ships a `loki` exporter — logs are dropped for now)
+# Service: lgtm.observability.svc.cluster.local:4318
+
+fullnameOverride: lgtm
+mode: deployment
+replicaCount: 1
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+nodeSelector:
+  inference-club.com/box: a2
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+# Only OTLP in; the chart's Jaeger/Zipkin receivers and hostPorts stay off.
+ports:
+  otlp:
+    enabled: true
+    hostPort: null
+  otlp-http:
+    enabled: true
+    hostPort: null
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+
+config:
+  receivers:
+    jaeger: null
+    zipkin: null
+    prometheus: null
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+  processors:
+    batch: {}
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+  exporters:
+    debug:
+      verbosity: basic
+    otlphttp/tempo:
+      endpoint: http://tempo.observability.svc.cluster.local:4318
+      tls:
+        insecure: true
+    otlphttp/prometheus:
+      endpoint: http://prometheus.monitoring.svc.cluster.local:9090/api/v1/otlp
+      tls:
+        insecure: true
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlphttp/tempo]
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlphttp/prometheus]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [debug]

@@ -1,0 +1,31 @@
+# https://jaeger.lan/  ->  jaeger:16686 (Jaeger UI)
+# TLS via the mkcert secret `jaeger-tls` (scripts/lan-certs.sh).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaeger
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Jaeger"
+    gethomepage.dev/description: "Distributed tracing (OTLP) — hermes-otel backend"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "jaeger.png"
+    gethomepage.dev/pod-selector: "app.kubernetes.io/name=jaeger"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: jaeger.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger
+                port:
+                  number: 16686
+  tls:
+    - secretName: jaeger-tls
+      hosts:
+        - jaeger.lan

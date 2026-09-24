@@ -1,0 +1,60 @@
+# SigNoz — values for the official chart
+#   helm repo add signoz https://charts.signoz.io
+#   helm upgrade --install signoz signoz/signoz --version 0.143.0 \
+#     -n observability -f observability/signoz/values.yaml
+# Bundled ClickHouse (single node, via the chart's Altinity clickhouse-operator)
+# + ZooKeeper + signoz (UI/API/alertmanager, SQLite) + signoz-otel-collector.
+# Traces + metrics + logs (hermes-otel type: signoz, metrics preset delta).
+# Everything pinned to a2; PVCs on local-path. First visit to the UI creates
+# the admin account (no ESO secret needed for self-hosted ingest).
+# hermes-otel endpoint: http://signoz-otel-collector.observability.svc.cluster.local:4318/v1/traces
+
+global:
+  storageClass: local-path
+
+clickhouse:
+  nodeSelector:
+    inference-club.com/box: a2
+  persistence:
+    size: 30Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 1Gi
+    limits:
+      memory: 6Gi
+  zookeeper:
+    replicaCount: 1
+    nodeSelector:
+      inference-club.com/box: a2
+    persistence:
+      size: 2Gi
+  clickhouseOperator:
+    nodeSelector:
+      inference-club.com/box: a2
+
+signoz:
+  nodeSelector:
+    inference-club.com/box: a2
+  persistence:
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+
+telemetryStoreMigrator:
+  nodeSelector:
+    inference-club.com/box: a2
+
+otelCollector:
+  nodeSelector:
+    inference-club.com/box: a2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 2Gi

@@ -1,0 +1,39 @@
+# Parseable OSS (standalone, local-store) — values for the official chart
+#   helm repo add parseable https://charts.parseable.com
+#   helm upgrade --install parseable parseable/parseable --version 3.2.3 \
+#     -n observability -f observability/parseable/values.yaml
+# One pod, two local-path PVCs (data + staging) on a2. hermes-otel (type:
+# parseable) writes traces/metrics/logs into three datasets via OTLP/HTTP on
+# the service's port 80 (/v1/traces, /v1/metrics, /v1/logs) with X-P-Stream
+# headers. Credentials come from the ESO-managed Secret parseable-env-secret
+# (Vaultwarden item observability-parseable-env-secret: addr, username, password).
+
+parseable:
+  deploymentMode: standalone
+  store:
+    type: local-store
+    secretName: parseable-env-secret
+  standalone:
+    unified:
+      env:
+        RUST_LOG: warn
+        P_CHECK_UPDATE: "false"
+        P_SEND_ANONYMOUS_USAGE_DATA: "false"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          cpu: "2"
+          memory: 3Gi
+      persistence:
+        data:
+          enabled: true
+          storageClass: local-path
+          size: 20Gi
+        staging:
+          enabled: true
+          storageClass: local-path
+          size: 5Gi
+      nodeSelector:
+        inference-club.com/box: a2

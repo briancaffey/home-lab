@@ -1,0 +1,46 @@
+# Grafana Tempo (single-binary) — values for the community chart
+#   helm repo add grafana-community https://grafana-community.github.io/helm-charts
+#   helm upgrade --install tempo grafana-community/tempo --version 3.0.0 \
+#     -n observability -f observability/tempo/values.yaml
+# NOTE: the community grafana/tempo charts moved from grafana.github.io to
+# grafana-community in Jan 2026; the old repo serves a stale 1.24.x chart.
+# Local filesystem storage on a local-path PVC (StatefulSet), traces only
+# (hermes-otel type: tempo). OTLP gRPC :4317 / HTTP :4318, query API :3200.
+# The UI is the existing Grafana (Explore → Tempo datasource, see
+# clusters/home/monitoring/config/grafana-datasources.yml).
+
+replicas: 1
+
+nodeSelector:
+  inference-club.com/box: a2
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 20Gi
+
+tempo:
+  reportingEnabled: false
+  retention: 168h
+  metricsGenerator:
+    enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"

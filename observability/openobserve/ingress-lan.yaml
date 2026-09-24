@@ -1,0 +1,31 @@
+# https://openobserve.lan/  ->  openobserve-openobserve-standalone:5080 (UI + OTLP/HTTP)
+# TLS via the mkcert secret `openobserve-tls` (scripts/lan-certs.sh).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openobserve
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "OpenObserve"
+    gethomepage.dev/description: "Traces, metrics & logs (OTLP) — hermes-otel backend"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "openobserve.png"
+    gethomepage.dev/pod-selector: "app.kubernetes.io/name=openobserve-standalone"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: openobserve.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openobserve-openobserve-standalone
+                port:
+                  number: 5080
+  tls:
+    - secretName: openobserve-tls
+      hosts:
+        - openobserve.lan

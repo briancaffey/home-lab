@@ -58,6 +58,13 @@ and containers at these instead of IP:port. `/docs` on each = OpenAPI UI.
 | Prometheus | Metrics store + scraper | http://192.168.5.173:30090 |
 | Phoenix | LLM traces & evals (OTLP) | UI http://192.168.5.173:30606 · OTLP grpc `:4317` |
 | Langfuse | LLM tracing, prompts & evals (OTLP) | https://langfuse.lan · OTLP http `/api/public/otel` (project keys in `langfuse-secrets`) |
+| OpenObserve | Traces + metrics + logs (OTLP), hermes-otel backend | https://openobserve.lan · OTLP http `:5080/api/default/v1/*` (Basic auth, `openobserve-root`) |
+| Jaeger | Distributed tracing (OTLP), hermes-otel backend | https://jaeger.lan · OTLP http `jaeger:4318` |
+| Tempo | Traces (OTLP), hermes-otel backend; UI = Grafana Explore | Grafana datasource **Tempo** · OTLP http `tempo:4318` |
+| LGTM gateway | OTel Collector → Tempo + Prometheus (hermes-otel `type: lgtm`) | OTLP http `lgtm:4318` (no UI; Grafana) |
+| SigNoz | Traces + metrics + logs (OTLP), hermes-otel backend | https://signoz.lan · OTLP http `signoz-otel-collector:4318` |
+| Uptrace | Traces + metrics + logs (OTLP), hermes-otel backend | https://uptrace.lan · OTLP http `uptrace:80` + `uptrace-dsn` header (`uptrace-secrets`) |
+| Parseable | Logs + traces + metrics (OTLP), hermes-otel backend | https://parseable.lan · OTLP http `parseable-standalone-service:80/v1/*` (Basic auth, `parseable-env-secret`) |
 | dcgm-exporter | Per-GPU metrics → Prometheus | (feeds Grafana) |
 | node-exporter | Host CPU/RAM/disk → Prometheus | (feeds Grafana) |
 

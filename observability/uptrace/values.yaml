@@ -1,0 +1,98 @@
+# Uptrace — values for the official chart, app only
+#   helm repo add uptrace https://charts.uptrace.dev
+#   kubectl apply -f observability/uptrace/clickhouse.yaml -f observability/uptrace/postgres.yaml
+#   helm upgrade --install uptrace uptrace/uptrace --version 2.0.2 \
+#     -n observability -f observability/uptrace/values.yaml
+# The chart's bundled stores are operator CRs (Altinity ClickHouseInstallation,
+# CloudNativePG Cluster, OpenTelemetryCollector) — three operators for one dev
+# backend is too much, so they are all off and the stores are the two plain
+# StatefulSets next to this file. Traces + metrics + logs (hermes-otel type:
+# uptrace, metrics preset delta). Pinned to a2.
+#
+# Every credential below is a `${VAR}` reference that Uptrace expands from the
+# environment at start; the values come from the ESO-managed Secret
+# `uptrace-secrets` (Vaultwarden item observability-uptrace-secrets).
+# UI: https://uptrace.lan (login admin@uptrace.lan / UPTRACE_ADMIN_PASSWORD)
+# OTLP/HTTP: http://uptrace.observability.svc.cluster.local:80/v1/traces
+# DSN:       http://<UPTRACE_PROJECT_TOKEN>@uptrace.observability.svc.cluster.local:80?grpc=4317
+
+clickhouse:
+  enabled: false
+postgresql:
+  enabled: false
+otelcol:
+  enabled: false
+otelcolDaemonset:
+  enabled: false
+ingress:
+  enabled: false   # observability/uptrace/ingress-lan.yaml (Traefik + mkcert)
+
+uptrace:
+  nodeSelector:
+    inference-club.com/box: a2
+  envFrom:
+    - secretRef:
+        name: uptrace-secrets
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 3Gi
+  service:
+    type: ClusterIP
+    http_port: 80
+    grpc_port: 4317
+  config:
+    service:
+      env: hosted
+      secret: ${UPTRACE_SECRET}
+    site:
+      url: https://uptrace.lan
+    seed_data:
+      users:
+        - key: user1
+          name: Admin
+          email: admin@uptrace.lan
+          password: ${UPTRACE_ADMIN_PASSWORD}
+          email_confirmed: true
+      user_tokens:
+        - key: user_token1
+          user_key: user1
+          token: ${UPTRACE_USER_TOKEN}
+      projects:
+        - key: project1
+          name: hermes-agent
+          org_key: org1
+      project_tokens:
+        - key: project_token1
+          project_key: project1
+          token: ${UPTRACE_PROJECT_TOKEN}
+    ch_cluster:
+      cluster: uptrace1
+      replicated: false
+      distributed: false
+      shards:
+        - replicas:
+            - addr: uptrace-clickhouse:9000
+              database: uptrace
+              user: uptrace
+              password: ${CH_PASSWORD}
+              dial_timeout: 3s
+              write_timeout: 5s
+              max_retries: 3
+              max_execution_time: 15s
+    pg:
+      addr: uptrace-postgres:5432
+      user: uptrace
+      password: ${PG_PASSWORD}
+      database: uptrace
+    # Query/session cache: reuse the shared platform Redis (platform/redis)
+    # instead of the chart's assumed redis-master.
+    redis_cache:
+      addrs:
+        1: redis.platform.svc.cluster.local:6379
+    # Uptrace's own telemetry — the chart default uses the seed token
+    # `project1_secret`, which does not exist here (403 spam in the logs).
+    self_monitoring:
+      dsn: ${UPTRACE_DSN}

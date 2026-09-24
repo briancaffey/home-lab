@@ -1,0 +1,44 @@
+# OpenObserve (standalone) — values for the official chart
+#   helm repo add openobserve https://charts.openobserve.ai
+#   helm upgrade --install openobserve openobserve/openobserve-standalone --version 1.0.1 \
+#     -n observability -f observability/openobserve/values.yaml
+# Single pod, embedded SQLite metadata + local disk (parquet) — the lightest
+# traces+metrics+logs backend hermes-otel supports (type: openobserve).
+# UI + OTLP/HTTP: :5080 (OTLP paths are /api/<org>/v1/{traces,metrics,logs}),
+# OTLP gRPC: :5081. Pinned to a2 (headroom; local-path PVC follows the pod).
+
+nodeSelector:
+  inference-club.com/box: a2
+
+persistence:
+  enabled: true
+  size: 20Gi
+  storageClass: local-path
+
+# Root user comes from the ESO-managed Secret (Vaultwarden item
+# observability-openobserve-root) — never from this file.
+auth:
+  existingRootUserSecret:
+    name: openobserve-root
+    emailKey: ZO_ROOT_USER_EMAIL
+    passwordKey: ZO_ROOT_USER_PASSWORD
+
+config:
+  ZO_LOCAL_MODE: "true"
+  ZO_LOCAL_MODE_STORAGE: "disk"
+  ZO_META_STORE: "sqlite"
+  ZO_WEB_URL: "https://openobserve.lan"
+  ZO_TELEMETRY: "false"
+  # Keep the disk bounded: drop data older than 14 days.
+  ZO_COMPACT_DATA_RETENTION_DAYS: "14"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    memory: 3Gi
+
+# We publish our own Traefik ingress (ingress-lan.yaml) with the mkcert cert.
+ingress:
+  enabled: false

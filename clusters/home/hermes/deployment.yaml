@@ -111,12 +111,14 @@ spec:
           volumeMounts:
             - { name: data, mountPath: /opt/data }
             - { name: vault-tools, mountPath: /vault-tools }
-        # Install the hermes-otel plugin onto the PVC from a pinned ref. Right
-        # now that's PR briancaffey/hermes-otel#50 (adds the W&B Weave OTLP
-        # backend), which lives on the contributor's fork ash0ts/hermes-otel
-        # branch feat/weave-backend. Once the PR merges, point TARBALL at a
-        # briancaffey/hermes-otel release tag. Idempotent refresh each boot so
-        # plugin updates deploy on restart. (Same pattern as install-otel-libs.)
+        # Install the hermes-otel plugin onto the PVC from a pinned release tag
+        # of briancaffey/hermes-otel (the plugin package is the hermes_otel/
+        # directory of that repo; since 1.x it has subpackages — hooks/,
+        # dashboard/, skills/ — so the whole directory is copied). Idempotent
+        # refresh each boot so plugin updates deploy on restart. NOTE: the
+        # release declares requires_hermes >=0.21; this image is Hermes 0.18.1,
+        # which still loads it (hooks register defensively) with the OTel libs
+        # installed by install-otel-libs above.
         - name: install-hermes-otel
           image: nousresearch/hermes-agent:v2026.7.7
           command:
@@ -124,15 +126,20 @@ spec:
             - -c
             - |
               DEST=/opt/data/plugins/hermes_otel
-              TARBALL="https://api.github.com/repos/ash0ts/hermes-otel/tarball/feat/weave-backend"
+              HERMES_OTEL_VERSION="1.15.1"
+              TARBALL="https://api.github.com/repos/briancaffey/hermes-otel/tarball/hermes-otel-v${HERMES_OTEL_VERSION}"
               mkdir -p "$DEST"
               TMP=$(mktemp -d)
               # Resilient: on a fetch failure, KEEP the existing PVC plugin
               # rather than fail the pod (only fatal if no plugin exists at all).
               if curl -fsSL "$TARBALL" | tar xz -C "$TMP" 2>/dev/null; then
                 SRC=$(echo "$TMP"/*/)
-                cp "$SRC"/*.py "$SRC"/plugin.yaml "$DEST"/
-                echo "hermes-otel installed from $TARBALL; weave refs in backends.py: $(grep -c weave "$DEST/backends.py")"
+                # Replace wholesale (old loose *.py files from the 1.0-era fork
+                # install would otherwise shadow the package layout).
+                rm -rf "$DEST"/* "$DEST"/.[!.]* 2>/dev/null || true
+                cp -r "$SRC"/hermes_otel/. "$DEST"/
+                rm -f "$DEST"/live.db
+                echo "hermes-otel installed from $TARBALL: $(grep '^version:' "$DEST/plugin.yaml")"
               else
                 echo "WARN: could not fetch hermes-otel plugin; keeping existing PVC copy"
                 [ -f "$DEST/backends.py" ] || { echo "FATAL: no existing plugin on PVC"; exit 1; }
@@ -205,6 +212,25 @@ spec:
                 secretKeyRef: { name: hermes-secrets, key: wandb-api-key }
             - { name: WANDB_ENTITY, value: "briancaffey-united-states-of-america" }
             - { name: WANDB_PROJECT, value: "hermes-agent" }
+            # In-cluster hermes-otel backends (observability/*). Referenced by
+            # name from hermes-otel-config.yaml (`*_env` fields / ${VAR}); the
+            # values are ESO-synced into hermes-secrets from the same Vaultwarden
+            # items the backends themselves use.
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: langfuse-public-key }
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: langfuse-secret-key }
+            - name: OPENOBSERVE_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: openobserve-password }
+            - name: PARSEABLE_BASIC_AUTH
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: parseable-basic-auth }
+            - name: UPTRACE_DSN
+              valueFrom:
+                secretKeyRef: { name: hermes-secrets, key: uptrace-dsn }
           volumeMounts:
             - { name: data, mountPath: /opt/data }
             # Bot creds as files (not env) so a stray `env` in a terminal tool

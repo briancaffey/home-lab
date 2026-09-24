@@ -1,0 +1,95 @@
+# Jaeger v2 (all-in-one on the OTel Collector) — values for the official chart
+#   helm repo add jaegertracing https://jaegertracing.github.io/helm-charts
+#   kubectl apply -f observability/jaeger/pvc.yaml
+#   helm upgrade --install jaeger jaegertracing/jaeger --version 4.14.0 \
+#     -n observability -f observability/jaeger/values.yaml
+# The chart's default storage is in-memory; this `userconfig` switches the v2
+# config to Badger on a local-path PVC (pvc.yaml) so traces survive restarts.
+# Traces only (hermes-otel type: jaeger). UI :16686, OTLP gRPC :4317 / HTTP :4318.
+
+jaeger:
+  nodeSelector:
+    inference-club.com/box: a2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 2Gi
+  extraVolumes:
+    - name: badger
+      persistentVolumeClaim:
+        claimName: jaeger-badger
+  extraVolumeMounts:
+    - name: badger
+      mountPath: /badger
+
+# Jaeger v2 configuration (mounted at /etc/jaeger/user-config.yaml).
+userconfig:
+  service:
+    extensions: [jaeger_storage, jaeger_query, healthcheckv2]
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [batch]
+        exporters: [jaeger_storage_exporter]
+    telemetry:
+      resource:
+        service.name: jaeger
+      metrics:
+        level: detailed
+        readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: 0.0.0.0
+                  port: 8888
+  extensions:
+    healthcheckv2:
+      use_v2: true
+      http:
+        endpoint: 0.0.0.0:13133
+    jaeger_query:
+      storage:
+        traces: primary_store
+        traces_archive: archive_store
+    jaeger_storage:
+      backends:
+        primary_store:
+          badger:
+            directories:
+              keys: /badger/keys
+              values: /badger/values
+            ephemeral: false
+            ttl:
+              spans: 168h
+        archive_store:
+          badger:
+            directories:
+              keys: /badger/archive-keys
+              values: /badger/archive-values
+            ephemeral: false
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  processors:
+    batch: {}
+  exporters:
+    jaeger_storage_exporter:
+      trace_storage: primary_store
+
+# Jaeger v2 only ships this one deployment; the ES/Cassandra helpers stay off.
+storage:
+  type: memory
+spark:
+  enabled: false
+esIndexCleaner:
+  enabled: false
+esRollover:
+  enabled: false
+esLookback:
+  enabled: false

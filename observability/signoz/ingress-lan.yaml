@@ -1,0 +1,31 @@
+# https://signoz.lan/  ->  signoz:8080 (UI + API)
+# TLS via the mkcert secret `signoz-tls` (scripts/lan-certs.sh).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: signoz
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "SigNoz"
+    gethomepage.dev/description: "Traces, metrics & logs (OTLP) — hermes-otel backend"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "signoz.png"
+    gethomepage.dev/pod-selector: "app.kubernetes.io/component=signoz"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: signoz.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signoz
+                port:
+                  number: 8080
+  tls:
+    - secretName: signoz-tls
+      hosts:
+        - signoz.lan

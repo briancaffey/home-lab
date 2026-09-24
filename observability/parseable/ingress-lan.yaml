@@ -1,0 +1,31 @@
+# https://parseable.lan/  ->  parseable-standalone-service:80 (UI + API + OTLP/HTTP)
+# TLS via the mkcert secret `parseable-tls` (scripts/lan-certs.sh).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: parseable
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Parseable"
+    gethomepage.dev/description: "Logs, traces & metrics (OTLP) — hermes-otel backend"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "parseable.png"
+    gethomepage.dev/pod-selector: "app=parseable"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: parseable.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: parseable-standalone-service
+                port:
+                  number: 80
+  tls:
+    - secretName: parseable-tls
+      hosts:
+        - parseable.lan

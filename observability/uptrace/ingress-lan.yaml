@@ -1,0 +1,31 @@
+# https://uptrace.lan/  ->  uptrace:80 (UI + API + OTLP/HTTP)
+# TLS via the mkcert secret `uptrace-tls` (scripts/lan-certs.sh).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: uptrace
+  namespace: observability
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Uptrace"
+    gethomepage.dev/description: "Traces, metrics & logs (OTLP) — hermes-otel backend"
+    gethomepage.dev/group: "Observability"
+    gethomepage.dev/icon: "uptrace.png"
+    gethomepage.dev/pod-selector: "app.kubernetes.io/name=uptrace"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: uptrace.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: uptrace
+                port:
+                  number: 80
+  tls:
+    - secretName: uptrace-tls
+      hosts:
+        - uptrace.lan

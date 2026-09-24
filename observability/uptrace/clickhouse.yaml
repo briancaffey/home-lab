@@ -1,0 +1,121 @@
+# Single-node ClickHouse for Uptrace (values.yaml sets clickhouse.enabled=false:
+# the chart's own path renders an Altinity ClickHouseInstallation CR, which
+# needs the clickhouse-operator). Same shape as observability/langfuse/clickhouse.yaml.
+# Credentials come from the ESO-managed Secret `uptrace-secrets` (CH_PASSWORD);
+# the image creates the `uptrace` user/database on first start.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: uptrace-clickhouse-config
+  namespace: observability
+data:
+  homelab.xml: |
+    <clickhouse>
+      <trace_log remove="1"/>
+      <latency_log remove="1"/>
+      <processors_profile_log remove="1"/>
+      <query_thread_log remove="1"/>
+      <query_log><ttl>event_date + INTERVAL 7 DAY</ttl></query_log>
+      <text_log><ttl>event_date + INTERVAL 3 DAY</ttl></text_log>
+      <metric_log><ttl>event_date + INTERVAL 3 DAY</ttl></metric_log>
+      <asynchronous_metric_log><ttl>event_date + INTERVAL 3 DAY</ttl></asynchronous_metric_log>
+      <part_log><ttl>event_date + INTERVAL 3 DAY</ttl></part_log>
+    </clickhouse>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uptrace-clickhouse
+  namespace: observability
+  labels:
+    app: uptrace-clickhouse
+spec:
+  type: ClusterIP
+  selector:
+    app: uptrace-clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: native
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: uptrace-clickhouse
+  namespace: observability
+spec:
+  serviceName: uptrace-clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uptrace-clickhouse
+  template:
+    metadata:
+      labels:
+        app: uptrace-clickhouse
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      containers:
+        - name: clickhouse
+          # The uptrace chart 2.0.x defaults to 25.3.
+          image: docker.io/clickhouse/clickhouse-server:25.3
+          env:
+            - name: CLICKHOUSE_DB
+              value: uptrace
+            - name: CLICKHOUSE_USER
+              value: uptrace
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: uptrace-secrets
+                  key: CH_PASSWORD
+          ports:
+            - name: http
+              containerPort: 8123
+            - name: native
+              containerPort: 9000
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              memory: 4Gi
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: logs
+              mountPath: /var/log/clickhouse-server
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d/homelab.xml
+              subPath: homelab.xml
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: uptrace-clickhouse-config
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi
