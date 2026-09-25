@@ -1,0 +1,26 @@
+# https://lgtm.lan/v1/{traces,metrics,logs}  ->  lgtm:4318 (OTLP/HTTP receiver)
+# No UI here — this host exists so exporters on the LAN (the laptop Hermes)
+# can reach the receiver; the UI is Grafana. TLS via the mkcert secret
+# `lgtm-tls` (scripts/lan-certs.sh). Not Homepage-discovered on purpose.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lgtm
+  namespace: observability
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: lgtm.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: lgtm
+                port:
+                  number: 4318
+  tls:
+    - secretName: lgtm-tls
+      hosts:
+        - lgtm.lan

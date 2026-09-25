@@ -1,0 +1,26 @@
+# https://tempo.lan/v1/{traces,metrics,logs}  ->  tempo:4318 (OTLP/HTTP receiver)
+# No UI here — this host exists so exporters on the LAN (the laptop Hermes)
+# can reach the receiver; the UI is Grafana. TLS via the mkcert secret
+# `tempo-tls` (scripts/lan-certs.sh). Not Homepage-discovered on purpose.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tempo
+  namespace: observability
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: tempo.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tempo
+                port:
+                  number: 4318
+  tls:
+    - secretName: tempo-tls
+      hosts:
+        - tempo.lan
