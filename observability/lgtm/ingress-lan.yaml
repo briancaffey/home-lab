@@ -1,4 +1,5 @@
 # https://lgtm.lan/v1/{traces,metrics,logs}  ->  lgtm:4318 (OTLP/HTTP receiver)
+# https://lgtm.lan/api/…                    ->  tempo:3200 (Tempo query API, read path)
 # No UI here — this host exists so exporters on the LAN (the laptop Hermes)
 # can reach the receiver; the UI is Grafana. TLS via the mkcert secret
 # `lgtm-tls` (scripts/lan-certs.sh). Not Homepage-discovered on purpose.
@@ -13,13 +14,23 @@ spec:
     - host: lgtm.lan
       http:
         paths:
-          - path: /
+          # OTLP/HTTP receiver: POST /v1/{traces,metrics,logs}
+          - path: /v1
             pathType: Prefix
             backend:
               service:
                 name: lgtm
                 port:
                   number: 4318
+          # Everything else is Tempo's query API (/api/search, /api/traces/…)
+          # so hermes-otel's dashboard adapter can read back through this host.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tempo
+                port:
+                  number: 3200
   tls:
     - secretName: lgtm-tls
       hosts:
