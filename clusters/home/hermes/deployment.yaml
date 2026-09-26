@@ -126,7 +126,7 @@ spec:
             - -c
             - |
               DEST=/opt/data/plugins/hermes_otel
-              HERMES_OTEL_VERSION="1.15.1"
+              HERMES_OTEL_VERSION="1.17.0"
               TARBALL="https://api.github.com/repos/briancaffey/hermes-otel/tarball/hermes-otel-v${HERMES_OTEL_VERSION}"
               mkdir -p "$DEST"
               TMP=$(mktemp -d)
