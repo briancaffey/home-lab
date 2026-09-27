@@ -92,6 +92,7 @@ metadata:
         name: FLUX.2 Klein 4B
         input_modalities: [text, image]
         output_modalities: [image]
+        features: [image-edit, multi-reference]
 spec:
   selector:
     app: flux2-klein

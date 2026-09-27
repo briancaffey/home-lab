@@ -23,6 +23,7 @@ flowchart LR
         magpie["magpie-tts<br/>文字→语音"]
         sv["studio-voice<br/>音频修复"]
         fc["firecrawl<br/>URL→markdown"]
+        qwen["qwen-image<br/>图像 + 编辑（spark）"]
     end
     subgraph parked["替补席（replicas: 0）"]
         flux["flux2-klein<br/>图像"]
@@ -44,11 +45,14 @@ flowchart LR
 - **转录**用 `asr.lan`——音频进、文字出，跑在 spark 的统一内存上
 - **配音**来自 `magpie.lan`——各种项目背后的 TTS
 - **抓取**用 `firecrawl.lan`——URL 进、干净的 markdown 出，喂给各路智能体
+- **带字的图**来自 `qwen.lan`——[Qwen-Image 2.1](./qwen-image.md)：文生图、参考图编辑、透明 PNG。唯一一个住在 spark 上的模型，因为这里没有别的机器装得下它的 33 GB
 - **唤醒某个服务**当项目需要时：一句 `kubectl scale`，模型就醒了
 
 ## 这里的配置方式（有意思的部分）
 
 **GPU 是刻意共享的，不是自动共享的。** 一个 Pod 要么独占整块 GPU（`nvidia.com/gpu: 1`——由调度器强制排他），要么加入"君子协定"（`NVIDIA_VISIBLE_DEVICES=all` 且*不*声明 GPU 资源——几个 Pod 共享一块卡，而调度器对此一无所知）。这里没有 time-slicing 也没有 MPS；一个自制的 `vram-reporter` 在带外记账。一块 RTX 4090 有 24 GB VRAM，每个模型大概吃多少，我心里有数。
+
+**有些模型会自己挑节点。** 舰队里大多数模型一块 4090 就装得下，哪里有 VRAM 就去哪里；但 Qwen-Image 那条 33 GB 的流水线逼出了一段值得单独一读的安置故事：在 a3 上的两次尝试（先是 CPU 卸载，再是 4-bit 编码器）各自牺牲了我想要的东西，而 spark 的 128 GB 统一内存是唯一诚实的答案。细节——包括那次悄无声息什么都没改的编辑——都在 [Qwen-Image 页](./qwen-image.md)上。
 
 **"停放"是一等公民的生活方式。** 我没法同时跑所有东西——光是视频生成就能吃掉一整块卡——所以服务频繁地缩到零再扩回来。这塑造了两个实实在在的架构决策：
 

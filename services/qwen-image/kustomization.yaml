@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: inference-club
+resources:
+  - qwen-image.yaml
+configMapGenerator:
+  - name: qwen-image-server
+    files:
+      - server.py
+generatorOptions:
+  disableNameSuffixHash: true

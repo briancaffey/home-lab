@@ -1,0 +1,126 @@
+# Qwen-Image-2.1 (Alibaba, released 2026-09-20): 7B single-stream DiT + a
+# Qwen3-VL text/vision encoder, one pipeline for text-to-image, reference-image
+# editing (up to 10 refs) and native RGBA output. Weights are 33 GB in BF16
+# (17.5 GB encoder + 14.2 GB DiT + 1.4 GB VAE) — more than any 4090 here holds,
+# so it lives on spark: the GB10's 128 GB unified memory takes the whole
+# pipeline resident (OFFLOAD=none, ~32 GB), ~60 s per 1024² image / edit.
+# (a3 was tried first with CPU offload + a 4-bit encoder: fine for
+# text-to-image, useless for editing — see a3-fallback/.)
+#
+# No custom image: the arm64 vllm/vllm-openai:nightly already cached on spark
+# (Python 3.12, torch 2.11+cu130) + pip at start bumps diffusers to a pinned
+# main-branch tarball (2.1 support post-dates the 0.40 release) and
+# transformers to 5.17; a hostPath pip cache makes restarts ~seconds.
+# `hf download` at start is idempotent, so the pod is self-sufficient once
+# the weights are in spark's HF cache (they were relayed from a3 — spark's
+# own uplink is ~3 MB/s). Outputs land in /home/brian/qwen-image/out.
+#
+# GPU sharing on spark: no nvidia.com/gpu claim (same as nemotron-asr) — the
+# nvidia RuntimeClass injects the GPU and unified memory is shared with
+# whatever else runs there (LM Studio, nemotron-asr).
+#
+# License: Qwen Research License (non-commercial) — fine for the lab.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen-image
+  namespace: inference-club
+  labels:
+    app: qwen-image
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # ~32 GB resident; don't double it during a rollout
+  selector:
+    matchLabels:
+      app: qwen-image
+  template:
+    metadata:
+      labels:
+        app: qwen-image
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      containers:
+        - name: qwen-image
+          image: docker.io/vllm/vllm-openai:nightly
+          imagePullPolicy: IfNotPresent # 10 GB arm64 image already on spark; never chase the tag
+          command: ["bash", "-lc"]
+          args:
+            - |
+              set -e
+              chown -R root:root /pip-cache  # pip refuses a cache dir it doesn't own
+              pip install -q \
+                "https://github.com/huggingface/diffusers/archive/$DIFFUSERS_SHA.tar.gz" \
+                "transformers==5.17.0" accelerate "huggingface_hub[hf_xet]" \
+                fastapi "uvicorn[standard]" python-multipart pillow
+              hf download "$MODEL_ID" --max-workers 8
+              exec uvicorn server:app --app-dir /app --host 0.0.0.0 --port 8000
+          env:
+            - { name: MODEL_ID, value: Qwen/Qwen-Image-2.1 }
+            - { name: DIFFUSERS_SHA, value: e0abab83b5df05de9e7abd788643c1a7c1e42e28 }
+            - { name: OFFLOAD, value: none }
+            - { name: HF_HOME, value: /hf }
+            - { name: OUT_DIR, value: /out }
+            - { name: PIP_CACHE_DIR, value: /pip-cache }
+            - { name: PYTORCH_CUDA_ALLOC_CONF, value: "expandable_segments:True" }
+            - { name: NVIDIA_VISIBLE_DEVICES, value: all }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "compute,utility" }
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+            - name: HF_TOKEN
+              valueFrom: { secretKeyRef: { name: hf-token, key: token } }
+          ports:
+            - { name: http, containerPort: 8000 }
+          volumeMounts:
+            - { name: app, mountPath: /app }
+            - { name: hf, mountPath: /hf }
+            - { name: out, mountPath: /out }
+            - { name: pip-cache, mountPath: /pip-cache }
+          startupProbe:
+            # pip + (first time) a 33 GB download + load + warm-up. Budget 2 h.
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            failureThreshold: 360
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+      volumes:
+        - name: app
+          configMap: { name: qwen-image-server }
+        - name: hf
+          hostPath: { path: /home/brian/.cache/huggingface, type: Directory }
+        - name: out
+          hostPath: { path: /home/brian/qwen-image/out, type: DirectoryOrCreate }
+        - name: pip-cache
+          hostPath: { path: /home/brian/qwen-image/pip-cache, type: DirectoryOrCreate }
+---
+# Discovery: type=image routes /v1/images/generations|edits here (OpenAI-shaped
+# under /v1, plus the native /v1/generate) — same shape as flux2-klein.
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen-image
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: image
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: qwen-image-2.1
+        name: Qwen-Image 2.1
+        input_modalities: [text, image]
+        output_modalities: [image]
+        # gates the inference.club playground controls (see the agent's
+        # docs/kubernetes-discovery.md for the vocabulary)
+        features: [image-edit, multi-reference, transparent-background, negative-prompt, seed, steps, custom-size]
+spec:
+  selector:
+    app: qwen-image
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

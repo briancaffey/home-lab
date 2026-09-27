@@ -78,7 +78,7 @@ t430 showed up as `Ready` in `kubectl get nodes`, and I very nearly ticked the b
 
 ## spark — the arm64 node
 
-An NVIDIA DGX Spark: arm64, a GB10 chip, and **128 GB of unified memory** shared between the GPU and CPU, which lets it hold models that do not fit on the 4090s. It differs from the other nodes in several ways: a different CPU architecture (images must be multi-arch to run on it), a different subnet, and frequent downtime. The cluster treats it as a specialist and runs nothing critical on it.
+An NVIDIA DGX Spark: arm64, a GB10 chip, and **128 GB of unified memory** shared between the GPU and CPU, which lets it hold models that do not fit on the 4090s. It differs from the other nodes in several ways: a different CPU architecture (images must be multi-arch to run on it), a different subnet, and frequent downtime. The cluster treats it as a specialist and runs nothing critical on it — but since September 2026 it runs the one model nothing else here can: [Qwen-Image 2.1](/ai/qwen-image), a 33 GB image pipeline that needed all of that unified memory after two attempts on a 4090 fell short.
 
 ## Everything runs on WiFi
 

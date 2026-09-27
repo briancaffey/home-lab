@@ -156,6 +156,9 @@ config:
         - flux2-klein:
             - abbr: IMG
               href: https://flux.lan/docs
+        - qwen-image:
+            - abbr: QWN
+              href: https://qwen.lan/docs
         - ltx2:
             - abbr: VID
               href: https://ltx.lan/docs

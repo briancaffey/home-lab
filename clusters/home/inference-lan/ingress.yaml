@@ -122,6 +122,31 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: lan-qwen
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "qwen-image"
+    gethomepage.dev/description: "Qwen-Image 2.1: text-to-image, editing, RGBA (spark)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-image-multiple"
+    gethomepage.dev/href: "https://qwen.lan/docs"
+    gethomepage.dev/pod-selector: "app=qwen-image"
+    gethomepage.dev/siteMonitor: "http://qwen-image.inference-club:8000/docs"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["qwen.lan"], secretName: inference-tls }]
+  rules:
+    - host: qwen.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: qwen-image, port: { number: 8000 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
   name: lan-ltx
   namespace: inference-club
   annotations:

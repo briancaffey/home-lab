@@ -1,0 +1,85 @@
+# a3 FALLBACK (text-to-image only) — apply by hand when spark is offline:
+#   kubectl apply -k services/qwen-image/a3-fallback   (and delete it after)
+# Same server, different placement: a3's 4090 is shared with Dia, so the DiT +
+# VAE swap through the GPU via diffusers' CPU-offload hooks and the Qwen3-VL
+# text encoder is quantized to 4-bit NF4 (OFFLOAD=te-nf4) to fit in RAM
+# without touching the HDD. ~30 s per 1024² image, but the 4-bit vision tower
+# cannot follow reference images: edits come out grainy and ignore the
+# instruction (verified 2026-09-27), and multi-reference / 2K runs OOM.
+# Use it for text-to-image only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen-image-a3
+  namespace: inference-club
+  labels:
+    app: qwen-image
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # ~18 GB of VRAM at peak; two copies never fit
+  selector:
+    matchLabels:
+      app: qwen-image
+  template:
+    metadata:
+      labels:
+        app: qwen-image
+    spec:
+      nodeSelector:
+        inference-club.com/box: a3
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: qwen-image
+          image: ghcr.io/inference-club/ltx2-comfy:v0.2
+          command: ["bash", "-lc"]
+          args:
+            - |
+              set -e
+              chown -R root:root /pip-cache  # pip refuses a cache dir it doesn't own
+              pip install -q \
+                "https://github.com/huggingface/diffusers/archive/$DIFFUSERS_SHA.tar.gz" \
+                "transformers==5.17.0" accelerate bitsandbytes "huggingface_hub[hf_xet]" \
+                fastapi "uvicorn[standard]" python-multipart pillow
+              hf download "$MODEL_ID" --max-workers 8
+              exec uvicorn server:app --app-dir /app --host 0.0.0.0 --port 8000
+          env:
+            - { name: MODEL_ID, value: Qwen/Qwen-Image-2.1 }
+            - { name: DIFFUSERS_SHA, value: e0abab83b5df05de9e7abd788643c1a7c1e42e28 }
+            - { name: OFFLOAD, value: te-nf4 }
+            - { name: HF_HOME, value: /hf }
+            - { name: OUT_DIR, value: /out }
+            - { name: PIP_CACHE_DIR, value: /pip-cache }
+            - { name: PYTORCH_CUDA_ALLOC_CONF, value: "expandable_segments:True" }
+            - { name: NVIDIA_VISIBLE_DEVICES, value: all }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "compute,utility" }
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+            - name: HF_TOKEN
+              valueFrom: { secretKeyRef: { name: hf-token, key: token } }
+          ports:
+            - { name: http, containerPort: 8000 }
+          volumeMounts:
+            - { name: app, mountPath: /app }
+            - { name: hf, mountPath: /hf }
+            - { name: out, mountPath: /out }
+            - { name: pip-cache, mountPath: /pip-cache }
+          startupProbe:
+            # pip + (first time) a 33 GB download + a ~2 min load. Budget 2 h.
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            failureThreshold: 360
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+      volumes:
+        - name: app
+          configMap: { name: qwen-image-server }
+        - name: hf
+          hostPath: { path: /mnt/d/huggingface, type: Directory }
+        - name: out
+          hostPath: { path: /mnt/d/qwen-image/out, type: DirectoryOrCreate }
+        - name: pip-cache
+          hostPath: { path: /mnt/d/qwen-image/pip-cache, type: DirectoryOrCreate }

@@ -27,6 +27,7 @@ and containers at these instead of IP:port. `/docs` on each = OpenAPI UI.
 | nemotron-asr | Speech-to-text | **https://asr.lan** |
 | magpie-tts | Text-to-speech | **https://magpie.lan** |
 | flux2-klein | Image generation | **https://flux.lan** |
+| qwen-image | Qwen-Image 2.1: text-to-image, editing, RGBA (spark) | **https://qwen.lan** |
 | ltx2 | Video generation | **https://ltx.lan** |
 | studio-voice | Speech enhancement | **https://studio-voice.lan** |
 | firecrawl | URL → markdown scraping | **https://firecrawl.lan** (no /docs) |
