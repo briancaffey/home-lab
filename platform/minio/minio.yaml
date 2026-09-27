@@ -43,7 +43,15 @@ spec:
       nodeSelector: { inference-club.com/box: a3 }
       containers:
         - name: minio
-          image: minio/minio:latest
+          # docker.io/minio/minio:latest vanished upstream (2026-09); after a3's
+          # 2026-09-22 reboot the pod sat in ImagePullBackOff for 4 days and
+          # every inference.club generation 500'd on media save. The
+          # RELEASE.2025-09-07T16-13-09Z build is still in a3's containerd
+          # cache, so pull policy IfNotPresent runs it. TODO: copy that amd64
+          # image into Harbor (needs a push from a3 or an amd64 docker) and
+          # pin it, or move to quay.io/minio/minio.
+          image: docker.io/minio/minio:latest
+          imagePullPolicy: IfNotPresent # RELEASE.2025-09-07 is cached on a3; never pull
           args: ["server", "/data", "--console-address", ":9001"]
           env:
             - name: MINIO_ROOT_USER
