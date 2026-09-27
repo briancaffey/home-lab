@@ -1,0 +1,18 @@
+# NodePort twin of the chart's ClusterIP service, so hermes-otel on the LAN can
+# reach OpenObserve (UI, API and OTLP under /api/<org>) by node IP and port over plain HTTP (no mkcert TLS, no .lan
+# DNS). Reachable on any node, e.g. a3 (192.168.5.173). Same pattern as the
+# *-direct services (immich, jellyfin, navidrome).
+apiVersion: v1
+kind: Service
+metadata:
+  name: openobserve-direct
+  namespace: observability
+  labels: { app.kubernetes.io/part-of: hermes-otel-direct }
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/component: openobserve
+    app.kubernetes.io/instance: openobserve
+    app.kubernetes.io/name: openobserve-standalone
+  ports:
+    - { name: http, port: 5080, targetPort: http, nodePort: 30508 }

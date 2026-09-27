@@ -1,0 +1,16 @@
+# NodePort twin of the chart's ClusterIP service, so hermes-otel on the LAN can
+# reach Phoenix (UI and OTLP/HTTP on one port) by node IP and port over plain HTTP (no mkcert TLS, no .lan
+# DNS). Reachable on any node, e.g. a3 (192.168.5.173). Same pattern as the
+# *-direct services (immich, jellyfin, navidrome).
+apiVersion: v1
+kind: Service
+metadata:
+  name: phoenix-direct
+  namespace: observability
+  labels: { app.kubernetes.io/part-of: hermes-otel-direct }
+spec:
+  type: NodePort
+  selector:
+    app: phoenix
+  ports:
+    - { name: phoenix-app, port: 6006, targetPort: 6006, nodePort: 30606 }

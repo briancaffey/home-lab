@@ -28,6 +28,9 @@ home-lab#1 and the per-backend issues #6–#15; upstream backend list in
 briancaffey/hermes-otel#232.
 
 ## Shared conventions
+- NodePort twins: each backend dir has a `nodeport.yaml` (`<name>-direct`, label
+  `app.kubernetes.io/part-of=hermes-otel-direct`) so a LAN Hermes can reach it by node IP
+  and port over plain HTTP, bypassing the mkcert TLS and `.lan` DNS; `kubectl apply -f` it.
 - Namespace `observability`. Helm repos are added in each README.
 - LAN TLS: add the host to `scripts/lan-certs.sh` (`HOSTS` + `<name>-tls:observability`), run it.
 - Secrets: Vaultwarden items `observability-<secret>` → `clusters/home/external-secrets/secrets/observability-<secret>.yaml`.
