@@ -13,6 +13,7 @@ resources:
   - node-exporter.yaml
   - alertmanager.yaml
   - karma.yaml
+  - kube-state-metrics.yaml
 
 generatorOptions:
   # Stable ConfigMap/Secret names (no hash suffix) so the Deployment volume
@@ -28,6 +29,7 @@ configMapGenerator:
     files:
       - config/vllm-alerts.yml
       - config/homelab-alerts.yml
+      - config/k8s-alerts.yml
   - name: grafana-datasources
     files:
       - config/grafana-datasources.yml

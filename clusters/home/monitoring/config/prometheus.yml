@@ -78,6 +78,21 @@ scrape_configs:
     static_configs:
       - targets: ["speedtest.speedtest.svc.cluster.local:80"]
 
+  # kube-state-metrics — Kubernetes object state (CronJobs, Jobs, pods,
+  # Deployments). Feeds config/k8s-alerts.yml. In-cluster DNS, not a host IP,
+  # so it survives rescheduling. 30s is plenty for object state.
+  - job_name: kube-state-metrics
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["kube-state-metrics.monitoring.svc.cluster.local:8080"]
+
+  # Argo CD application-controller — argocd_app_info{sync_status,health_status}
+  # per Application. Feeds the gitops group in config/k8s-alerts.yml.
+  - job_name: argocd
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["argocd-metrics.argocd.svc.cluster.local:8082"]
+
   # Prometheus scraping itself.
   - job_name: prometheus
     static_configs:

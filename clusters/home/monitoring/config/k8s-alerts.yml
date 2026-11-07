@@ -1,0 +1,99 @@
+# Workload-state alert rules (kube-state-metrics + Argo CD metrics).
+# 2026-11-07 cluster survey: every nightly restic backup failed from Sept 30
+# to Nov 7 and Renovate's token died the same day — 38 days, zero alerts,
+# because Prometheus only watched hosts. These rules watch the workloads.
+# Routed like everything else: Alertmanager -> Telegram + Mailpit.
+groups:
+  - name: k8s-workloads
+    rules:
+      - alert: CronJobNotSucceeding
+        # Every non-suspended CronJob here runs at least daily, so >26h since the
+        # last success means at least one scheduled run failed or never ran.
+        # A never-succeeded CronJob reports 0 -> fires too (correct).
+        expr: |
+          (time() - kube_cronjob_status_last_successful_time) > 26 * 3600
+          and on (namespace, cronjob) kube_cronjob_spec_suspend == 0
+        for: 15m
+        labels: { severity: critical }
+        annotations:
+          summary: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }}: no success in {{ $value | humanizeDuration }}"
+          description: "Backups and Renovate are CronJobs. Check: kubectl -n {{ $labels.namespace }} get jobs --sort-by=.metadata.creationTimestamp"
+
+      - alert: JobFailed
+        # Hand-made Jobs only (kubectl create job ...). CronJob-owned Jobs are
+        # covered by CronJobNotSucceeding — no double page per failed backup.
+        expr: |
+          kube_job_failed{condition="true"} == 1
+          unless on (namespace, job_name) kube_job_owner{owner_kind="CronJob"}
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Job {{ $labels.namespace }}/{{ $labels.job_name }} failed"
+          description: "Delete the Job once handled to clear this alert."
+
+      - alert: PodCrashLooping
+        expr: max by (namespace, pod, container) (kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}) == 1
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) CrashLoopBackOff 15m"
+          description: "kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }} -c {{ $labels.container }} --previous"
+
+      - alert: PodImagePullFailing
+        expr: max by (namespace, pod, container) (kube_pod_container_status_waiting_reason{reason=~"ErrImagePull|ImagePullBackOff|InvalidImageName"}) == 1
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.namespace }}/{{ $labels.pod }} can't pull its image (15m)"
+
+      - alert: DeploymentUnavailable
+        # Catches what CrashLooping can't: Pending (unschedulable / node down),
+        # stuck rollouts, failed admission. Scaled-to-0 (parked) Deployments
+        # have spec_replicas 0 and never match.
+        expr: |
+          kube_deployment_spec_replicas > 0
+          and kube_deployment_status_replicas_available < kube_deployment_spec_replicas
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }}: {{ $value }} available, below desired, for 30m"
+
+      - alert: StatefulSetUnavailable
+        expr: |
+          kube_statefulset_replicas > 0
+          and kube_statefulset_status_replicas_ready < kube_statefulset_replicas
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} not fully ready for 30m"
+
+  - name: gitops
+    rules:
+      - alert: ArgoAppUnhealthy
+        # Progressing is allowed briefly (rollouts); 30m of anything but Healthy
+        # is real. Suspended = deliberately paused, not a fault.
+        expr: argocd_app_info{health_status!~"Healthy|Suspended"} == 1
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Argo app {{ $labels.name }} is {{ $labels.health_status }} for 30m"
+
+      - alert: ArgoAppOutOfSync
+        expr: argocd_app_info{sync_status="OutOfSync"} == 1
+        for: 2h
+        labels: { severity: warning }
+        annotations:
+          summary: "Argo app {{ $labels.name }} OutOfSync for 2h (sync failing or drift)"
+
+  - name: node-capacity
+    rules:
+      - alert: NodeDiskFilling
+        # Kubelet image GC starts at 85% used (a2 sat at 88% with GC failing on
+        # 2026-11-07 and nobody knew). Fires before the existing <8% critical.
+        expr: |
+          (node_filesystem_avail_bytes{fstype=~"ext4|xfs|btrfs"} / node_filesystem_size_bytes) < 0.15
+          and on (instance, mountpoint) (node_filesystem_size_bytes{fstype=~"ext4|xfs|btrfs"} > 50e9)
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.instance }} {{ $labels.mountpoint }} over 85% full (kubelet image GC zone)"
