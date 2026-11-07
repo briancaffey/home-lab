@@ -39,6 +39,6 @@ flowchart LR
     CONSUME --> OCR[OCR + classify]
     OCR --> MEDIA[(originals + archive)]
     OCR --> PG[(Postgres)]
-    RESTIC[nightly restic] -->|files + pg_dump| MINIO[(backup MinIO)]
+    RESTIC[nightly restic] -->|files + pg_dump| S3[(backup RustFS)]
     UI[paperless.lan] --> MEDIA
 ```

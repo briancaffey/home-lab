@@ -23,10 +23,11 @@ flowchart LR
         magpie["magpie-tts<br/>text→speech"]
         sv["studio-voice<br/>audio cleanup"]
         fc["firecrawl<br/>URL→markdown"]
-        qwen["qwen-image<br/>images + edits (spark)"]
+        klein["flux3-klein<br/>images + edits (spark)"]
     end
     subgraph parked["The bench (replicas: 0)"]
         flux["flux2-klein<br/>images"]
+        qwen["qwen-image<br/>images + text (spark)"]
         ltx["ltx2<br/>video"]
         ace["acestep<br/>music"]
         dia["dia<br/>voice cloning"]
@@ -45,14 +46,15 @@ flowchart LR
 - **Transcription** via `asr.lan` — audio in, text out, runs on spark's unified memory
 - **Voices** from `magpie.lan` — the TTS behind various projects
 - **Scraping** with `firecrawl.lan` — URL in, clean markdown out, feeds agents
-- **Images with words in them** from `qwen.lan` — [Qwen-Image 2.1](./qwen-image.md): text-to-image, reference edits, transparent PNGs. The one model that lives on spark because nothing else here can hold its 33 GB
+- **Images and edits** from `klein.lan` — [FLUX 3 Image Klein](./flux3-klein.md): text-to-image, edits from up to ten references, bounding-box layout, and a prompt upsampler in front. It lives on spark (about 45 GB resident). An fp8 variant for a1's 4090 is parked next to it
+- **Images with words in them** from `qwen.lan` — [Qwen-Image 2.1](./qwen-image.md), currently parked. Klein took its spark slot because the two don't fit together next to the rest of spark's tenants. Swapping back is two `kubectl scale` commands
 - **Unparking something** when a project needs it: one `kubectl scale` and a model wakes up
 
 ## How it's configured (the interesting parts)
 
 **GPUs are shared deliberately, not automatically.** A pod either claims a whole GPU (`nvidia.com/gpu: 1` — the scheduler enforces exclusivity) or joins the honor system (`NVIDIA_VISIBLE_DEVICES=all` with *no* GPU request — several pods share one card, and the scheduler is blind to it). There's no time-slicing or MPS; a custom `vram-reporter` keeps score out-of-band. One RTX 4090 has 24 GB of VRAM, and I know roughly what every model costs.
 
-**Some models choose their own node.** Most of the fleet fits a 4090 and goes wherever there is VRAM, but Qwen-Image's 33 GB pipeline forced a placement story worth reading on its own: two attempts on a3 (CPU offload, then a 4-bit encoder) each traded away something I wanted, and spark's 128 GB of unified memory was the only honest answer. The details, including the edit that silently did nothing, are on the [Qwen-Image page](./qwen-image.md).
+**Some models choose their own node.** Most of the fleet fits a 4090 and goes wherever there is VRAM, but Qwen-Image's 33 GB pipeline forced a placement story worth reading on its own: two attempts on a3 (CPU offload, then a 4-bit encoder) each traded away something I wanted, and spark's 128 GB of unified memory was the only honest answer. The details, including the edit that silently did nothing, are on the [Qwen-Image page](./qwen-image.md). Its successor in that slot, [FLUX 3 Image Klein](./flux3-klein.md), also has two placements in git: bf16 on spark, and fp8 on a 4090 that borrows spark's upsampler over the network.
 
 **Parking is a first-class lifestyle.** I can't run everything at once — video generation alone would eat a whole card — so services scale to zero and back constantly. This shaped two real architectural decisions:
 

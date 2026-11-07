@@ -7,6 +7,10 @@ repo_path: services/qwen-image/
 
 # Qwen-Image 2.1
 
+:::info[2026 年 11 月起停放]
+Qwen-Image 目前是 `replicas: 0`。[FLUX 3 Image Klein](./flux3-klein.md) 接替了它在 spark 上的位置，因为两者放不下、挤不进 LM Studio、acestep 和 nemotron-asr 的旁边。权重留在 spark 的 Hugging Face 缓存里，所以换回去只需把 Qwen-Image 扩到 1、把 Klein 缩到 0。本页其余部分描述的是它在线时的运行方式。
+:::
+
 **这是什么：** [Qwen-Image 2.1](https://huggingface.co/Qwen/Qwen-Image-2.1)，阿里巴巴的开放权重图像模型（2026-09-20 发布），由一个包着 diffusers `QwenImage21Pipeline` 的小 FastAPI 服务在 `https://qwen.lan` 上提供。一条流水线干四件事：文生图、基于最多十张参考图的编辑（在提示词里用"image 1、image 2……"指代它们）、区域引导编辑（在参考图上画个红圈，或者把遮罩当作第二张参考图传入），以及原生 RGBA 输出——提示词里写上"This is an RGBA image with transparency … the background is transparent"，拿到的就是货真价实的透明 PNG，不需要再抠一遍背景。
 
 **我为什么要跑它：** 为了文字。我停在替补席上的每一个图像模型都能画出漂亮的画，然后把任何带字的东西糊成一团。Qwen-Image 能画出带价格的菜单、带对白的漫画、中英文同框的海报——而且在我的抽查里，文字一个字母都没错。这一点，再加上用一句话就能描述、不用拖节点图的编辑能力，值得我为它的安置折腾一番。

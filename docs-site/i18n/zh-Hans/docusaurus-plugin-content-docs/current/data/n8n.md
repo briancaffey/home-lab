@@ -10,7 +10,7 @@ description: 自托管的 n8n——实验室里事件驱动的自动化层。Web
 
 **先说实在话。** [n8n](https://n8n.io/) 是一个工作流自动化工具——你在画布上把一个个"节点"连起来（一个 webhook 触发，调一个 API，变换 JSON，发到 Telegram），触发条件说了算，它就跑这条流程。可以把它想成 Zapier 或 Make，但是自托管、开放，而且在拖拽拖不动的时候还有一个完整的 **Code 节点**。我把它立在了实验室的 *数据 / 编排* 类别下，就挨着 [Dagster](./dagster.md)，因为它补上了"跑一段逻辑然后做点事"的另一半：Dagster 是我的**定时数据流水线**，n8n 是我的**事件驱动 / webhook / 集成黏合层**。我的这台跑在 a2 上，地址 `https://n8n.lan`。
 
-**我为什么想要它。** Dagster 很适合"每天按计划把这些资产材料化"，但它不是"当*这件事*发生时，就去做*那件事*"该有的形状——一个 webhook 落地、一个文件冒出来、有人戳了一下端点。n8n 恰恰是为这种响应式、重集成的活儿而生的，而且自带两百来个预置的服务节点，于是我不必给每个 API 都手写一个 HTTP 客户端。再配上 [LiteLLM 网关](../ai/litellm.md)，它就成了一个能触达家里*每一个*模型和服务的编排层——Paperless、Immich、Forgejo、MinIO、Mailpit、Telegram 告警机器人——把它们缝到一起，而不用我每次都写一个专门的服务。
+**我为什么想要它。** Dagster 很适合"每天按计划把这些资产材料化"，但它不是"当*这件事*发生时，就去做*那件事*"该有的形状——一个 webhook 落地、一个文件冒出来、有人戳了一下端点。n8n 恰恰是为这种响应式、重集成的活儿而生的，而且自带两百来个预置的服务节点，于是我不必给每个 API 都手写一个 HTTP 客户端。再配上 [LiteLLM 网关](../ai/litellm.md)，它就成了一个能触达家里*每一个*模型和服务的编排层——Paperless、Immich、Forgejo、RustFS 对象存储、Mailpit、Telegram 告警机器人——把它们缝到一起，而不用我每次都写一个专门的服务。
 
 这是一台**实验用的实例**，不是加固过的生产编队：单 main、无队列模式、无 Redis。够拿来搭建和学习了；哪天真有工作流配得上，我再加那些扩展的部件。
 
@@ -38,14 +38,14 @@ flowchart LR
     HOOK["webhook / 计划 / 手动"] --> N
     N --- PG
     N -->|"OpenAI 兼容"| L["LiteLLM 网关<br/>（observability 命名空间）"]
-    N -->|"集成节点"| S["Paperless · Immich · Forgejo<br/>MinIO · Mailpit · Telegram"]
+    N -->|"集成节点"| S["Paperless · Immich · Forgejo<br/>RustFS (S3) · Mailpit · Telegram"]
 ```
 
 ## 连接组织：通向每个模型的一扇门
 
 n8n 在这里不只是个玩具，原因是它被直接接到了 [LiteLLM 网关](../ai/litellm.md)上。main Pod 带着一个指向集群内网关的 `LITELLM_BASE_URL`（`http://litellm...:4000/v1`）和一个从带外 secret 取来的 `LITELLM_API_KEY`，我还在 n8n UI 里建了一个对应的 OpenAI 兼容凭据。于是任何工作流都能调 LiteLLM 挡在前面的**任何**模型——我自己 GPU 上的本地 vLLM，或者任务大到家里装不下时的某个云厂商——都经由其他每个消费者都用的那同一扇门。n8n 不需要知道模型；它只知道*一个*网关，而网关知道一切。
 
-这就是把它称作黏合层的整个理由：n8n 对一个事件做出响应，用 LiteLLM 思考，然后作用于 Paperless / Immich / Forgejo / MinIO / Telegram 机器人——这些都是实验室里已经存在的服务。它是 Dagster 按计划做的那件事的、事件驱动的孪生兄弟。
+这就是把它称作黏合层的整个理由：n8n 对一个事件做出响应，用 LiteLLM 思考，然后作用于 Paperless / Immich / Forgejo / RustFS / Telegram 机器人——这些都是实验室里已经存在的服务。它是 Dagster 按计划做的那件事的、事件驱动的孪生兄弟。
 
 ## "想写什么代码都行"的那一面
 

@@ -34,11 +34,15 @@ sequenceDiagram
 
 集群节点也享受同样待遇，但用的是分域 DNS（split DNS）：只有 `lan` 这个区域会路由到 Pi-hole，所以 Pi-hole 宕机永远不会连带搞垮节点的*常规* DNS。
 
+薄弱点在于 Pi-hole 住在哪里。它跑在 a2 上——也就是那台双系统启动 Windows 的节点——而集群内的 `*.lan` 解析会转发给它。2026 年 11 月，这个组合让 a2 在启动时陷入了死锁（故事在[节点页面](/hardware/nodes)）。我已排上日程的修复：让 CoreDNS 自己应答 `*.lan`，而不是转发给 Pi-hole；让 a2 自己的解析器指向路由器，而不是同一台机器上的 Pi-hole；再给 a2 腾出一些磁盘空间。
+
 ## 不开端口的远程访问
 
-在外面的时候，少数几个服务可以通过 [Tailscale](https://tailscale.com) 访问——每个暴露的服务都有自己的 tailnet 主机名和真正的 Let's Encrypt 证书。Tailnet 的 ACL 是**默认拒绝**：没有明确授权就什么都连不上，而且只有真正值得远程访问的少数服务才会暴露。任何东西都不对公网开放。
+在外面的时候，一组精选的服务可以通过 [Tailscale](https://tailscale.com) 访问——每个暴露的服务都有自己的 tailnet 主机名和真正的 Let's Encrypt 证书。Tailnet 的 ACL 是**默认拒绝**：没有明确授权就什么都连不上，而且只有真正值得远程访问的少数服务才会暴露。任何东西都不对公网开放。
 
-第二个主机名教会我一件事：**Ingress 只是把服务暴露在两个名字上的一半。**另一半是应用本身。当我把 [hn.fm](../media/hnfm.md) 放到 tailnet 上时，tailnet 那边的页面能加载，然后同时坏在三处——前端用绝对的 `https://hnfm.lan` URL 调用 API，CORS 只允许那一个源，MinIO 的预签名媒体 URL 是为那个主机签的、换任何别的主机都被拒绝。每一处修复都在应用里，而不是集群里：相对的同源 URL、给 SSR 用的服务端代理、以及从请求到达的主机推导出来的签名 URL。现在我给任何可能拿到第二个名字的自写服务定的规矩是：永远不要把公网主机名烤进环境变量；从请求里推导它。
+如今 tailnet 上有十八个服务，目录（短名、后端 Service、实际运行在哪个节点）就是 [`clusters/home/tailscale/README.md`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/tailscale/README.md) 里的那张表。Homepage 的静态"Tailnet"分组为每一行配了一个磁贴，最新加入的是 LiteLLM、Langfuse、Phoenix 和 n8n，每个磁贴都有实时状态点。我想要这些状态点是因为 a2：它双系统启动 Windows 打游戏，它离开的时候，所有托管在 a2 上的 tailnet 名字都会返回 502。代理 Pod 漂在其他节点上、一直在线，所以"tailnet 主机名有应答"不等于"应用在线"。现在红点会在我开始排查之前告诉我看到的是哪一种。
+
+第二个主机名教会我一件事：**Ingress 只是把服务暴露在两个名字上的一半。**另一半是应用本身。当我把 [hn.fm](../media/hnfm.md) 放到 tailnet 上时，tailnet 那边的页面能加载，然后同时坏在三处——前端用绝对的 `https://hnfm.lan` URL 调用 API，CORS 只允许那一个源，对象存储（当时是 MinIO，现在是 RustFS）的预签名媒体 URL 是为那个主机签的、换任何别的主机都被拒绝。每一处修复都在应用里，而不是集群里：相对的同源 URL、给 SSR 用的服务端代理、以及从请求到达的主机推导出来的签名 URL。现在我给任何可能拿到第二个名字的自写服务定的规矩是：永远不要把公网主机名烤进环境变量；从请求里推导它。
 
 还有一个我一直*刻意不做*的决定：把家里路由器的 DHCP 指向 Pi-hole，让每台家庭设备都自动解析 `.lan`。听起来显然很美，直到你意识到 CA 反正是逐设备信任的——家人的手机能解析域名，然后撞上证书警告。`.lan` 是运维者的网络体系；等到哪天它该服务全家时，正确答案是一个真域名加 Let's Encrypt，而不是给路由器做手术。
 

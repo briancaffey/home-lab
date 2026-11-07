@@ -124,13 +124,13 @@ Claude will scaffold the module, wire the job and schedule, validate it, push it
 watch the Harbor build, bump the tag in `values.yaml`, let Argo roll it, and launch
 a verification run — then report the result. Good things to include in the prompt:
 
-- **The data source** ("read Prometheus / hit this API / list this MinIO bucket").
+- **The data source** ("read Prometheus / hit this API / list this S3 bucket").
 - **The output** ("a daily table", "a Slack message", "a Markdown report in the UI").
 - **The cadence** ("daily at 7am", "on demand only").
 - **Where it goes** — default is a new module in `dagster-pipelines`; say so if you
   want a whole separate code location instead.
 
-Some starter ideas worth trying: a **Hacker News → sentiment** digest, a **MinIO
+Some starter ideas worth trying: a **Hacker News → sentiment** digest, a **RustFS (S3)
 bucket catalog** (counts/sizes/newest objects), or a **backup-freshness check** that
 alerts through the existing Telegram/Alertmanager stack.
 

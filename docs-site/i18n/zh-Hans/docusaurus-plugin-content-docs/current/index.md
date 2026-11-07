@@ -46,7 +46,7 @@ flowchart TB
     prom["Prometheus"] --> am["Alertmanager"]
     am --> tg["Telegram 📱"]
     am --> mp["Mailpit"]
-    restic["restic 每晚备份"] --> minio["备份 MinIO"]
+    restic["restic 每晚备份"] --> minio["备份 RustFS（S3）"]
   end
 
   machines --> prom

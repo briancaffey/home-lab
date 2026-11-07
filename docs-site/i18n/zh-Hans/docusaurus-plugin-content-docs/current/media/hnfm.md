@@ -6,7 +6,7 @@ description: "由实验室自己的 GPU 把 Hacker News 变成视频和播客订
 
 # hn.fm
 
-**它是什么：**一个我自己写的应用：读取 Hacker News，挑出值得一听的故事，用 LLM 写脚本、配音，渲染成短视频和一条播客订阅源——全部在集群内完成。它由 FastAPI 后端、Celery 工作通道、Nuxt 前端和一个渲染 sidecar 组成，自带 Postgres、Redis 和 MinIO，跑在 **a2** 上，因为磁盘在那里。
+**它是什么：**一个我自己写的应用：读取 Hacker News，挑出值得一听的故事，用 LLM 写脚本、配音，渲染成短视频和一条播客订阅源——全部在集群内完成。它由 FastAPI 后端、Celery 工作通道、Nuxt 前端和一个渲染 sidecar 组成，自带 Postgres、Redis 和 S3 对象存储（2026 年 11 月起是 RustFS，之前是 MinIO），跑在 **a2** 上，因为磁盘在那里。
 
 **为什么我建议你也做一个这样的东西：**本章节的其他每一页都在讲运行*别人的*软件。hn.fm 是实验室唯一一处端到端运行*我自己的*软件的地方——我的仓库、我的 CI、我的 chart、我的 GitOps 循环——也正是在这里，基础设施不再是爱好，而开始成为平台。如果你已经把机器（Forgejo、Harbor、Argo CD、LiteLLM）搭起来了，一个自己的应用就是它们真正可用的证明。
 
@@ -24,7 +24,7 @@ hn.fm 是一个 Argo CD **多源（multi-source）** Application，这种拆分�
 flowchart LR
     HN[Hacker News] --> WEB[FastAPI + Celery 通道]
     WEB -->|LLM 经由| LLM[LiteLLM → spark]
-    WEB -->|渲染| MEDIA[(MinIO 媒体桶)]
+    WEB -->|渲染| MEDIA[(RustFS 媒体桶)]
     MEDIA --> ABS[Audiobookshelf 订阅源]
     MEDIA --> FE[Nuxt 前端]
     FE -.-> LAN[hnfm.lan]
@@ -33,9 +33,11 @@ flowchart LR
 
 ## 两扇前门
 
-在局域网内它是 `https://hnfm.lan`，由 Traefik 按路径路由：`/api`、`/docs` 等去 FastAPI 服务，`/hnfm-media` 去 MinIO，`/flower` 去 Celery 仪表盘，其余一切去 Nuxt 前端。Homepage 会在"Apps"分组下自动发现它。
+在局域网内它是 `https://hnfm.lan`，由 Traefik 按路径路由：`/api`、`/docs` 等去 FastAPI 服务，`/hnfm-media` 去对象存储（`hnfm-minio` Service，现在背后是 RustFS），`/flower` 去 Celery 仪表盘，其余一切去 Nuxt 前端。Homepage 会在"Apps"分组下自动发现它。
 
 在外面时，同一套部署通过 Tailscale operator 在 `https://hnfm.<tailnet>.ts.net` 应答——这是 [`clusters/home/tailscale/`](https://github.com/briancaffey/home-lab/tree/main/clusters/home/tailscale) 里的第二个 Ingress，逐条镜像 chart 的路径表。如果 chart 的 ingress 哪天多了一条路径，这个文件也必须跟着加；文件顶部的注释就是这么写的，因为我一定会忘。Homepage 把它列在静态的"Tailnet"分组里。
+
+**对象存储的替换。**2026 年 11 月上游 MinIO 不再发布镜像后，hn.fm 的存储在同一个 chart 里换成了 [RustFS](https://github.com/rustfs/rustfs)。我复制了媒体桶（1641 个对象，2.2 GiB），Service 名字（`hnfm-minio`）和凭据都没动，所以应用无需改动。有了下面那个 war story 的教训，我在信任它之前先通过 `hnfm.lan` 的 ingress 测试了预签名 URL：有效链接返回 200 `audio/mpeg`，签名被篡改返回 400，匿名请求返回 403。正是我想要的行为。
 
 hn.fm 自己没有登录。在局域网内这没问题；在 tailnet 上，默认拒绝的 ACL *就是*大门，与这里其他所有远程暴露的服务姿态一致。任何东西都不对公网开放。
 

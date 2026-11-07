@@ -40,6 +40,6 @@ flowchart LR
     S --> ML[ML worker<br/>CLIP embeddings]
     ML --> PG
     S --> LIB[(photo library<br/>a2 disk)]
-    RESTIC[nightly restic] -->|pg_dump + files| MINIO[(backup MinIO)]
+    RESTIC[nightly restic] -->|pg_dump + files| S3[(backup RustFS)]
     ARGO[Argo CD] -->|deploys| S
 ```

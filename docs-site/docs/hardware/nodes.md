@@ -52,15 +52,25 @@ Why was a3 on a buggy kernel? It had a bare kernel package with no meta-package,
 
 The fix has three layers, all in [`scripts/node-lockup-guard.sh`](https://github.com/briancaffey/home-lab/blob/main/scripts/node-lockup-guard.sh), which now runs on every amd64 node as part of standard prep: the kernel is told to **panic and reboot** on a soft or hard lockup instead of spinning (about 75 seconds from stuck to booting again), the Intel chipset's **hardware watchdog** is loaded at boot and armed by systemd so the board resets itself even if PID 1 dies, and `intel-microcode` is back so the CPU boots on current microcode. On a3 the script also installed the HWE kernel meta-package, which moved it to 7.0 and, more importantly, means it keeps getting updates. A matching set of [alerts](/observability/alerting) now fires on a CPU pinned in kernel mode, a hot core, an I/O stall, or an unexpected reboot. The full postmortem, traces included, is [`docs/22`](https://github.com/briancaffey/home-lab/blob/main/docs/22-a3-thermal-runaway-postmortem.md) in the repo.
 
-The investigation also surfaced a slower problem: a3's k3s data directory — containerd's image store plus about 14 GB of node-local database volumes — lives on a 5400 rpm hard disk, so every reboot is followed by roughly fifteen minutes of saturated I/O while everything restarts. That was not the cause of the heat, but it is why pods on a3 look flaky after a reboot. Moving that data onto the SSD is the next item on a3's list, alongside a BIOS update.
+The investigation also surfaced a slower problem: a3's k3s data directory — containerd's image store plus about 14 GB of node-local database volumes — lives on a 5400 rpm hard disk, so every reboot is followed by roughly fifteen minutes of saturated I/O while everything restarts. That was not the cause of the heat, but it is why pods on a3 look flaky after a reboot. Since then the cluster database and the node-local volumes have moved onto the SSD, and bulk data (object storage, audiobook media) stays on the HDD on purpose, so the 228 GB SSD only holds what needs to be fast. The details are in the addendum to [`docs/22`](https://github.com/briancaffey/home-lab/blob/main/docs/22-a3-thermal-runaway-postmortem.md). A BIOS update is still on a3's list.
 
 ## a2 — the busiest node
 
 a2 runs the most services, by a wide margin: the household DNS (Pi-hole), the Git forge, the container registry, the CI runner, every media service, and the backup target. It handles this because it has the most disk — two 2 TB NVMe drives plus 6 TB and 4 TB hard drives, and a nearly empty 5.5 TB disk used as the landing zone for downloads, backups, and storage replicas. New services usually go here.
 
+a2 is also my gaming PC. It dual-boots Windows, so it shows up as `NotReady` often, and that's expected. The trouble is everything else it hosts: Argo CD, Forgejo, Harbor, and Pi-hole, which in-cluster `*.lan` DNS forwards to. Most of the time a2 comes back from Windows and everything just reconnects. In November 2026 it didn't.
+
+:::warning[🔥 War story]
+After a routine update and reboot, a2 deadlocked against itself. Pi-hole's pod binds `hostPort: 53`, which means the node's own DNS lookups get DNAT'd into the Pi-hole pod. That pod had no image to run. Meanwhile the kubelet's image garbage collector had cleared the image cache, because the root disk was at 85% and that is exactly the kubelet's default high threshold. It removed everything, including the `pause` image every pod sandbox needs. Harbor runs on a2 too, so a2 had to pull Harbor's images through Harbor, which wasn't running, and every pull needed DNS, which was a pod with no image. Each piece was waiting on another. I broke the loop by hand: I scaled Pi-hole to 0 so a2's DNS fell through to something that answered, pulled the missing images straight into containerd with `k3s ctr`, and brought Pi-hole back once Harbor was up. It's the [July Pi-hole deadlock](/blog/2026/07/07/the-pihole-deadlock) again in a new form, and the lesson is the same: **a node should never depend on a pod it hosts in order to start that pod.** Three follow-ups: CoreDNS answering `*.lan` itself, a2's resolver pointed at the router, and enough free disk on a2 that image GC never kicks in during a boot.
+:::
+
 ## a1 — speech models
 
 The third RTX 4090 machine. It hosts the speech stack: text-to-speech and speech-enhancement model servers that load and unload as needed. Because it runs fewer standing services than a2 or a3, it has the most spare GPU capacity when something new needs one. It has since moved to the 192.168.4.x subnet alongside t430, and it was the control group in the a3 story above: same hardware class, HWE kernel, weeks of uptime, zero lockups.
+
+:::warning[🔥 War story]
+For about nineteen days a1's RTX 4090 did nothing, and nothing told me. a1 gets its NVIDIA driver from Ubuntu's prebuilt `linux-modules-nvidia-595-open-*` packages, a kernel module built for one exact kernel, rather than DKMS compiling it on the box. The meta package that's supposed to track the newest kernel got stuck on an old one, while newer kernels kept installing and becoming the default. So a1 booted a kernel without `nvidia.ko`. The node was `Ready`, the pods that didn't need a GPU ran fine, and the GPU workloads went quiet. That looks the same as being parked, and "parked is not down" is a rule I built into [alerting](/observability/alerting) on purpose. Installing the module meta package for the running kernel brought the card back. a2 and a3 use `nvidia-dkms`, which rebuilds the module on every kernel install, so they don't have this failure mode. The lesson: with prebuilt kernel modules, **the driver and the kernel are two packages that have to move together**, and I need a check for "this GPU node has no GPU," not only for "this pod is down."
+:::
 
 ## x1 — the laptop node
 
@@ -78,7 +88,11 @@ t430 showed up as `Ready` in `kubectl get nodes`, and I very nearly ticked the b
 
 ## spark — the arm64 node
 
-An NVIDIA DGX Spark: arm64, a GB10 chip, and **128 GB of unified memory** shared between the GPU and CPU, which lets it hold models that do not fit on the 4090s. It differs from the other nodes in several ways: a different CPU architecture (images must be multi-arch to run on it), a different subnet, and frequent downtime. The cluster treats it as a specialist and runs nothing critical on it — but since September 2026 it runs the one model nothing else here can: [Qwen-Image 2.1](/ai/qwen-image), a 33 GB image pipeline that needed all of that unified memory after two attempts on a 4090 fell short.
+An NVIDIA DGX Spark: arm64, a GB10 chip, and **128 GB of unified memory** shared between the GPU and CPU, which lets it hold models that do not fit on the 4090s. It differs from the other nodes in several ways: a different CPU architecture (images must be multi-arch to run on it), a different subnet, and frequent downtime. The cluster treats it as a specialist and runs nothing critical on it — but since September 2026 it holds the lab's big image model. First that was [Qwen-Image 2.1](/ai/qwen-image), a 33 GB pipeline that needed the unified memory after two attempts on a 4090 fell short. Since November it's [FLUX 3 Image Klein](/ai/flux3-klein), about 45 GB resident with its prompt upsampler, which took Qwen-Image's slot.
+
+## Patch day
+
+On 2026-11-07 I fully updated and rebooted a1, a2 and a3. a1 and a3 are now on the 7.0.0-42 HWE kernel and a2 on 6.8.0-149, all through kernel meta packages so they keep receiving fixes (the a3 story above is why). I skipped spark on purpose: it's the arm64 odd one out and was busy serving. The two stories above both came out of that one patch day. Rebooting everything at once is how I find out which nodes have been running on luck.
 
 ## Everything runs on WiFi
 

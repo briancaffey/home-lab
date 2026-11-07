@@ -7,6 +7,10 @@ repo_path: services/qwen-image/
 
 # Qwen-Image 2.1
 
+:::info[Parked since November 2026]
+Qwen-Image is at `replicas: 0`. [FLUX 3 Image Klein](./flux3-klein.md) took its spark slot, because the two don't fit together next to LM Studio, acestep and nemotron-asr. The weights stay in spark's Hugging Face cache, so swapping back means scaling Qwen-Image to 1 and Klein to 0. The rest of this page describes how it ran while it was live.
+:::
+
 **What it is:** [Qwen-Image 2.1](https://huggingface.co/Qwen/Qwen-Image-2.1), Alibaba's open-weight image model (released 2026-09-20), served at `https://qwen.lan` by a small FastAPI wrapper around diffusers' `QwenImage21Pipeline`. One pipeline does four jobs: text-to-image, editing against up to ten reference images (you refer to them as "image 1, image 2, …" in the prompt), region-guided edits (draw a red circle on the reference, or pass a mask as a second reference), and native RGBA output — ask for "an RGBA image with transparency … the background is transparent" and you get a real transparent PNG, no background-removal pass.
 
 **Why I run it:** text. Every image model I have parked on the bench draws lovely pictures and mangles anything with letters in it. Qwen-Image renders a menu with prices, a comic with lettering, a poster with Chinese and English in the same frame — and in my spot checks the text came out letter-perfect. That, plus edits I can describe in one sentence instead of a node graph, was worth the fight it took to place it.

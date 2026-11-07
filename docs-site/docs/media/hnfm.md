@@ -6,7 +6,7 @@ description: "Hacker News, turned into videos and a podcast feed by the lab's ow
 
 # hn.fm
 
-**What it is:** an app I wrote that reads Hacker News, picks the stories worth a listen, scripts them with an LLM, voices them, and renders short videos and a podcast feed — all inside the cluster. It's a FastAPI backend, Celery worker lanes, a Nuxt frontend, and a render sidecar, with its own Postgres, Redis and MinIO, running on **a2** because that's where the disk is.
+**What it is:** an app I wrote that reads Hacker News, picks the stories worth a listen, scripts them with an LLM, voices them, and renders short videos and a podcast feed — all inside the cluster. It's a FastAPI backend, Celery worker lanes, a Nuxt frontend, and a render sidecar, with its own Postgres, Redis and S3 object store (RustFS since November 2026, MinIO before that), running on **a2** because that's where the disk is.
 
 **Why I recommend building something like it:** every other page in this section is about running *someone else's* software. hn.fm is the one place where the lab runs *mine*, end to end — my repo, my CI, my chart, my GitOps loop — and that's where the infrastructure stops being a hobby and starts being a platform. If you've built the machinery (Forgejo, Harbor, Argo CD, LiteLLM), an app of your own is the proof it works.
 
@@ -24,7 +24,7 @@ Secrets arrive through External Secrets from a Vaultwarden item; nothing sensiti
 flowchart LR
     HN[Hacker News] --> WEB[FastAPI + Celery lanes]
     WEB -->|LLM via| LLM[LiteLLM → spark]
-    WEB -->|renders| MEDIA[(MinIO media bucket)]
+    WEB -->|renders| MEDIA[(RustFS media bucket)]
     MEDIA --> ABS[Audiobookshelf feed]
     MEDIA --> FE[Nuxt frontend]
     FE -.-> LAN[hnfm.lan]
@@ -33,9 +33,11 @@ flowchart LR
 
 ## Two front doors
 
-On the LAN it's `https://hnfm.lan`, path-routed by Traefik: `/api`, `/docs` and friends go to the FastAPI service, `/hnfm-media` to MinIO, `/flower` to the Celery dashboard, and everything else to the Nuxt frontend. Homepage auto-discovers that one under "Apps".
+On the LAN it's `https://hnfm.lan`, path-routed by Traefik: `/api`, `/docs` and friends go to the FastAPI service, `/hnfm-media` to the object store (the `hnfm-minio` Service, now backed by RustFS), `/flower` to the Celery dashboard, and everything else to the Nuxt frontend. Homepage auto-discovers that one under "Apps".
 
 Away from home, the same deployment answers at `https://hnfm.<tailnet>.ts.net` via the Tailscale operator — a second Ingress in [`clusters/home/tailscale/`](https://github.com/briancaffey/home-lab/tree/main/clusters/home/tailscale) that mirrors the chart's path table exactly. If the chart's ingress ever grows a path, that file has to grow it too; the comment at the top says so, because I will forget. Homepage lists it in the static "Tailnet" group.
+
+**The object store swap.** When upstream MinIO stopped publishing images in November 2026, hn.fm's store moved to [RustFS](https://github.com/rustfs/rustfs) inside the same chart. I copied the media bucket (1641 objects, 2.2 GiB) and left the Service name (`hnfm-minio`) and credentials alone, so the app didn't change. Given the war story below, I tested presigned URLs through the `hnfm.lan` ingress before trusting it: a valid link returned 200 `audio/mpeg`, a tampered signature returned 400, and an anonymous request returned 403. That's the behavior I wanted.
 
 hn.fm has no login of its own. On the LAN that's fine; on the tailnet, the default-deny ACL *is* the gate, the same posture as every other remotely exposed service here. Nothing is open to the internet.
 

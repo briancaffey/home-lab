@@ -10,7 +10,7 @@ description: Self-hosted n8n — the lab's event-driven automation layer. Webhoo
 
 **The quick honest take.** [n8n](https://n8n.io/) is a workflow-automation tool — you wire together "nodes" on a canvas (a webhook fires, call an API, transform the JSON, post to Telegram) and it runs the flow whenever the trigger says so. Think Zapier or Make, but self-hosted, open, and with a full **Code node** when the drag-and-drop runs out. I stood it up in the lab's *Data / Orchestration* category, right next to [Dagster](./dagster.md), because it fills the other half of "run some logic and do something": Dagster is my **scheduled data pipelines**, n8n is my **event-driven / webhook / integration glue**. Mine lives on a2 at `https://n8n.lan`.
 
-**Why I wanted it.** Dagster is wonderful for "materialize these assets on a daily schedule," but it's the wrong shape for "when *this* happens, go do *that*" — a webhook lands, a file shows up, someone pokes an endpoint. n8n is built for exactly that reactive, integration-heavy work, and it comes with a couple hundred pre-built service nodes so I'm not writing an HTTP client for every API. Paired with the [LiteLLM gateway](../ai/litellm.md), it becomes an orchestration layer that can reach *every* model and service in the house — Paperless, Immich, Forgejo, MinIO, Mailpit, the Telegram alerting bot — and stitch them together without me writing a bespoke service each time.
+**Why I wanted it.** Dagster is wonderful for "materialize these assets on a daily schedule," but it's the wrong shape for "when *this* happens, go do *that*" — a webhook lands, a file shows up, someone pokes an endpoint. n8n is built for exactly that reactive, integration-heavy work, and it comes with a couple hundred pre-built service nodes so I'm not writing an HTTP client for every API. Paired with the [LiteLLM gateway](../ai/litellm.md), it becomes an orchestration layer that can reach *every* model and service in the house — Paperless, Immich, Forgejo, the RustFS object store, Mailpit, the Telegram alerting bot — and stitch them together without me writing a bespoke service each time.
 
 This is an **experimentation instance**, not a hardened production fleet: single-main, no queue mode, no Redis. Good enough to build and learn on; I'll add the scaling bits if a workflow ever earns them.
 
@@ -38,14 +38,14 @@ flowchart LR
     HOOK["webhook / schedule / manual"] --> N
     N --- PG
     N -->|"OpenAI-compatible"| L["LiteLLM gateway<br/>(observability ns)"]
-    N -->|"integration nodes"| S["Paperless · Immich · Forgejo<br/>MinIO · Mailpit · Telegram"]
+    N -->|"integration nodes"| S["Paperless · Immich · Forgejo<br/>RustFS (S3) · Mailpit · Telegram"]
 ```
 
 ## The connective tissue: one door to every model
 
 The reason n8n is more than a toy here is that it's wired straight into the [LiteLLM gateway](../ai/litellm.md). The main pod carries a `LITELLM_BASE_URL` pointing at the in-cluster gateway (`http://litellm...:4000/v1`) and a `LITELLM_API_KEY` pulled from an out-of-band secret, and I created a matching OpenAI-compatible credential in the n8n UI. So any workflow can call **any** model LiteLLM fronts — local vLLM on my own GPUs, or a cloud provider when a task outgrows the house — through the same single door every other consumer uses. n8n doesn't need to know about models; it knows about *one* gateway, and the gateway knows about everything.
 
-That's the whole pitch for calling it glue: n8n reacts to an event, thinks with LiteLLM, and acts on Paperless / Immich / Forgejo / MinIO / the Telegram bot — all services that already exist in the lab. It's the event-driven twin of what Dagster does on a schedule.
+That's the whole pitch for calling it glue: n8n reacts to an event, thinks with LiteLLM, and acts on Paperless / Immich / Forgejo / RustFS / the Telegram bot — all services that already exist in the lab. It's the event-driven twin of what Dagster does on a schedule.
 
 ## The "code anything" angle
 

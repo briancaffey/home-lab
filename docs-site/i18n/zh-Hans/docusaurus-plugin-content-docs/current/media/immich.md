@@ -40,6 +40,6 @@ flowchart LR
     S --> ML[ML worker<br/>CLIP 向量]
     ML --> PG
     S --> LIB[(照片库<br/>a2 硬盘)]
-    RESTIC[每晚 restic 备份] -->|pg_dump + 文件| MINIO[(备份 MinIO)]
+    RESTIC[每晚 restic 备份] -->|pg_dump + 文件| S3[(备份 RustFS)]
     ARGO[Argo CD] -->|部署| S
 ```
