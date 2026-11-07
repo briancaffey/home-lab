@@ -28,7 +28,10 @@ metadata:
   labels:
     app: qwen-image
 spec:
-  replicas: 1
+  # Parked 2026-10-18: FLUX 3 Image Klein (services/flux3-klein) took this
+  # spark slot — both don't fit next to LM Studio + acestep + nemotron-asr.
+  # Weights stay in spark's HF cache; scale back to 1 (and Klein to 0) to swap.
+  replicas: 0
   strategy:
     type: Recreate # ~32 GB resident; don't double it during a rollout
   selector:

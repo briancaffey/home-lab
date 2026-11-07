@@ -1,0 +1,125 @@
+# FLUX 3 Image Klein on an RTX 4090 (a1) — the "does it fit a consumer GPU"
+# placement. The DiT is BFL's rowwise FP8 export (variants/fp8r, 6.3 GB,
+# torch._scaled_mm on Ada) next to the bf16 Qwen3-VL-4B encoder (9 GB) and
+# the AE: ~16 GB resident, the rest of the 24 GB for activations. The 9B
+# prompt upsampler does NOT fit beside it, so PUP_MODE=remote borrows the one
+# in the spark pod (POST flux3-klein:8000/v1/upsample) and falls back to the
+# prompt as typed if spark is away.
+#
+# Ships at replicas: 0 — a1's 4090 normally belongs to magpie-tts (claims the
+# GPU) + studio-voice (shares it). To run it:
+#   kubectl -n inference-club scale deploy magpie-tts studio-voice --replicas=0
+#   kubectl -n inference-club scale deploy flux3-klein-4090 --replicas=1
+# and the reverse afterwards (replicas is ignored by Argo on all three).
+#
+# python:3.12-slim + pip (torch cu130 wheels through a hostPath cache) rather
+# than a multi-GB image: a1's USB WiFi corrupts big image pulls, pip at least
+# hash-checks and resumes from the cache.
+#
+# Everything lives on a1's SSD, NOT /mnt/d: on 2026-10-18 the WD 6 TB HDD
+# behind /mnt/d silently corrupted every write of the 6.3 GB fp8 DiT (three
+# different wrong sha256s; stable on re-read, no kernel errors) while the same
+# bytes verified on the SSD. So the weights are a pre-assembled, sha256-checked
+# directory (~/flux3-klein/weights/flux-3-image-klein: text_encoder/,
+# ae.safetensors, variants/fp8r/, configs) rather than an HF cache the pod
+# downloads into — re-verify against the HF LFS oids after any re-copy.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flux3-klein-4090
+  namespace: inference-club
+  labels:
+    app: flux3-klein-4090
+spec:
+  replicas: 0
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: flux3-klein-4090
+  template:
+    metadata:
+      labels:
+        app: flux3-klein-4090
+    spec:
+      nodeSelector:
+        inference-club.com/box: a1
+      runtimeClassName: nvidia
+      containers:
+        - name: flux3-klein
+          image: docker.io/library/python:3.12-slim
+          imagePullPolicy: IfNotPresent
+          command: ["bash", "-lc"]
+          args:
+            - |
+              set -e
+              pip install -q torch==2.11.0 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu130
+              pip install -q --no-deps "https://github.com/black-forest-labs/flux-3-image-klein/archive/$FLUX3_SHA.tar.gz"
+              pip install -q "transformers==5.8.1" accelerate "safetensors>=0.6" pillow "numpy<2.4" \
+                "huggingface_hub[hf_xet]" requests fastapi "uvicorn[standard]" python-multipart
+              exec uvicorn server:app --app-dir /app --host 0.0.0.0 --port 8000
+          env:
+            - { name: MODEL_ID, value: flux-3-image-klein-fp8 }
+            - { name: FLUX3_SHA, value: bfc8889a4497f846416f253a3972a1941ac698b9 }
+            - { name: DIT_QUANT, value: fp8 }
+            - { name: PUP_MODE, value: remote }
+            - { name: PUP_URL, value: "http://flux3-klein.inference-club.svc.cluster.local:8000" }
+            # 1 MP runs fully resident (~22 GB peak); above ~1.6 MP the encoder
+            # parks in system RAM during denoise so 2K fits. 4K doesn't.
+            - { name: MAX_SIDE, value: "2048" }
+            - { name: TE_OFFLOAD_PIXELS, value: "1600000" }
+            - { name: WEIGHTS_DIR, value: /weights }
+            - { name: OUT_DIR, value: /out }
+            - { name: PYTORCH_CUDA_ALLOC_CONF, value: "expandable_segments:True" }
+            - { name: NVIDIA_VISIBLE_DEVICES, value: all }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "compute,utility" }
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+          ports:
+            - { name: http, containerPort: 8000 }
+          volumeMounts:
+            - { name: app, mountPath: /app }
+            - { name: weights, mountPath: /weights, readOnly: true }
+            - { name: out, mountPath: /out }
+            - { name: pip-cache, mountPath: /root/.cache/pip }
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            failureThreshold: 360
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+      volumes:
+        - name: app
+          configMap: { name: flux3-klein-server }
+        - name: weights
+          hostPath: { path: /home/brian/flux3-klein/weights, type: Directory }
+        - name: out
+          hostPath: { path: /home/brian/flux3-klein/out, type: DirectoryOrCreate }
+        - name: pip-cache
+          hostPath: { path: /home/brian/flux3-klein/pip-cache, type: DirectoryOrCreate }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flux3-klein-4090
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: image
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: flux-3-image-klein-fp8
+        name: FLUX 3 Image Klein (FP8, RTX 4090)
+        input_modalities: [text, image]
+        output_modalities: [image]
+        features: [image-edit, multi-reference, seed, steps, custom-size, prompt-upsampling, layout-boxes]
+spec:
+  selector:
+    app: flux3-klein-4090
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

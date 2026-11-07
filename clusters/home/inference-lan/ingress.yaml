@@ -147,6 +147,31 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  name: lan-klein
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "flux3-klein"
+    gethomepage.dev/description: "FLUX 3 Image Klein: text-to-image, 10-ref editing, layout boxes, 4K (spark)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-image-auto-adjust"
+    gethomepage.dev/href: "https://klein.lan/docs"
+    gethomepage.dev/pod-selector: "app=flux3-klein"
+    gethomepage.dev/siteMonitor: "http://flux3-klein.inference-club:8000/health"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["klein.lan"], secretName: inference-tls }]
+  rules:
+    - host: klein.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: flux3-klein, port: { number: 8000 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
   name: lan-ltx
   namespace: inference-club
   annotations:

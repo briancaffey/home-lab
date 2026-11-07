@@ -1,0 +1,136 @@
+# FLUX 3 Image Klein (Black Forest Labs, 2026-10): 5.6B flow-map DiT, 16 steps
+# without CFG, Qwen3-VL-4B text encoder. One model for text-to-image, editing
+# with up to 10 reference images, and bounding-box layout; natively up to 4K,
+# but capped at ~4.4 MP here (MAX_PIXELS) — the 4K decode overran spark.
+# BFL's card is explicit that the prompt upsampler (flux-3-image-klein-pup, a
+# 9B Qwen3.5 VLM, 18.8 GB) belongs in front of it: short prompts become full
+# scene captions, edit instructions + references become a target caption.
+#
+# Served with BFL's reference package (flux3, pinned SHA below), not diffusers:
+# it loads the repo's native bf16 / fp8r / nvfp4 DiTs and does layout boxes.
+# This is the spark placement and the permanent one: bf16 DiT (11 GB) +
+# encoder (9 GB) + the upsampler on vLLM (PUP_MEMORY of the GB10, ~24 GB) all
+# resident in the unified memory, ~45 GB in all. It took Qwen-Image 2.1's slot
+# (services/qwen-image, now replicas: 0). The 4090 placement — fp8 DiT on a1,
+# upsampling remotely through this pod's /v1/upsample — is in a1/.
+#
+# No custom image: the arm64 vllm/vllm-openai:nightly already on spark has
+# torch 2.11 + cu130 + a vLLM new enough for Qwen3.5; pip adds flux3 (no deps)
+# + the server bits at start, through a hostPath pip cache. Weights live in
+# spark's HF cache; the snapshot_download calls are no-ops once they're there.
+#
+# License: FLUX Kommunity License (free under $5M revenue) — accepted on the
+# HF account behind the hf-token secret (the repo is gated).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flux3-klein
+  namespace: inference-club
+  labels:
+    app: flux3-klein
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # ~45 GB resident; don't double it during a rollout
+  selector:
+    matchLabels:
+      app: flux3-klein
+  template:
+    metadata:
+      labels:
+        app: flux3-klein
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      containers:
+        - name: flux3-klein
+          image: docker.io/vllm/vllm-openai:nightly
+          imagePullPolicy: IfNotPresent # 10 GB arm64 image already on spark; never chase the tag
+          command: ["bash", "-lc"]
+          args:
+            - |
+              set -e
+              chown -R root:root /pip-cache  # pip refuses a cache dir it doesn't own
+              pip install -q --no-deps "https://github.com/black-forest-labs/flux-3-image-klein/archive/$FLUX3_SHA.tar.gz"
+              pip install -q "transformers==5.17.0" "huggingface_hub[hf_xet]" requests \
+                fastapi "uvicorn[standard]" python-multipart
+              mkdir -p /weights
+              ln -sfn "$(python3 -c 'import os; from huggingface_hub import snapshot_download as s; print(s("black-forest-labs/flux-3-image-klein", allow_patterns=os.environ["KLEIN_FILES"].split()))' | tail -1)" /weights/flux-3-image-klein
+              ln -sfn "$(python3 -c 'from huggingface_hub import snapshot_download as s; print(s("black-forest-labs/flux-3-image-klein-pup"))' | tail -1)" /weights/pup
+              exec uvicorn server:app --app-dir /app --host 0.0.0.0 --port 8000
+          env:
+            - { name: MODEL_ID, value: flux-3-image-klein }
+            - { name: FLUX3_SHA, value: bfc8889a4497f846416f253a3972a1941ac698b9 }
+            - { name: KLEIN_FILES, value: "*.json *.md model.safetensors ae.safetensors text_encoder/* variants/nvfp4/*" }
+            - { name: DIT_QUANT, value: "" } # bf16; "nvfp4" also runs here (Blackwell)
+            - { name: PUP_MODE, value: local }
+            - { name: PUP_MEMORY, value: "0.22" }
+            - { name: MAX_PIXELS, value: "4400000" } # 2K presets; 8.3 MP 4K wedged the node
+            - { name: WEIGHTS_DIR, value: /weights }
+            - { name: HF_HOME, value: /hf }
+            - { name: OUT_DIR, value: /out }
+            - { name: PIP_CACHE_DIR, value: /pip-cache }
+            - { name: PYTORCH_CUDA_ALLOC_CONF, value: "expandable_segments:True" }
+            - { name: NVIDIA_VISIBLE_DEVICES, value: all }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "compute,utility" }
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+            - name: HF_TOKEN
+              valueFrom: { secretKeyRef: { name: hf-token, key: token } }
+          ports:
+            - { name: http, containerPort: 8000 }
+          volumeMounts:
+            - { name: app, mountPath: /app }
+            - { name: hf, mountPath: /hf }
+            - { name: out, mountPath: /out }
+            - { name: pip-cache, mountPath: /pip-cache }
+            - { name: shm, mountPath: /dev/shm } # vLLM's engine core is a subprocess
+          startupProbe:
+            # pip + (first time) a ~40 GB download + vLLM init + load + warm-up. Budget 2 h.
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+            failureThreshold: 360
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+      volumes:
+        - name: app
+          configMap: { name: flux3-klein-server }
+        - name: hf
+          hostPath: { path: /home/brian/.cache/huggingface, type: Directory }
+        - name: out
+          hostPath: { path: /home/brian/flux3-klein/out, type: DirectoryOrCreate }
+        - name: pip-cache
+          hostPath: { path: /home/brian/flux3-klein/pip-cache, type: DirectoryOrCreate }
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 2Gi }
+---
+# Discovery: type=image routes /v1/images/generations|edits here (OpenAI-shaped
+# under /v1, plus the native /v1/generate). `prompt-upsampling` and
+# `layout-boxes` gate the matching inference.club playground controls. No
+# `4k` (which would unlock the 4K presets): see MAX_PIXELS in server.py.
+apiVersion: v1
+kind: Service
+metadata:
+  name: flux3-klein
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: image
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: flux-3-image-klein
+        name: FLUX 3 Image Klein
+        input_modalities: [text, image]
+        output_modalities: [image]
+        features: [image-edit, multi-reference, seed, steps, custom-size, prompt-upsampling, layout-boxes]
+spec:
+  selector:
+    app: flux3-klein
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
