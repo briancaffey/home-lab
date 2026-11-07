@@ -1,7 +1,7 @@
 # Tailscale Kubernetes Operator
 
 Exposes selected cluster services on the tailnet as `https://<name>.<tailnet>.ts.net`
-with trusted HTTPS, reachable only from devices on the `briancaffey.github`
+with trusted HTTPS, reachable only from devices on your
 tailnet. Nothing is published to the public internet.
 
 It's the same identity model you already use with `tsnet`: the operator joins
