@@ -8,7 +8,12 @@ metadata:
   namespace: minio-backups
   labels: { app: minio-backups }
 spec:
-  replicas: 1
+  # RETIRED 2026-11-07 — RustFS (rustfs.yaml) serves the `minio-backups`
+  # Service now; data was mirrored + `rclone check`ed. Kept at 0 as a rollback
+  # (flip replicas + the Service selector). Its image only survives in a2's
+  # containerd cache; delete this Deployment and /home/brian/e/backups once
+  # RustFS has a few clean nightly runs behind it.
+  replicas: 0
   strategy:
     type: Recreate
   selector:
@@ -58,7 +63,7 @@ metadata:
   namespace: minio-backups
   labels: { app: minio-backups }
 spec:
-  selector: { app: minio-backups }
+  selector: { app: rustfs } # was app: minio-backups (MinIO); restic clients unchanged
   ports:
     - { name: s3, port: 9000, targetPort: s3 }
     - { name: console, port: 9001, targetPort: console }
