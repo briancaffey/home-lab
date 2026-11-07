@@ -30,6 +30,58 @@ helmCharts:
 # The chart exposes runtimeClassName for cluster-mode query/index nodes but NOT
 # for the standalone workload, so inject it here for shared/unmanaged GPU access.
 patches:
+  # The chart's bundled MinIO -> RustFS (2026-11-07; upstream MinIO images are
+  # gone). Patching the subchart's Deployment, not using externalS3, keeps the
+  # Service name, the `milvus-minio` Secret and Milvus' own config unchanged —
+  # externalS3 would need the keys in plain values. RustFS gets a fresh
+  # `rustfs/` subdir of the same PVC; the retired MinIO data (an empty
+  # milvus-bucket) stays at the PVC root.
+  - target:
+      kind: Deployment
+      name: milvus-minio
+    patch: |
+      - op: add
+        path: /spec/template/spec/initContainers
+        value:
+          - name: rustfs-dir
+            image: docker.io/rustfs/rustfs:1.0.4
+            command: ["sh", "-c", "mkdir -p /export/rustfs && chown 1000:1000 /export/rustfs"]
+            securityContext: { runAsUser: 0 }
+            volumeMounts:
+              - { name: export, mountPath: /export }
+      - op: replace
+        path: /spec/template/spec/containers/0
+        value:
+          name: minio
+          image: docker.io/rustfs/rustfs:1.0.4
+          env:
+            - { name: RUSTFS_VOLUMES, value: /data }
+            - { name: RUSTFS_ADDRESS, value: "0.0.0.0:9000" }
+            - { name: RUSTFS_CONSOLE_ENABLE, value: "false" }
+            - { name: RUSTFS_OBS_LOGGER_LEVEL, value: warn }
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: milvus-minio, key: accesskey } }
+            - name: RUSTFS_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: milvus-minio, key: secretkey } }
+          ports:
+            - { name: http, containerPort: 9000 }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { memory: 256Mi }
+            limits: { memory: 2Gi }
+          volumeMounts:
+            - { name: export, mountPath: /data, subPath: rustfs }
+            - { name: logs, mountPath: /logs }
+      - op: add
+        path: /spec/template/spec/volumes/-
+        value: { name: logs, emptyDir: {} }
   - target:
       kind: Deployment
       name: milvus-standalone

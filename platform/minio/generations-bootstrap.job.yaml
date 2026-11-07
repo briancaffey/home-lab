@@ -22,8 +22,10 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-        - name: mc
-          image: minio/mc:latest
+        # minio/mc is gone from Docker Hub along with the server; RustFS's own
+        # `rc` CLI speaks the same alias/mb/pipe/admin dialect.
+        - name: rc
+          image: docker.io/rustfs/rc:v0.1.37
           env:
             - name: ROOT_USER
               valueFrom:
@@ -41,10 +43,10 @@ spec:
             - sh
             - -ec
             - |
-              mc alias set m http://minio.platform.svc:9000 "$ROOT_USER" "$ROOT_PASSWORD"
-              mc mb --ignore-existing m/generations
+              rc alias set m http://minio.platform.svc:9000 "$ROOT_USER" "$ROOT_PASSWORD"
+              rc mb --ignore-existing m/generations
               for p in music images video pdf 3d _meta; do
-                echo placeholder | mc pipe "m/generations/$p/.keep"
+                echo placeholder | rc pipe "m/generations/$p/.keep"
               done
               cat >/tmp/pol.json <<'JSON'
               {
@@ -61,16 +63,16 @@ spec:
                 ]
               }
               JSON
-              mc admin policy create m generations-rw /tmp/pol.json || echo "policy exists"
-              mc admin user add m "$SVC_ACCESS" "$SVC_SECRET" || echo "user exists"
-              mc admin policy attach m generations-rw --user "$SVC_ACCESS" || echo "already attached"
+              rc admin policy create m/ generations-rw /tmp/pol.json || echo "policy exists"
+              rc admin user add m/ "$SVC_ACCESS" "$SVC_SECRET" || echo "user exists"
+              rc admin policy attach m/ generations-rw --user "$SVC_ACCESS" || echo "already attached"
 
               # inference.club app media lives in its OWN bucket (the app is
               # configured with OBJECT_STORAGE_BUCKET=inference-club-media and reuses
               # this same service account via inference-club-secrets). Grant that SA
               # read/write on inference-club-media too, else generated files fail to
               # save with NoCredentials/AccessDenied while inference still runs.
-              mc mb --ignore-existing m/inference-club-media
+              rc mb --ignore-existing m/inference-club-media
               cat >/tmp/icm.json <<'JSON'
               {
                 "Version": "2012-10-17",
@@ -86,9 +88,9 @@ spec:
                 ]
               }
               JSON
-              mc admin policy create m inference-club-media-rw /tmp/icm.json || echo "policy exists"
-              mc admin policy attach m inference-club-media-rw --user "$SVC_ACCESS" || echo "already attached"
+              rc admin policy create m/ inference-club-media-rw /tmp/icm.json || echo "policy exists"
+              rc admin policy attach m/ inference-club-media-rw --user "$SVC_ACCESS" || echo "already attached"
 
               echo "=== result ==="
-              mc ls m/generations/
+              rc ls m/generations/
               echo "BOOTSTRAP DONE"

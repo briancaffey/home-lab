@@ -32,7 +32,11 @@ metadata:
   namespace: platform
   labels: { app: minio }
 spec:
-  replicas: 1
+  # RETIRED 2026-11-07 — RustFS (rustfs.yaml) serves the `minio` Service now;
+  # all 3 buckets mirrored with 0 `mc diff` differences, IAM recreated. Kept
+  # at 0 as a rollback (flip replicas + the Service selector); the PVC below is
+  # the untouched MinIO data. Delete both once RustFS has run clean a while.
+  replicas: 0
   strategy: { type: Recreate }
   selector:
     matchLabels: { app: minio }
@@ -84,7 +88,7 @@ metadata:
   labels: { app: minio }
 spec:
   type: NodePort
-  selector: { app: minio }
+  selector: { app: rustfs } # was app: minio; name + NodePorts kept so clients are unchanged
   ports:
     - { name: s3, port: 9000, targetPort: s3, nodePort: 30900 }
     - { name: console, port: 9001, targetPort: console, nodePort: 30901 }

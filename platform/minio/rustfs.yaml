@@ -1,0 +1,89 @@
+# RustFS — S3 object store for the platform namespace (replaced MinIO on
+# 2026-11-07: upstream MinIO stopped publishing images, docker.io and quay.io
+# both 404 every release tag).
+#
+# Clients are unchanged: the `minio` Service (minio.yaml, NodePort
+# 30900/30901) now selects these pods, and the root credentials are the same
+# `platform-minio` Secret. The `rustfs` Service is the honest name for new
+# clients. IAM (user `generations` + generations-rw / inference-club-media-rw)
+# was recreated with `rc admin`; generations-bootstrap.job.yaml does the same
+# from scratch.
+#
+# Data lives on a3's HDD, not the SSD that holds the cluster DB (docs/22):
+# a hostPath under storage.hdd/ instead of another local-path PV + bind mount.
+# The retired MinIO volume (PVC minio-data) is kept, untouched, as a rollback.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  namespace: platform
+  labels: { app: rustfs }
+spec:
+  replicas: 1
+  strategy: { type: Recreate } # single-writer data dir
+  selector:
+    matchLabels: { app: rustfs }
+  template:
+    metadata:
+      labels: { app: rustfs }
+    spec:
+      nodeSelector: { inference-club.com/box: a3 }
+      initContainers:
+        # hostPath dirs are created root-owned; RustFS runs as 10001.
+        - name: chown-data
+          image: docker.io/rustfs/rustfs:1.0.4
+          command: ["sh", "-c", "chown 10001:10001 /data"]
+          securityContext: { runAsUser: 0 }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      containers:
+        - name: rustfs
+          image: docker.io/rustfs/rustfs:1.0.4
+          env:
+            - { name: RUSTFS_VOLUMES, value: /data }
+            - { name: RUSTFS_ADDRESS, value: "0.0.0.0:9000" }
+            - { name: RUSTFS_CONSOLE_ENABLE, value: "true" }
+            - { name: RUSTFS_CONSOLE_ADDRESS, value: "0.0.0.0:9001" }
+            - { name: RUSTFS_OBS_LOGGER_LEVEL, value: warn }
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: platform-minio, key: root-user }
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: platform-minio, key: root-password }
+          ports:
+            - { name: s3, containerPort: 9000 }
+            - { name: console, containerPort: 9001 }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 2Gi }
+          readinessProbe:
+            httpGet: { path: /health, port: s3 }
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /health, port: s3 }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: logs, mountPath: /logs }
+      volumes:
+        - name: data
+          hostPath:
+            path: /mnt/d/k3s-data/storage.hdd/platform-rustfs
+            type: DirectoryOrCreate
+        - name: logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: platform
+  labels: { app: rustfs }
+spec:
+  selector: { app: rustfs }
+  ports:
+    - { name: s3, port: 9000, targetPort: s3 }
+    - { name: console, port: 9001, targetPort: console }
