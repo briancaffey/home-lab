@@ -36,6 +36,60 @@
       ]
     },
     {
+      "description": "GROUP BY MANAGER (1/3): every non-major image bump in raw k8s manifests -> ONE PR. Majors stay separate (default separateMajorMinor). Ceremony packages are excluded so they keep their own approval-gated PRs.",
+      "matchManagers": [
+        "kubernetes"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin"
+      ],
+      "matchPackageNames": [
+        "!longhorn",
+        "!nvcr.io/nvidia/**",
+        "!kubernetes-sigs/node-feature-discovery"
+      ],
+      "groupName": "kubernetes images (non-major)"
+    },
+    {
+      "description": "GROUP BY MANAGER (2/3): all Helm chart bumps -> ONE PR. argocd (Application chart versions), kustomize (helmCharts + images:) and helm-values are three managers for the same thing in this repo.",
+      "matchManagers": [
+        "argocd",
+        "kustomize",
+        "helm-values"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin"
+      ],
+      "matchPackageNames": [
+        "!longhorn",
+        "!nvcr.io/nvidia/**",
+        "!kubernetes-sigs/node-feature-discovery"
+      ],
+      "groupName": "helm charts (non-major)"
+    },
+    {
+      "description": "GROUP BY MANAGER (3/3): build & CI tooling (docs-site npm, Dockerfiles, Forgejo Actions, regex-pinned CLIs) -> ONE PR. None of these touch running cluster state directly.",
+      "matchManagers": [
+        "npm",
+        "dockerfile",
+        "github-actions",
+        "regex"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin"
+      ],
+      "groupName": "build and CI tooling (non-major)"
+    },
+    {
       "description": "Self-built images (inference-club CI -> ghcr, private): not Renovate's job \u2014 CI moves these, and anonymous lookups fail with no-result noise",
       "matchPackageNames": [
         "ghcr.io/inference-club/**"
