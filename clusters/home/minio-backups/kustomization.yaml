@@ -16,4 +16,5 @@ namespace: minio-backups
 resources:
   - namespace.yaml
   - minio.yaml
+  - rustfs.yaml
   - ingress.yaml

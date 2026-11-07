@@ -1,0 +1,80 @@
+# RustFS backup target (replaced MinIO 2026-11-07 — upstream MinIO images are
+# gone from docker.io and quay.io). Same root credentials Secret, same
+# consumer-facing Service name (`minio-backups`, see minio.yaml), so the restic
+# CronJobs in clusters/home/backups/ are unchanged.
+#
+# New data dir on the same "e" disk: /home/brian/e/rustfs-backups (pre-created
+# as brian, hence type: Directory). The retired MinIO data in
+# /home/brian/e/backups is left as-is for rollback.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  namespace: minio-backups
+  labels: { app: rustfs }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: rustfs }
+  template:
+    metadata:
+      labels: { app: rustfs }
+    spec:
+      nodeSelector:
+        inference-club.com/box: a2
+      securityContext:
+        runAsUser: 1000   # brian on a2 — backup files land owned by brian
+        runAsGroup: 1000
+      containers:
+        - name: rustfs
+          image: docker.io/rustfs/rustfs:1.0.4
+          env:
+            - { name: RUSTFS_VOLUMES, value: /data }
+            - { name: RUSTFS_ADDRESS, value: "0.0.0.0:9000" }
+            - { name: RUSTFS_CONSOLE_ENABLE, value: "true" }
+            - { name: RUSTFS_CONSOLE_ADDRESS, value: "0.0.0.0:9001" }
+            - { name: RUSTFS_OBS_LOGGER_LEVEL, value: warn }
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: minio-backups-secrets, key: root-user }
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: minio-backups-secrets, key: root-password }
+          ports:
+            - { name: s3, containerPort: 9000 }
+            - { name: console, containerPort: 9001 }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: logs, mountPath: /logs }
+          readinessProbe:
+            httpGet: { path: /health, port: s3 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: s3 }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: data
+          hostPath:
+            path: /home/brian/e/rustfs-backups
+            type: Directory
+        - name: logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: minio-backups
+  labels: { app: rustfs }
+spec:
+  selector: { app: rustfs }
+  ports:
+    - { name: s3, port: 9000, targetPort: s3 }
+    - { name: console, port: 9001, targetPort: console }
