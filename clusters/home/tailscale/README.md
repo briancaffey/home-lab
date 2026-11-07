@@ -10,10 +10,43 @@ Ingress) using an OAuth client instead of a hard-coded auth key.
 
 ## What it gives you
 
-- `https://homepage.<tailnet>.ts.net` → Homepage (your remote front door)
-- `https://grafana.<tailnet>.ts.net`  → Grafana
+- `https://homepage.<tailnet>.ts.net` → Homepage, the remote front door. Its
+  **Tailnet** group (`clusters/home/homepage/values.yaml`) has one tile per row
+  below, each with a live up/down dot (`siteMonitor`).
 - Trusted certs on every device (phone/laptop) with no mkcert root to install.
 - Access gated by your tailnet ACLs — only your authenticated devices.
+
+## Catalog
+
+Every `https://<name>.<tailnet>.ts.net` endpoint. "Runs on" is where the
+backend is pinned — **a2 dual-boots Windows**, so its rows go 502 while it's
+away (the proxy pods themselves float on spark/t430 and stay up).
+
+| name        | service              | backend (ns/svc:port)                     | runs on |
+|-------------|----------------------|-------------------------------------------|---------|
+| `homepage`  | Homepage             | homepage/homepage:3000                    | any     |
+| `grafana`   | Grafana              | monitoring/grafana:3000                   | a3      |
+| `netdata`   | Netdata              | netdata/netdata:19999                     | a2      |
+| `headlamp`  | Headlamp (k8s UI)    | headlamp/headlamp:80                      | any     |
+| `vault`     | Vaultwarden          | vaultwarden/vaultwarden:80                | a3      |
+| `jellyfin`  | Jellyfin             | jellyfin/jellyfin:80                      | a2      |
+| `abs`       | Audiobookshelf       | audiobookshelf/audiobookshelf:80          | a3      |
+| `hnfm`      | hn.fm                | hnfm/hnfm-web:8000                        | a2      |
+| `openwebui` | Open WebUI           | open-webui/open-webui:80                  | any     |
+| `litellm`   | LiteLLM gateway      | observability/litellm:4000                | a3      |
+| `langfuse`  | Langfuse             | observability/langfuse-web:3000           | a3      |
+| `phoenix`   | Phoenix              | observability/phoenix-svc:6006            | a3      |
+| `invokeai`  | InvokeAI             | invokeai/invokeai:80                      | a2      |
+| `jupyter`   | JupyterLab           | jupyter/jupyter:80                        | a2      |
+| `n8n`       | n8n                  | n8n/n8n:5678                              | a2      |
+| `dagster`   | Dagster              | dagster/dagster-dagster-webserver:80      | a2      |
+| `forgejo`   | Forgejo              | forgejo/forgejo:3000                      | a2      |
+| `harbor`    | Harbor (UI)          | harbor/harbor-core:80                     | a2      |
+| `speedtest` | Speedtest Tracker    | speedtest/speedtest:80                    | a2      |
+
+Adding one = new `ingress-<svc>.yaml` here + kustomization entry + a tile in
+the Homepage Tailnet group + a row above. First hit after a long idle can
+hang ~30 s while the proxy renews its Let's Encrypt cert — that's normal.
 
 ## One-time setup in the Tailscale admin console (only you can do this)
 

@@ -80,58 +80,92 @@ config:
             href: https://grafana.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: grafana.png
             description: Metrics & dashboards
+            siteMonitor: http://grafana.monitoring:3000
         - Netdata:
             href: https://netdata.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: netdata.png
             description: Live per-node hardware metrics
+            siteMonitor: http://netdata.netdata:19999
         - Jellyfin:
             href: https://jellyfin.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: jellyfin.png
             description: Media server
+            siteMonitor: http://jellyfin.jellyfin:80
         - Audiobookshelf:
             href: https://abs.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: audiobookshelf.png
             description: Audiobooks & podcasts
+            siteMonitor: http://audiobookshelf.audiobookshelf:80
         - Open WebUI:
             href: https://openwebui.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: open-webui.png
             description: Chat with local LLMs
+            siteMonitor: http://open-webui.open-webui:80
         - InvokeAI:
             href: https://invokeai.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: invoke-ai.svg
             description: Image generation
+            siteMonitor: http://invokeai.invokeai:80
         - JupyterLab:
             href: https://jupyter.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: jupyter.png
             description: GPU notebooks
+            siteMonitor: http://jupyter.jupyter:80
         - Headlamp:
             href: https://headlamp.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: headlamp.png
             description: Kubernetes dashboard
+            siteMonitor: http://headlamp.headlamp:80
         - Harbor:
             href: https://harbor.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: harbor.png
             description: Container registry (UI)
+            siteMonitor: http://harbor-core.harbor:80/api/v2.0/ping
         - Forgejo:
             href: https://forgejo.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: forgejo.png
             description: Self-hosted Git forge
+            siteMonitor: http://forgejo.forgejo:3000
         - Speedtest:
             href: https://speedtest.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: speedtest-tracker.png
             description: WAN/ISP speed tracker
+            siteMonitor: http://speedtest.speedtest:80
         - Vaultwarden:
             href: https://vault.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: vaultwarden.png
             description: Passwords & secrets
+            siteMonitor: http://vaultwarden.vaultwarden:80
         - Dagster:
             href: https://dagster.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: /icons/dagster.svg
             description: Data pipeline orchestration
+            siteMonitor: http://dagster-dagster-webserver.dagster:80
         - hn.fm:
             href: https://hnfm.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: mdi-podcast
             description: Hacker News, watchable
+            siteMonitor: http://hnfm-web.hnfm:8000
+        - LiteLLM:
+            href: https://litellm.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: sh-litellm
+            description: LLM gateway — API + Admin UI, virtual keys
+            siteMonitor: http://litellm.observability:4000
+        - Langfuse:
+            href: https://langfuse.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: sh-langfuse
+            description: LLM tracing, prompts & evals
+            siteMonitor: http://langfuse-web.observability:3000
+        - Phoenix:
+            href: https://phoenix.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: /icons/phoenix.png
+            description: LLM tracing & evals (LiteLLM)
+            siteMonitor: http://phoenix-svc.observability:6006
+        - n8n:
+            href: https://n8n.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: sh-n8n
+            description: Workflow automation
+            siteMonitor: http://n8n.n8n:5678
   bookmarks:
     - Homelab:
         - GitHub:
