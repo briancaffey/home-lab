@@ -97,31 +97,6 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: lan-flux
-  namespace: inference-club
-  annotations:
-    gethomepage.dev/enabled: "true"
-    gethomepage.dev/name: "flux2-klein"
-    gethomepage.dev/description: "Image generation (a2)"
-    gethomepage.dev/group: "Inference"
-    gethomepage.dev/icon: "mdi-image-multiple"
-    gethomepage.dev/href: "https://flux.lan/docs"
-    gethomepage.dev/pod-selector: "app=flux2-klein"
-    gethomepage.dev/siteMonitor: "http://flux2-klein.inference-club:8000/docs"
-spec:
-  ingressClassName: traefik
-  tls: [{ hosts: ["flux.lan"], secretName: inference-tls }]
-  rules:
-    - host: flux.lan
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend: { service: { name: flux2-klein, port: { number: 8000 } } }
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
   name: lan-qwen
   namespace: inference-club
   annotations:

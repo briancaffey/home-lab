@@ -43,7 +43,7 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
 - `clusters/home/<service>/` — LAN / cluster services (Homepage, Grafana, Jellyfin,
   Harbor, Tailscale operator ingresses, monitoring, etc.). Aggregated by
   `clusters/home/kustomization.yaml`.
-- `services/<name>/` — AI inference workloads (vLLM models, flux2, ltx2, dia,
+- `services/<name>/` — AI inference workloads (vLLM models, flux3-klein, ltx2, dia,
   nemotron-*, etc.).
 - `observability/`, `platform/`, `mcp/` — gateway/data layer, observability,
   MCP backends.

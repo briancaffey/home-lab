@@ -709,31 +709,6 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: svc-flux2
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: https://forgejo.lan/brian/home-lab.git
-    targetRevision: main
-    path: services/flux2
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: inference-club
-  ignoreDifferences:
-    - group: apps
-      kind: Deployment
-      jsonPointers: ["/spec/replicas"]
-  syncPolicy:
-    automated:
-      prune: false
-      selfHeal: true
-    syncOptions:
-      - RespectIgnoreDifferences=true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
   name: svc-qwen-image
   namespace: argocd
 spec:

@@ -187,9 +187,6 @@ config:
         - magpie-tts:
             - abbr: TTS
               href: https://magpie.lan/docs
-        - flux2-klein:
-            - abbr: IMG
-              href: https://flux.lan/docs
         - flux3-klein:
             - abbr: KLN
               href: https://klein.lan/docs

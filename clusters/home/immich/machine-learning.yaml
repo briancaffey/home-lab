@@ -29,8 +29,9 @@ spec:
         inference-club.com/box: a2
       containers:
         - name: machine-learning
-          # CPU image (no -cuda suffix): a2's 4090 is exclusively flux2-klein,
-          # so run CLIP on CPU for now (indexing is just slower). Switch to the
+          # CPU image (no -cuda suffix): a2's 4090 was exclusively flux2-klein's
+          # (removed 2026-11-07 — FLUX 3 Klein replaced it), so CLIP ran on CPU.
+          # The GPU no longer has an exclusive owner; to use it, switch to the
           # -cuda image + NVIDIA_VISIBLE_DEVICES=all later to share the GPU.
           # Pinned to a version tag (not :release) so Renovate tracks it; keep in
           # lockstep with immich-server's tag — they must run the same version.
