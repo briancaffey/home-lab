@@ -37,7 +37,7 @@ spec:
             - name: renovate
               image: renovate/renovate:43.288.0
               env:
-                - { name: RENOVATE_PLATFORM, value: gitea }
+                - { name: RENOVATE_PLATFORM, value: forgejo }
                 - { name: RENOVATE_ENDPOINT, value: "https://forgejo.lan/api/v1" }
                 - { name: RENOVATE_REPOSITORIES, value: "brian/home-lab,brian/rampart" }
                 - { name: RENOVATE_GIT_AUTHOR, value: "Renovate Bot <renovate@home-cluster.lan>" }

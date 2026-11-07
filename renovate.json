@@ -79,7 +79,7 @@
         "npm",
         "dockerfile",
         "github-actions",
-        "regex"
+        "custom.regex"
       ],
       "matchUpdateTypes": [
         "minor",
