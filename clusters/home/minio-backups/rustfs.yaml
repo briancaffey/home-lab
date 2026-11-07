@@ -57,8 +57,10 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
           resources:
+            # 1Gi OOM-killed during the initial mirror: RustFS buffers in RAM
+            # while the HDD lags on concurrent restic-pack writes.
             requests: { cpu: 100m, memory: 256Mi }
-            limits: { memory: 1Gi }
+            limits: { memory: 2Gi }
       volumes:
         - name: data
           hostPath:
