@@ -20,6 +20,7 @@ private values (see "Secrets & privacy").
 | a1    | 192.168.4.25  | online       | amd64 | RTX 4090         | agent |
 | a2    | 192.168.5.96  | online       | amd64 | RTX 4090         | agent |
 | spark | 192.168.6.19  | (often offline) | arm64 | DGX Spark GB10 (128 GB unified) | agent |
+| blade | 192.168.6.3   | —            | amd64 | RTX 5090 Laptop (24 GB, Blackwell) | agent (laptop, WiFi; joined 2026-11-08; runs studio-voice) |
 
 Node selector convention: pin pods with `nodeSelector: { inference-club.com/box: <a1|a2|a3|spark> }`.
 
@@ -38,6 +39,9 @@ Node selector convention: pin pods with `nodeSelector: { inference-club.com/box:
   is scoped to a1+a3 for that reason.
 - **spark** is arm64 + on a different subnet (192.168.6.x); keep it as an agent,
   not a control-plane/etcd/storage member.
+- **blade** (ex-hostname `razer`) is a WiFi laptop on 192.168.6.x: agent only. Its NVIDIA
+  kernel module comes from `linux-modules-nvidia-580-open-<kernel>`; after a kernel bump check
+  `nvidia-smi` (on 2026-11-08 it had booted 7.0.0-42 with no module and the GPU was gone).
 
 ## Repo layout
 - `clusters/home/<service>/` — LAN / cluster services (Homepage, Grafana, Jellyfin,
