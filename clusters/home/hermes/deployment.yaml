@@ -141,33 +141,16 @@ spec:
               # the old seeding path (HERMES_HOME=/opt/data made them land in
               # /opt/data/.hermes/..., which the plugin never read) are removed.
               rm -rf /opt/data/.hermes/plugins/hermes_otel /opt/data/hermes_otel.yaml 2>/dev/null || true
-              # Plugin deps the image does NOT bundle (v0.23 ships OTel SDK +
-              # http exporter + grpcio, but not PyYAML — without it the plugin
-              # IGNORES config.yaml and env-autodetects backends — nor the OTLP
-              # gRPC exporter). --no-deps so nothing shadows the bundled OTel;
-              # the exporter is pinned to the bundled SDK version. Dir is keyed
-              # by Python version so a future image bump can't load stale C
-              # extensions. PYTHONPATH (main container) points here.
-              PY=/opt/hermes/.venv/bin/python3
-              PYVER=$($PY -c 'import sys;print(f"{sys.version_info[0]}.{sys.version_info[1]}")')
-              OTELV=$($PY -c 'import opentelemetry.sdk.version as v;print(v.__version__)')
-              DEPS=/opt/data/plugin-deps/py$PYVER
-              UV=$(ls /opt/hermes/tools/uv-*/uv | head -1)
-              if $PY -c 'import yaml' 2>/dev/null; then
-                echo "image already has PyYAML; skipping plugin-deps"
-              elif PYTHONPATH=$DEPS $PY -c "import yaml, opentelemetry.exporter.otlp.proto.grpc" 2>/dev/null \
-                   && [ "$(cat $DEPS/.otel-version 2>/dev/null)" = "$OTELV" ]; then
-                echo "plugin-deps present in $DEPS (otel $OTELV)"
-              else
-                rm -rf "$DEPS" && mkdir -p "$DEPS"
-                "$UV" pip install --no-cache --no-deps --python "$PY" --target "$DEPS" \
-                  'PyYAML>=6,<7' "opentelemetry-exporter-otlp-proto-grpc==$OTELV" \
-                  && echo "$OTELV" > "$DEPS/.otel-version" \
-                  && echo "plugin-deps installed into $DEPS (otel $OTELV)" \
-                  || echo "WARN: plugin-deps install failed; hermes-otel will fall back to env autodetect"
-              fi
-              ln -sfn "$DEPS" /opt/data/plugin-deps/current
-              rm -rf /opt/data/otel-libs 2>/dev/null || true  # pre-v0.23 workaround, py3.13
+              # Plugin Python deps (PyYAML — without it the plugin IGNORES
+              # config.yaml — and the OTLP gRPC exporter) are NOT side-loaded:
+              # v0.23's launcher strips PYTHONPATH. They live in Hermes's own
+              # PM dependency generation on the PVC (/opt/data/installs), which
+              # the image's stage2 hook re-resolves on every image upgrade. If
+              # `hermes plugins doctor hermes_otel` ever WARNs about missing
+              # python_dependencies (e.g. a fresh PVC), run in the pod:
+              #   runuser -u hermes -- env HOME=/opt/data HERMES_HOME=/opt/data hermes pm repair
+              # then delete the pod.
+              rm -rf /opt/data/otel-libs /opt/data/plugin-deps 2>/dev/null || true  # dead workarounds
           volumeMounts:
             - { name: data, mountPath: /opt/data }
       containers:
@@ -188,8 +171,6 @@ spec:
             # Edit clusters/home/hermes/hermes-otel-config.yaml + push; Reloader
             # rolls the pod.
             - { name: HERMES_OTEL_CONFIG, value: "/etc/hermes-otel/config.yaml" }
-            # PyYAML + OTLP gRPC exporter for hermes-otel (install-hermes-otel).
-            - { name: PYTHONPATH, value: "/opt/data/plugin-deps/current" }
             # Belt-and-braces: if config.yaml is ever ignored again, the
             # plugin's env-autodetected Langfuse must hit in-cluster Langfuse,
             # never its cloud.langfuse.com default (full prompt capture).
