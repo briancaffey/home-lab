@@ -1,0 +1,54 @@
+# LTX-2.5 (Lightricks, Oct 2026) on a2's RTX 4090 — text/image/audio/video →
+# video+audio, keyframes, retake, IC-LoRA video-to-video, text-to-audio.
+#
+# EXPERIMENT (2026-11-08): the server runs on the a2 HOST as the systemd unit
+# `ltx25-server` (uvicorn :8025, ltx2-server repo's ltx_server/ltx25.py), not
+# as a pod — it shells out to the official `ltx_pipelines` CLIs in the LTX-2
+# repo venv (~/git/LTX-2/.venv, bound to the host's python3.12), so there's no
+# image yet. This selector-less Service + EndpointSlice is what lets the
+# inference.club agents discover it (type=video → POST {base}/generate).
+# Containerizing it (image with the venv baked, hostPath /home/brian/models)
+# is the follow-up; until then GPU use is invisible to the scheduler — a2's
+# 4090 is otherwise idle (immich-ml is CPU, milvus holds ~1.4 GB).
+#
+# Weights: /home/brian/models/ltx-2.5 on a2's NVMe (bf16 distilled DiT +
+# Gemma-4 12B TE, fp8-cast + CPU offload at runtime; dev DiT + distilled LoRA
+# for audio-to-video / text-to-audio). LoRAs under loras/<repo>/.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ltx25
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: video
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/models: |
+      - id: ltx-2.5
+        name: LTX-2.5 (22B distilled)
+        input_modalities: [text, image, audio, video]
+        output_modalities: [video, audio]
+        features: [keyframes, audio-to-video, video-to-video, retake, text-to-audio, loras, auto-duration, multishot]
+spec:
+  ports:
+    - name: http
+      port: 8025
+      targetPort: 8025
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: ltx25-a2
+  namespace: inference-club
+  labels:
+    kubernetes.io/service-name: ltx25
+addressType: IPv4
+ports:
+  - name: http
+    port: 8025
+    protocol: TCP
+endpoints:
+  - addresses: ["192.168.5.96"]
+    conditions:
+      ready: true
