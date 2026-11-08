@@ -10,8 +10,10 @@
 # Mamba state), so KV is tiny and 80K costs little.
 #
 # Memory on the 121.69 GiB unified GB10: weights ~21.6 GB + DSpark ~1.3 GB +
-# KV/Mamba state/activations. 0.45 (~55 GiB) is ample and leaves room for the
-# other spark tenants (acestep, nemotron-asr) without parking them.
+# KV/Mamba state/activations. Measured at 0.45: ~22 GiB non-KV + 32.5 GiB KV
+# (62x concurrency at 80K — far more than MAX_NUM_SEQS=4 needs). 0.30 (~36.5
+# GiB) still leaves ~14 GiB KV (~25x at 80K) and frees ~18 GiB of spark's
+# unified memory for the other tenants (acestep, nemotron-asr, ...).
 #
 # Weights + drafter are pre-downloaded on the spark host (~/.cache/huggingface)
 # and HF_HUB_OFFLINE=1 keeps startup off spark's WiFi; the image was pre-pulled
@@ -35,7 +37,7 @@ spec:
             - name: MAX_MODEL_LEN
               value: "81920"
             - name: GPU_MEM_UTIL
-              value: "0.45"
+              value: "0.30"
           args:
             - |
               vllm serve --model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 \
