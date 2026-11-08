@@ -9,5 +9,6 @@ kind: Kustomization
 # The Recreate strategy means the old pod frees the GPU before the new loads.
 # (Once wired to Argo, changing this line + push is the whole switch.)
 resources:
-  - ../models/qwen3_6-27b-nvfp4
+  - ../models/ripple-65b-nvfp4
+  # - ../models/qwen3_6-27b-nvfp4
   # - ../models/nemotron-omni
