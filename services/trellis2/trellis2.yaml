@@ -61,6 +61,14 @@ spec:
             # `preview` format loads assets/hdri/*.exr through cv2.
             - name: OPENCV_IO_ENABLE_OPENEXR
               value: "1"
+            # glibc per-thread malloc arenas (FastAPI runs each request on a
+            # threadpool thread) fragmented the multi-GB mesh/bake buffers:
+            # anon RSS jumped 15 -> 28 GiB on the first request and crept to an
+            # OOMKill at 40Gi. Two arenas + trimming: flat ~18 GiB, same speed.
+            - name: MALLOC_ARENA_MAX
+              value: "2"
+            - name: MALLOC_TRIM_THRESHOLD_
+              value: "134217728"
             - name: HF_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -72,7 +80,7 @@ spec:
           resources:
             limits:
               nvidia.com/gpu: 1
-              memory: 40Gi
+              memory: 32Gi # a2 also hosts Argo/Harbor/Forgejo
             requests:
               memory: 12Gi
           volumeMounts:
