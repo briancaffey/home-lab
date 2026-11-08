@@ -1,0 +1,60 @@
+# Ripple-65B Preview (NVFP4) — Ricursive's 65B dense agentic-coding model —
+# served by vLLM on spark's GB10. Native vLLM support landed in PR #65745
+# (merged 2026-11-05): RicursiveForCausalLM with a built-in config (NO
+# --trust-remote-code), `ripple` reasoning + tool-call parsers, and the DFlash2
+# speculative draft. NVFP4 MLPs + BF16 attention (ModelOpt, group 16).
+#
+# Memory on the 121.69 GiB unified GB10: weights 53.3 GiB + DFlash2 draft
+# 7.5 GiB + BF16 KV/activations. KV is cheap: only 16 of 80 layers are full
+# attention (NoPE); the other 64 use a 1024-token sliding window, so ~64 KiB
+# per token of context. KV stays BF16 — the authors' Spark runner refuses a
+# quantized KV cache.
+#
+# Speed: decode reads ~53 GB of weights per token, so the GB10's ~273 GB/s caps
+# plain decoding near 5 tok/s. DFlash2 (mean acceptance ~5–7 tokens) is what
+# makes it usable — keep it on.
+#
+# Weights are pre-downloaded on the spark host (~/.cache/huggingface, 65 GB)
+# and HF_HUB_OFFLINE=1 keeps startup off spark's WiFi entirely.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-llm
+spec:
+  template:
+    spec:
+      containers:
+        - name: vllm
+          # First vLLM nightly containing PR #65745 that we've pulled to spark
+          # (commit 1648fef, 130 commits past the merge; arm64 manifest). Commit
+          # tags don't move, and IfNotPresent never re-contacts Docker Hub (the
+          # :nightly tag's moving layers truncate on spark's WiFi — see the
+          # Qwen overlay). The image was pre-pulled with retries on the host.
+          image: docker.io/vllm/vllm-openai:nightly-1648fefab91204f3b15bf8062217316f07f2c4bb
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: HF_HUB_OFFLINE
+              value: "1"
+            - name: MAX_NUM_SEQS
+              value: "4"
+            - name: MAX_MODEL_LEN
+              value: "65536"
+            - name: GPU_MEM_UTIL
+              # 0.62 × 121.69 GiB ≈ 75 GiB: weights + draft + ~14 GiB KV and
+              # activations. Assumes spark's FLUX 3 (bf16 + 27 GiB upsampler)
+              # is parked while Ripple runs — the two don't fit together.
+              value: "0.62"
+          args:
+            - |
+              vllm serve ricursiveAI/Ripple-65B-Preview-NVFP4 \
+                --served-model-name ricursiveAI/Ripple-65B-Preview-NVFP4 ripple-65b \
+                --tensor-parallel-size 1 \
+                --port 8000 --host 0.0.0.0 \
+                --max-model-len "$MAX_MODEL_LEN" \
+                --max-num-seqs "$MAX_NUM_SEQS" \
+                --gpu-memory-utilization "$GPU_MEM_UTIL" \
+                --enable-prefix-caching \
+                --enable-auto-tool-choice \
+                --tool-call-parser ripple \
+                --reasoning-parser ripple \
+                --speculative-config '{"method": "dflash", "model": "ricursiveAI/Ripple-65B-Preview-DFlash2", "num_speculative_tokens": 15}'
