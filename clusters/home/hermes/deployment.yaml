@@ -64,26 +64,17 @@ spec:
           volumeMounts:
             - { name: data, mountPath: /opt/data }
             - { name: seed, mountPath: /seed }
-        # hermes-otel needs the OTel SDK importable by the hermes venv, but
-        # /opt/hermes/.venv is root-owned/read-only at runtime. Until x1
-        # trusts the Harbor CA (sudo scripts/trust-harbor-ca.sh on x1) we
-        # can't pull the derived image (image/Dockerfile, already pushed as
-        # harbor.lan/library/hermes-agent:v2026.6.19-otel) — so install the
-        # libs onto the PVC once and expose them via PYTHONPATH below.
-        # TODO(x1-harbor-trust): swap image to the Harbor tag and drop this
-        # initContainer + the PYTHONPATH env.
-        - name: install-otel-libs
-          image: nousresearch/hermes-agent:v2026.7.7
-          command: ["sh", "-c", "[ -d /opt/data/otel-libs/opentelemetry ] && echo 'otel libs present' || uv pip install --no-cache --target /opt/data/otel-libs opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp-proto-http"]
-          volumeMounts:
-            - { name: data, mountPath: /opt/data }
+        # (OpenTelemetry for hermes-otel is bundled in the upstream image since
+        # v0.23 — the old install-otel-libs initContainer + PYTHONPATH=
+        # /opt/data/otel-libs workaround is gone; those 3.13-built libs would
+        # now shadow the image's own on Python 3.14.)
         # kubectl onto the PVC — /opt/data/.local/bin is already on the image's
         # PATH, so terminal tool calls find it with zero container changes.
-        # Pinned to the server version (k3s v1.35.5). Same interim-vs-derived-
-        # image story as install-otel-libs; fold into image/Dockerfile when
-        # x1 trusts Harbor (TODO(x1-harbor-trust)).
+        # Pinned to the server version (k3s v1.35.5). Interim until a derived
+        # image (image/Dockerfile) is pulled from Harbor on x1
+        # (TODO(x1-harbor-trust)).
         - name: install-kubectl
-          image: nousresearch/hermes-agent:v2026.7.7
+          image: nousresearch/hermes-agent:v0.23.0
           command: ["sh", "-c", "[ -x /opt/data/.local/bin/kubectl ] && echo 'kubectl present' || (mkdir -p /opt/data/.local/bin && curl -fsSL -o /opt/data/.local/bin/kubectl https://dl.k8s.io/release/v1.35.5/bin/linux/amd64/kubectl && chmod +x /opt/data/.local/bin/kubectl)"]
           volumeMounts:
             - { name: data, mountPath: /opt/data }
@@ -93,7 +84,7 @@ spec:
         # bw (a ~100 MB pkg'd Node binary, no unzip in image → python zipfile)
         # only downloads once. TODO(x1-harbor-trust): fold into image/Dockerfile.
         - name: install-vault-tools
-          image: nousresearch/hermes-agent:v2026.7.7
+          image: nousresearch/hermes-agent:v0.23.0
           command:
             - sh
             - -c
@@ -115,12 +106,10 @@ spec:
         # of briancaffey/hermes-otel (the plugin package is the hermes_otel/
         # directory of that repo; since 1.x it has subpackages — hooks/,
         # dashboard/, skills/ — so the whole directory is copied). Idempotent
-        # refresh each boot so plugin updates deploy on restart. NOTE: the
-        # release declares requires_hermes >=0.21; this image is Hermes 0.18.1,
-        # which still loads it (hooks register defensively) with the OTel libs
-        # installed by install-otel-libs above.
+        # refresh each boot so plugin updates deploy on restart. The release
+        # declares requires_hermes >=0.21 (image is v0.23.0, OTel bundled).
         - name: install-hermes-otel
-          image: nousresearch/hermes-agent:v2026.7.7
+          image: nousresearch/hermes-agent:v0.23.0
           command:
             - sh
             - -c
@@ -156,15 +145,13 @@ spec:
             - { name: data, mountPath: /opt/data }
       containers:
         - name: hermes
-          image: nousresearch/hermes-agent:v2026.7.7
+          image: nousresearch/hermes-agent:v0.23.0
           # Keep the image ENTRYPOINT (/init = s6 PID 1); this is the CMD.
           args: ["gateway", "run"]
           ports:
             - { name: api, containerPort: 8642 }
             - { name: dashboard, containerPort: 9119 }
           env:
-            # See install-otel-libs above; only OTel packages live there.
-            - { name: PYTHONPATH, value: "/opt/data/otel-libs" }
             # HOME on the PVC persists the bw (vault) login cache across restarts.
             - { name: HOME, value: "/opt/data" }
             # The hermes-otel plugin config (backends fan-out list) comes straight
