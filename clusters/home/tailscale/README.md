@@ -38,7 +38,6 @@ away (the proxy pods themselves float on spark/t430 and stay up).
 | `phoenix`   | Phoenix              | observability/phoenix-svc:6006            | a3      |
 | `invokeai`  | InvokeAI             | invokeai/invokeai:80                      | a2      |
 | `jupyter`   | JupyterLab           | jupyter/jupyter:80                        | a2      |
-| `n8n`       | n8n                  | n8n/n8n:5678                              | a2      |
 | `dagster`   | Dagster              | dagster/dagster-dagster-webserver:80      | a2      |
 | `forgejo`   | Forgejo              | forgejo/forgejo:3000                      | a2      |
 | `harbor`    | Harbor (UI)          | harbor/harbor-core:80                     | a2      |

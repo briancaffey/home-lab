@@ -161,11 +161,6 @@ config:
             icon: /icons/phoenix.png
             description: LLM tracing & evals (LiteLLM)
             siteMonitor: http://phoenix-svc.observability:6006
-        - n8n:
-            href: https://n8n.{{HOMEPAGE_VAR_TAILNET}}.ts.net
-            icon: sh-n8n
-            description: Workflow automation
-            siteMonitor: http://n8n.n8n:5678
   bookmarks:
     - Homelab:
         - GitHub:

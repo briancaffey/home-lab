@@ -21,6 +21,5 @@ resources:
   - ingress-phoenix.yaml
   - ingress-langfuse.yaml
   - ingress-dagster.yaml
-  - ingress-n8n.yaml
   - ingress-hnfm.yaml
   - ingress-litellm.yaml

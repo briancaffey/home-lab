@@ -1,6 +1,6 @@
 # Postgres + pgvector — shared relational + vector store for the cluster (Phase A,
 # docs/04). One DB serves anything that needs SQL or embeddings: RAG, MCP memory,
-# LiteLLM virtual keys (later), n8n, etc. Distinct from firecrawl's own bundled
+# LiteLLM virtual keys (later), etc. Distinct from firecrawl's own bundled
 # postgres (left alone). Image is official + multi-arch; no pull secret.
 #
 # Pinned to a3 so the 20Gi local-path PVC re-attaches to the same node's disk.

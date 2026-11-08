@@ -23,7 +23,6 @@ const sidebars: SidebarsConfig = {
     {type: 'category', label: 'Data / Orchestration', items: [
       'data/dagster',
       'data/dagster-projects',
-      'data/n8n',
     ]},
     {type: 'category', label: 'Observability & Alerting', items: [
       'observability/prometheus-grafana', 'observability/logs', 'observability/langfuse', 'observability/otel-backends', 'observability/alerting', 'observability/scrutiny',

@@ -40,7 +40,7 @@ sequenceDiagram
 
 在外面的时候，一组精选的服务可以通过 [Tailscale](https://tailscale.com) 访问——每个暴露的服务都有自己的 tailnet 主机名和真正的 Let's Encrypt 证书。Tailnet 的 ACL 是**默认拒绝**：没有明确授权就什么都连不上，而且只有真正值得远程访问的少数服务才会暴露。任何东西都不对公网开放。
 
-如今 tailnet 上有十八个服务，目录（短名、后端 Service、实际运行在哪个节点）就是 [`clusters/home/tailscale/README.md`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/tailscale/README.md) 里的那张表。Homepage 的静态"Tailnet"分组为每一行配了一个磁贴，最新加入的是 LiteLLM、Langfuse、Phoenix 和 n8n，每个磁贴都有实时状态点。我想要这些状态点是因为 a2：它双系统启动 Windows 打游戏，它离开的时候，所有托管在 a2 上的 tailnet 名字都会返回 502。代理 Pod 漂在其他节点上、一直在线，所以"tailnet 主机名有应答"不等于"应用在线"。现在红点会在我开始排查之前告诉我看到的是哪一种。
+如今 tailnet 上有十八个服务，目录（短名、后端 Service、实际运行在哪个节点）就是 [`clusters/home/tailscale/README.md`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/tailscale/README.md) 里的那张表。Homepage 的静态"Tailnet"分组为每一行配了一个磁贴，最新加入的是 LiteLLM、Langfuse 和 Phoenix，每个磁贴都有实时状态点。我想要这些状态点是因为 a2：它双系统启动 Windows 打游戏，它离开的时候，所有托管在 a2 上的 tailnet 名字都会返回 502。代理 Pod 漂在其他节点上、一直在线，所以"tailnet 主机名有应答"不等于"应用在线"。现在红点会在我开始排查之前告诉我看到的是哪一种。
 
 第二个主机名教会我一件事：**Ingress 只是把服务暴露在两个名字上的一半。**另一半是应用本身。当我把 [hn.fm](../media/hnfm.md) 放到 tailnet 上时，tailnet 那边的页面能加载，然后同时坏在三处——前端用绝对的 `https://hnfm.lan` URL 调用 API，CORS 只允许那一个源，对象存储（当时是 MinIO，现在是 RustFS）的预签名媒体 URL 是为那个主机签的、换任何别的主机都被拒绝。每一处修复都在应用里，而不是集群里：相对的同源 URL、给 SSR 用的服务端代理、以及从请求到达的主机推导出来的签名 URL。现在我给任何可能拿到第二个名字的自写服务定的规矩是：永远不要把公网主机名烤进环境变量；从请求里推导它。
 

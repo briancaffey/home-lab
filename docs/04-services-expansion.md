@@ -101,7 +101,7 @@ canonical access via the pinned node).
 
 ## Phase E — workflow & utility (documented, not yet scaffolded)
 
-n8n/Windmill (automation glue), text-embeddings-inference (TEI, small GPU slice for
+Windmill (automation glue), text-embeddings-inference (TEI, small GPU slice for
 RAG embeddings → Qdrant/pgvector), Docling/Tika (doc → markdown), code-server,
 JupyterHub. Add opportunistically.
 
