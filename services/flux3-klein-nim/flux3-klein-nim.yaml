@@ -96,6 +96,9 @@ spec:
 ---
 # Discovery: type=image → inference.club routes /v1/images/generations|edits
 # for model `flux-3-image-klein-nim` here (OpenAI-compatible under /v1).
+# Features are what the NIM really accepts: up to 8 references, seed, steps.
+# NOT `custom-size` (unlocks the playground's 2K presets; the NIM caps output
+# at ~1.06 MP), NOT `negative-prompt` (the distilled version rejects it).
 apiVersion: v1
 kind: Service
 metadata:
@@ -112,7 +115,7 @@ metadata:
         name: FLUX 3 Image Klein (NVIDIA NIM)
         input_modalities: [text, image]
         output_modalities: [image]
-        features: [image-edit, multi-reference, seed, steps, custom-size]
+        features: [image-edit, multi-reference, seed, steps]
 spec:
   selector:
     app: flux3-klein-nim
