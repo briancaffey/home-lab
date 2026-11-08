@@ -1,13 +1,27 @@
-# TRELLIS.2 text/image-to-3D on spark (arm64) — Phase 5 service #3, and the
-# k8s rebuild that doubles as the debugging exercise for the spark perf
-# mystery. Image ghcr.io/inference-club/trellis2 (private; Secret ghcr-pull).
+# TRELLIS.2-4B image-to-3D (microsoft/TRELLIS.2-4B) on a2's RTX 4090.
 #
-# NOTE the docker setup bind-mounts the ENTIRE TRELLIS.2 source tree + api
-# from ~/git/Trellis2-DGX-Spark-Docker — the image is just the runtime env.
-# The pod mirrors those hostPaths exactly (spark-pinned anyway). HF_TOKEN
-# lives in Secret hf-token (create once:
-#   kubectl -n inference-club create secret generic hf-token \
-#     --from-literal=token=<HF token>  ).
+# Moved off spark 2026-11-08: the spark build (arm64/sm_121, hostPath-mounted
+# source tree) had an unresolved 10-15x perf regression and fought vLLM for
+# unified memory. This is an amd64 image built from Dockerfile.4090 in
+# github.com/briancaffey/Trellis2-DGX-Spark-Docker (torch 2.6/cu124, prebuilt
+# flash-attn, CUDA extensions for sm_89) with the TRELLIS.2 source + FastAPI
+# wrapper BAKED IN. Built on a3 (not a1) and pushed to harbor.lan/apps.
+#
+# NOT a3: two test generations there panic-rebooted the control plane —
+# kernel BUG at fs/namei.c:934 (try_to_unlazy) on 7.0.0-42 under the
+# generation's compile/IO burst. a2 runs the 6.8 kernel.
+#
+# GPU: claims a2's GPU EXCLUSIVELY (nvidia.com/gpu: 1) — the 1024 cascade
+# needs a big chunk of 24 GB. The host-run LTX-2.5 server (ltx25-server, :8025)
+# uses the same card OUTSIDE k8s, so stop one before running the other:
+#   ssh a2 sudo systemctl stop ltx25-server
+#   kubectl -n inference-club scale deploy trellis2 --replicas=1
+# (Argo ignores /spec/replicas, so hand-scaling sticks.)
+#
+# Weights: a2's HF cache (~/.cache/huggingface) — TRELLIS.2-4B, the ss decoder
+# from TRELLIS-image-large, and the two GATED aux models
+# (facebook/dinov3-vitl16-pretrain-lvd1689m, briaai/RMBG-2.0). HF_TOKEN comes
+# from Secret hf-token for any first-time download.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,12 +30,9 @@ metadata:
   labels:
     app: trellis2
 spec:
-  # PARKED (2026-07-01): scaled to 0 — not in active use, and a prime suspect
-  # in spark's unified-memory pressure (the box wedged + overheated when
-  # acestep generated alongside vLLM + trellis2). Bump to 1 to bring back.
-  replicas: 0
+  replicas: 1
   strategy:
-    type: Recreate
+    type: Recreate # single GPU claim; old pod must release it first
   selector:
     matchLabels:
       app: trellis2
@@ -31,68 +42,49 @@ spec:
         app: trellis2
     spec:
       nodeSelector:
-        inference-club.com/box: spark
+        inference-club.com/box: a2
+        kubernetes.io/arch: amd64
       runtimeClassName: nvidia
-      imagePullSecrets:
-        - name: ghcr-pull
       containers:
         - name: trellis2
-          image: ghcr.io/inference-club/trellis2:spark-arm64
+          image: harbor.lan/apps/trellis2:4090-8609836-r2
+          imagePullPolicy: IfNotPresent
           env:
-            - name: APP_SCRIPT
-              value: api
-            - name: API_HOST
-              value: 0.0.0.0
-            - name: API_PORT
-              value: "8000"
-            - name: ATTN_BACKEND
-              value: flash-attn
-            # Persist the Triton compile cache AND the flex_gemm autotune cache
-            # on the mounted hostPath (triton_cache) so they survive the Recreate
-            # restart. WITHOUT these, both default to ephemeral /root/.triton and
-            # /root/.flex_gemm — wiped every pod restart, so the first generation
-            # after each boot pays a ~95s cold re-autotune tax (200s vs ~110s).
-            # See [[project-trellis2-perf]] (root-caused 2026-06-29 via py-spy).
-            - name: TRITON_CACHE_DIR
-              value: /workspace/cache/triton
-            - name: FLEX_GEMM_AUTOTUNE_CACHE_PATH
-              value: /workspace/cache/triton/flex_autotune_cache.json
-            - name: HF_HOME
-              value: /workspace/cache/huggingface
+            - name: TRELLIS2_DEFAULT_VARIANT
+              value: bf16
+            # One resident variant on a 24 GB card; a GGUF swap would reload.
+            - name: TRELLIS2_ALLOW_VARIANT_SWITCH
+              value: "false"
+            - name: PYTORCH_CUDA_ALLOC_CONF
+              value: expandable_segments:True
+            # opencv-python ships with EXR reading disabled; the turntable
+            # `preview` format loads assets/hdri/*.exr through cv2.
+            - name: OPENCV_IO_ENABLE_OPENEXR
+              value: "1"
             - name: HF_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
-            - name: UID
-              value: "1000"
-            - name: GID
-              value: "1000"
-            # GPU sharing on spark (acestep holds the 1 advertised
-            # nvidia.com/gpu): docker --gpus all semantics via env + runtime.
-            - name: NVIDIA_VISIBLE_DEVICES
-              value: all
-            - name: NVIDIA_DRIVER_CAPABILITIES
-              value: compute,utility
           ports:
             - name: http
               containerPort: 8000
-              # Cutover 2026-06-12: prod's static agent routes mesh to
-              # spark:8000 — served by this pod now that the docker copy
-              # (container AND image) is removed.
-              hostPort: 8000
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              memory: 40Gi
+            requests:
+              memory: 12Gi
           volumeMounts:
-            - name: trellis-src
-              mountPath: /workspace/TRELLIS.2
-            - name: trellis-api
-              mountPath: /workspace/TRELLIS.2/api
             - name: hf-cache
               mountPath: /workspace/cache/huggingface
+            # Triton + flex_gemm autotune caches survive restarts (otherwise the
+            # first generation after each boot pays a ~95 s re-autotune tax).
+            - name: compile-cache
+              mountPath: /workspace/cache/triton
             - name: torch-cache
               mountPath: /workspace/cache/torch
-            - name: triton-cache
-              mountPath: /workspace/cache/triton
-          startupProbe: # pipeline load is heavy; budget generously (magpie's lesson)
+          startupProbe: # pipeline load is heavy; budget generously
             httpGet:
               path: /health
               port: http
@@ -104,29 +96,21 @@ spec:
               port: http
             periodSeconds: 15
       volumes:
-        - name: trellis-src
-          hostPath:
-            path: /home/brian/git/Trellis2-DGX-Spark-Docker/TRELLIS.2
-            type: Directory
-        - name: trellis-api
-          hostPath:
-            path: /home/brian/git/Trellis2-DGX-Spark-Docker/api
-            type: Directory
         - name: hf-cache
           hostPath:
-            path: /home/brian/git/Trellis2-DGX-Spark-Docker/hf_cache
+            path: /home/brian/.cache/huggingface
             type: Directory
+        - name: compile-cache
+          hostPath:
+            path: /home/brian/trellis2-cache/triton
+            type: DirectoryOrCreate
         - name: torch-cache
           hostPath:
-            path: /home/brian/git/Trellis2-DGX-Spark-Docker/torch_cache
-            type: Directory
-        - name: triton-cache
-          hostPath:
-            path: /home/brian/git/Trellis2-DGX-Spark-Docker/triton_cache
-            type: Directory
+            path: /home/brian/trellis2-cache/torch
+            type: DirectoryOrCreate
 ---
-# Discovery: type=mesh routes 3D generations here; the API is served from the
-# base URL (POST /generate, GET /health) — no base-path annotation.
+# Discovery: type=mesh routes 3D generations here (agent rewrites
+# /v1/3d/generations -> POST /generate on the base URL).
 apiVersion: v1
 kind: Service
 metadata:

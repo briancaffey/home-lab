@@ -278,7 +278,7 @@ metadata:
   annotations:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "trellis2"
-    gethomepage.dev/description: "3D generation (spark, parked)"
+    gethomepage.dev/description: "TRELLIS.2 image-to-3D (a2 4090)"
     gethomepage.dev/group: "Inference"
     gethomepage.dev/icon: "mdi-cube-outline"
     gethomepage.dev/href: "https://trellis.lan/docs"

@@ -33,7 +33,7 @@ and containers at these instead of IP:port. `/docs` on each = OpenAPI UI.
 | firecrawl | URL → markdown scraping | **https://firecrawl.lan** (no /docs) |
 | acestep | Music generation (parked) | **https://acestep.lan** |
 | dia | Voice cloning / dialogue (parked) | **https://dia.lan** |
-| trellis2 | 3D mesh generation (parked) | **https://trellis.lan** |
+| trellis2 | TRELLIS.2 image-to-3D (a2 4090) | **https://trellis.lan** |
 | lmstudio | LLM headless (parked) | **https://lmstudio.lan** |
 
 ---
