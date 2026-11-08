@@ -5,7 +5,7 @@
 #   model id (inference.club)     what / where
 #   flux-3-image-klein            BFL reference package, bf16, spark  (services/flux3-klein)
 #   flux-3-image-klein-fp8        BFL reference package, fp8, a1 4090 (services/flux3-klein/a1)
-#   flux-3-image-klein-nim        THIS: NVIDIA NIM 1.0.0, SGLang Diffusion, spark
+#   flux-3-image-klein-nim        THIS: NVIDIA NIM 1.0.1, SGLang Diffusion, fp8, spark
 #
 # Why spark: NVIDIA's support matrix asks for >=48 GB GPU memory (Ampere+) and
 # lists x86_64 + aarch64; the image is multi-arch. A 4090 (24 GB) is below the
@@ -14,8 +14,10 @@
 #
 # Version: the step-distilled `flux-3-image-klein` (fast, few steps). The
 # undistilled `flux-3-image-klein-base` is NIM's default — switch with
-# NIM_MODEL_VERSION. Precision: BF16 (the profile NIM auto-picks; FP8 profiles
-# exist — set NIM_MODEL_PROFILE, ids in README.md).
+# NIM_MODEL_VERSION (its HF licence must be accepted first; it isn't yet).
+# Precision: FP8, pinned via NIM_MODEL_PROFILE (NIM would auto-pick BF16).
+# Measured on spark 2026-11-08: FP8 8.5 s vs BF16 10.3 s per 1024² image,
+# 20.7 vs 28.2 GB, same composition per seed (profile ids in README.md).
 #
 # Image + weights: the 14.75 GB arm64 image was pre-pulled on spark with
 # retries (spark's WiFi truncates big layers), hence IfNotPresent. NIM
@@ -59,6 +61,8 @@ spec:
             - name: HF_TOKEN
               valueFrom: { secretKeyRef: { name: hf-token, key: token } }
             - { name: NIM_MODEL_VERSION, value: flux-3-image-klein }
+            # FP8 profile of the distilled version (NIM 1.0.1 id).
+            - { name: NIM_MODEL_PROFILE, value: 2c9b9ddf24cf4c98f7f2f70c22f6332ff48b151917d312df980b8d099129c224 }
             # Distinct API name so it never collides with the other two klein
             # deployments in inference.club's model routing.
             - { name: NIM_SERVED_MODEL_NAME, value: flux-3-image-klein-nim }
