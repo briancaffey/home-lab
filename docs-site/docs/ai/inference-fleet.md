@@ -7,7 +7,7 @@ repo_path: services/
 
 # The Inference Fleet
 
-**What it is:** a namespace called `inference-club` where AI models live as Kubernetes services — a multimodal LLM, speech-to-text, text-to-speech, image generation, video generation, speech enhancement, web scraping, and a bench of parked experiments. Each one is a container wrapping a model server (most are [vLLM](https://github.com/vllm-project/vllm), some are NVIDIA NIMs or custom servers), and each gets a stable `https://<name>.lan` address with an OpenAPI page at `/docs`.
+**What it is:** a namespace called `inference-club` where AI models live as Kubernetes services — a multimodal LLM, speech-to-text, text-to-speech, image generation, video generation, image-to-3D, speech enhancement, web scraping, and a bench of parked experiments. Each one is a container wrapping a model server (most are [vLLM](https://github.com/vllm-project/vllm), some are NVIDIA NIMs or custom servers), and each gets a stable `https://<name>.lan` address with an OpenAPI page at `/docs`.
 
 **Why I run it:** because "call an API" and "own the API" are different hobbies. Running models at home means no per-token bills for experimentation, no rate limits, no data leaving the house — and a forcing function to actually understand GPUs, VRAM, and scheduling. The fleet is the *reason* this cluster exists; everything else on this site is supporting cast.
 
@@ -24,6 +24,7 @@ flowchart LR
         sv["studio-voice<br/>audio cleanup"]
         fc["firecrawl<br/>URL→markdown"]
         klein["flux3-klein<br/>images + edits (spark)"]
+        trellis["trellis2<br/>image→3D mesh (a2)"]
     end
     subgraph parked["The bench (replicas: 0)"]
         flux["flux2-klein<br/>images"]
@@ -31,7 +32,6 @@ flowchart LR
         ltx["ltx2<br/>video"]
         ace["acestep<br/>music"]
         dia["dia<br/>voice cloning"]
-        trellis["trellis2<br/>3D meshes"]
     end
     gpu1[("a1 · RTX 4090")]
     gpu2[("a2 · RTX 4090")]
@@ -48,13 +48,14 @@ flowchart LR
 - **Scraping** with `firecrawl.lan` — URL in, clean markdown out, feeds agents
 - **Images and edits** from `klein.lan` — [FLUX 3 Image Klein](./flux3-klein.md): text-to-image, edits from up to ten references, bounding-box layout, and a prompt upsampler in front. It lives on spark (about 45 GB resident). An fp8 variant for a1's 4090 is parked next to it
 - **Images with words in them** from `qwen.lan` — [Qwen-Image 2.1](./qwen-image.md), currently parked. Klein took its spark slot because the two don't fit together next to the rest of spark's tenants. Swapping back is two `kubectl scale` commands
+- **3D meshes** from `trellis.lan` — [TRELLIS.2](./trellis2.md): one image in, a textured GLB out in about a minute. It moved off spark onto a2's 4090 in November 2026 and claims that card exclusively, taking turns with the host-run LTX-2.5 video server
 - **Unparking something** when a project needs it: one `kubectl scale` and a model wakes up
 
 ## How it's configured (the interesting parts)
 
 **GPUs are shared deliberately, not automatically.** A pod either claims a whole GPU (`nvidia.com/gpu: 1` — the scheduler enforces exclusivity) or joins the honor system (`NVIDIA_VISIBLE_DEVICES=all` with *no* GPU request — several pods share one card, and the scheduler is blind to it). There's no time-slicing or MPS; a custom `vram-reporter` keeps score out-of-band. One RTX 4090 has 24 GB of VRAM, and I know roughly what every model costs.
 
-**Some models choose their own node.** Most of the fleet fits a 4090 and goes wherever there is VRAM, but Qwen-Image's 33 GB pipeline forced a placement story worth reading on its own: two attempts on a3 (CPU offload, then a 4-bit encoder) each traded away something I wanted, and spark's 128 GB of unified memory was the only honest answer. The details, including the edit that silently did nothing, are on the [Qwen-Image page](./qwen-image.md). Its successor in that slot, [FLUX 3 Image Klein](./flux3-klein.md), also has two placements in git: bf16 on spark, and fp8 on a 4090 that borrows spark's upsampler over the network.
+**Some models choose their own node.** Most of the fleet fits a 4090 and goes wherever there is VRAM, but Qwen-Image's 33 GB pipeline forced a placement story worth reading on its own: two attempts on a3 (CPU offload, then a 4-bit encoder) each traded away something I wanted, and spark's 128 GB of unified memory was the only honest answer. The details, including the edit that silently did nothing, are on the [Qwen-Image page](./qwen-image.md). Its successor in that slot, [FLUX 3 Image Klein](./flux3-klein.md), also has two placements in git: bf16 on spark, and fp8 on a 4090 that borrows spark's upsampler over the network. And one model is banned from a node outright: [TRELLIS.2](./trellis2.md) panic-rebooted a3, the control plane, on both of its test generations, so it lives on a2 and never on a3.
 
 **Parking is a first-class lifestyle.** I can't run everything at once — video generation alone would eat a whole card — so services scale to zero and back constantly. This shaped two real architectural decisions:
 

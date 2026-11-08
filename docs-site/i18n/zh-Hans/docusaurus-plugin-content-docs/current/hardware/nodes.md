@@ -52,6 +52,8 @@ a3 为什么在跑一个有 bug 的内核？因为它装的是一个"裸"内核�
 
 修复分三层，全部在 [`scripts/node-lockup-guard.sh`](https://github.com/briancaffey/home-lab/blob/main/scripts/node-lockup-guard.sh) 里，现在作为标准准备工作的一部分在每台 amd64 节点上运行：内核被设置为在软锁死或硬锁死时**直接 panic 并重启**，而不是空转（从卡住到重新开机大约 75 秒）；Intel 芯片组的**硬件看门狗**在启动时加载、由 systemd 喂狗，这样即使 PID 1 停止运行主板也会自行复位；`intel-microcode` 也装回来了，CPU 开机就能用上当前微码。在 a3 上，这个脚本还额外安装了 HWE 内核元包，把它升到了 7.0，更重要的是从此它会持续收到更新。配套的一组[告警](/observability/alerting)现在会在 CPU 被钉在内核态、核心过热、I/O 停滞或意外重启时触发。完整的事后分析（含内核栈）在仓库里的 [`docs/22`](https://github.com/briancaffey/home-lab/blob/main/docs/22-a3-thermal-runaway-postmortem.md)。
 
+这个守护在 2026 年 11 月迎来了第一次实战。我在 a3 的 4090 上试跑 [TRELLIS.2](/ai/trellis2) 图生 3D 模型，两次测试生成都在密集的编译和 IO 期间撞上了另一个内核 bug（7.0.0-42 上的 `kernel BUG at fs/namei.c:934`）。panic-on-oops 每次都让 a3 自动重启，集群大约五分钟就恢复了，全程没人插手。journal 里什么都没有，所以内核栈是从 `/var/lib/systemd/pstore` 里捞出来的。结论是一条安置规则：突发性的 GPU 任务不上控制平面，TRELLIS 跑在 a2 上。
+
 这次排查还翻出了一个慢性问题：a3 的 k3s 数据目录——containerd 的镜像存储加上大约 14 GB 的节点本地数据库卷——放在一块 5400 转的机械硬盘上，所以每次重启之后都要经历大约十五分钟的 I/O 饱和，等所有东西重新起来。这不是发热的原因，但正是 a3 重启后 Pod 看起来"抖"的原因。此后集群数据库和节点本地卷都已挪到 SSD 上，而大块数据（对象存储、有声书媒体）刻意留在机械盘上，这样 228 GB 的 SSD 只装需要快的东西。细节见 [`docs/22`](https://github.com/briancaffey/home-lab/blob/main/docs/22-a3-thermal-runaway-postmortem.md) 的附录。BIOS 更新仍在 a3 的清单上。
 
 ## a2 —— 最忙的节点

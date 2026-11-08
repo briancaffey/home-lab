@@ -18,7 +18,7 @@ const sidebars: SidebarsConfig = {
       'gitops/argocd', 'gitops/renovate', 'gitops/the-trio', 'gitops/ci-loops', 'gitops/kustomize-evolution',
     ]},
     {type: 'category', label: 'Inference & AI', items: [
-      'ai/inference-fleet', 'ai/flux3-klein', 'ai/qwen-image', 'ai/litellm', 'ai/rampart', 'ai/hermes', 'ai/code-server',
+      'ai/inference-fleet', 'ai/flux3-klein', 'ai/qwen-image', 'ai/trellis2', 'ai/litellm', 'ai/rampart', 'ai/hermes', 'ai/code-server',
     ]},
     {type: 'category', label: 'Data / Orchestration', items: [
       'data/dagster',

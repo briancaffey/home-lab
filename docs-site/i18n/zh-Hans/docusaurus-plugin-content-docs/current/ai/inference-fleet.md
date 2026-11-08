@@ -7,7 +7,7 @@ repo_path: services/
 
 # 推理服务舰队
 
-**这是什么：** 一个叫 `inference-club` 的命名空间，AI 模型们以 Kubernetes 服务的身份住在这里——多模态 LLM、语音转文字、文字转语音、图像生成、视频生成、语音增强、网页抓取，还有一排停放着的实验品。每个服务都是一个包着模型服务器的容器（大多数是 [vLLM](https://github.com/vllm-project/vllm)，也有一些是 NVIDIA NIM 或自定义服务器），并且每个都有一个稳定的 `https://<name>.lan` 地址，`/docs` 路径下还有 OpenAPI 页面。
+**这是什么：** 一个叫 `inference-club` 的命名空间，AI 模型们以 Kubernetes 服务的身份住在这里——多模态 LLM、语音转文字、文字转语音、图像生成、视频生成、图生 3D、语音增强、网页抓取，还有一排停放着的实验品。每个服务都是一个包着模型服务器的容器（大多数是 [vLLM](https://github.com/vllm-project/vllm)，也有一些是 NVIDIA NIM 或自定义服务器），并且每个都有一个稳定的 `https://<name>.lan` 地址，`/docs` 路径下还有 OpenAPI 页面。
 
 **我为什么要跑它：** 因为"调用 API"和"拥有 API"是两种不同的爱好。在家里跑模型意味着实验不用按 token 付费、没有速率限制、数据不出家门——还逼着你真正搞懂 GPU、VRAM 和调度。这支舰队就是这个集群存在的*理由*；这个网站上的其他一切都只是配角。
 
@@ -24,6 +24,7 @@ flowchart LR
         sv["studio-voice<br/>音频修复"]
         fc["firecrawl<br/>URL→markdown"]
         klein["flux3-klein<br/>图像 + 编辑（spark）"]
+        trellis["trellis2<br/>图→3D 网格（a2）"]
     end
     subgraph parked["替补席（replicas: 0）"]
         flux["flux2-klein<br/>图像"]
@@ -31,7 +32,6 @@ flowchart LR
         ltx["ltx2<br/>视频"]
         ace["acestep<br/>音乐"]
         dia["dia<br/>声音克隆"]
-        trellis["trellis2<br/>3D 网格"]
     end
     gpu1[("a1 · RTX 4090")]
     gpu2[("a2 · RTX 4090")]
@@ -48,13 +48,14 @@ flowchart LR
 - **抓取**用 `firecrawl.lan`——URL 进、干净的 markdown 出，喂给各路智能体
 - **图像与编辑**来自 `klein.lan`——[FLUX 3 Image Klein](./flux3-klein.md)：文生图、基于最多十张参考图的编辑、边界框布局，前面还有一个提示词扩写器。它住在 spark 上（常驻约 45 GB）。给 a1 那块 4090 用的 fp8 版本停放在一旁
 - **带字的图**来自 `qwen.lan`——[Qwen-Image 2.1](./qwen-image.md)，目前处于停放状态。Klein 接替了它在 spark 上的位置，因为两者放不下、挤不进 spark 上其他租户的旁边。换回去只需要两条 `kubectl scale` 命令
+- **3D 网格**来自 `trellis.lan`——[TRELLIS.2](./trellis2.md)：一张图进，大约一分钟后一个带贴图的 GLB 出。它在 2026 年 11 月从 spark 搬到了 a2 的 4090 上，独占那块卡，和跑在宿主机上的 LTX-2.5 视频服务器轮流使用
 - **唤醒某个服务**当项目需要时：一句 `kubectl scale`，模型就醒了
 
 ## 这里的配置方式（有意思的部分）
 
 **GPU 是刻意共享的，不是自动共享的。** 一个 Pod 要么独占整块 GPU（`nvidia.com/gpu: 1`——由调度器强制排他），要么加入"君子协定"（`NVIDIA_VISIBLE_DEVICES=all` 且*不*声明 GPU 资源——几个 Pod 共享一块卡，而调度器对此一无所知）。这里没有 time-slicing 也没有 MPS；一个自制的 `vram-reporter` 在带外记账。一块 RTX 4090 有 24 GB VRAM，每个模型大概吃多少，我心里有数。
 
-**有些模型会自己挑节点。** 舰队里大多数模型一块 4090 就装得下，哪里有 VRAM 就去哪里；但 Qwen-Image 那条 33 GB 的流水线逼出了一段值得单独一读的安置故事：在 a3 上的两次尝试（先是 CPU 卸载，再是 4-bit 编码器）各自牺牲了我想要的东西，而 spark 的 128 GB 统一内存是唯一诚实的答案。细节——包括那次悄无声息什么都没改的编辑——都在 [Qwen-Image 页](./qwen-image.md)上。它在那个位置上的继任者 [FLUX 3 Image Klein](./flux3-klein.md) 同样在 git 里有两种安置方式：spark 上的 bf16，以及一块 4090 上的 fp8——后者通过网络借用 spark 的扩写器。
+**有些模型会自己挑节点。** 舰队里大多数模型一块 4090 就装得下，哪里有 VRAM 就去哪里；但 Qwen-Image 那条 33 GB 的流水线逼出了一段值得单独一读的安置故事：在 a3 上的两次尝试（先是 CPU 卸载，再是 4-bit 编码器）各自牺牲了我想要的东西，而 spark 的 128 GB 统一内存是唯一诚实的答案。细节——包括那次悄无声息什么都没改的编辑——都在 [Qwen-Image 页](./qwen-image.md)上。它在那个位置上的继任者 [FLUX 3 Image Klein](./flux3-klein.md) 同样在 git 里有两种安置方式：spark 上的 bf16，以及一块 4090 上的 fp8——后者通过网络借用 spark 的扩写器。还有一个模型被某台节点直接拉黑：[TRELLIS.2](./trellis2.md) 在 a3 这个控制平面上的两次测试生成，两次都让它 panic 重启，所以它住在 a2，永远不上 a3。
 
 **"停放"是一等公民的生活方式。** 我没法同时跑所有东西——光是视频生成就能吃掉一整块卡——所以服务频繁地缩到零再扩回来。这塑造了两个实实在在的架构决策：
 
