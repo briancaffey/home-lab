@@ -14,6 +14,10 @@ repo_path: observability/
 {/* screenshot: observability/otel-backends-homepage.png — the Observability group on Homepage with all nine tiles */}
 {/* screenshot: observability/otel-backends-same-trace.png — the same Hermes trace open in Jaeger, SigNoz and Uptrace side by side */}
 
+:::info[2026 年 11 月起大部分已停放]
+新鲜劲过去了，正如计划的那样。Hermes 现在只发往三个后端：W&B Weave（云端）、Phoenix 和 Langfuse（集群内）。OpenObserve、Jaeger、Tempo、LGTM 网关（以及它后面的 Parseable）、SigNoz 和 Uptrace 都已缩容到 0。它们在 [`hermes-otel-config.yaml`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/hermes/hermes-otel-config.yaml) 里的条目被注释掉并标为"parked"（已停放），所以要恢复其中一个，只需扩容加取消注释。这一页的其余部分我保留了下来，作为每个后端跑起来是什么样子的记录。
+:::
+
 ## 矩阵
 
 | 后端 | hermes-otel `type` | 链路 | 指标 | 日志 | 去哪里看 |
@@ -86,7 +90,7 @@ flowchart LR
 
 ## 它和其他部分怎么配合
 
-- **[Hermes](../ai/hermes.md)** 是今天唯一的发送方。插件每次启动都从一个钉住的 hermes-otel release 标签安装，所以"Hermes 跑的是哪个版本的插件"就是 deployment 里的一行。
+- **[Hermes](../ai/hermes.md)** 是今天唯一的发送方。插件每次启动都从一个钉住的 hermes-otel release 标签安装，所以"Hermes 跑的是哪个版本的插件"就是 deployment 里的一行。十一月升级到 Hermes v0.23 之后，插件自身的 Python 依赖住在 Hermes 的依赖代里。缺失的 PyYAML 曾让链路短暂地又跑去了 Langfuse Cloud，这个故事在 [Hermes 页面](../ai/hermes.md)上。
 - **[Langfuse](./langfuse.md)** 和 Phoenix 保留各自的页面和各自存在的理由；它们是我真正会打开来读链路的两个。其余的是对照组。
 - **[Prometheus 与 Grafana](./prometheus-grafana.md)** 多了一个 OTLP 接收器和一个 Tempo 数据源，所以在我本来就常驻的那个 Grafana 里，一条 Hermes 链路只差一句 TraceQL 查询。
 - **[日志](./logs.md)** 是没做完的那条边：网关的日志管道在等 Loki 3。

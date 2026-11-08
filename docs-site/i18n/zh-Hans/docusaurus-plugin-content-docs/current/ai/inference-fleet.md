@@ -18,7 +18,7 @@ repo_path: services/
 ```mermaid
 flowchart LR
     subgraph active["通常醒着"]
-        omni["nemotron-omni<br/>多模态 LLM"]
+        omni["spark-llm 槽位<br/>Nemotron 3.5 Lightning（spark）"]
         asr["nemotron-asr<br/>语音→文字"]
         magpie["magpie-tts<br/>文字→语音"]
         sv["studio-voice<br/>音频修复"]
@@ -42,7 +42,7 @@ flowchart LR
 
 ## 日常主力
 
-- **聊天与推理**走 `omni.lan`（通常由 [LiteLLM](./litellm.md) 代理，不直接调用）
+- **聊天、推理与智能体任务**来自 spark 的 LLM 槽位，几乎总是经由 [LiteLLM](./litellm.md)，而不是直接调用。从 2026 年 11 月起，这个槽位跑的是 NVIDIA 的 Nemotron 3.5 Lightning，它同时也是 [Hermes](./hermes.md) 的本地大脑
 - **转录**用 `asr.lan`——音频进、文字出，跑在 spark 的统一内存上
 - **配音**来自 `magpie.lan`——各种项目背后的 TTS
 - **抓取**用 `firecrawl.lan`——URL 进、干净的 markdown 出，喂给各路智能体
@@ -56,6 +56,12 @@ flowchart LR
 **GPU 是刻意共享的，不是自动共享的。** 一个 Pod 要么独占整块 GPU（`nvidia.com/gpu: 1`——由调度器强制排他），要么加入"君子协定"（`NVIDIA_VISIBLE_DEVICES=all` 且*不*声明 GPU 资源——几个 Pod 共享一块卡，而调度器对此一无所知）。这里没有 time-slicing 也没有 MPS；一个自制的 `vram-reporter` 在带外记账。一块 RTX 4090 有 24 GB VRAM，每个模型大概吃多少，我心里有数。
 
 **有些模型会自己挑节点。** 舰队里大多数模型一块 4090 就装得下，哪里有 VRAM 就去哪里；但 Qwen-Image 那条 33 GB 的流水线逼出了一段值得单独一读的安置故事：在 a3 上的两次尝试（先是 CPU 卸载，再是 4-bit 编码器）各自牺牲了我想要的东西，而 spark 的 128 GB 统一内存是唯一诚实的答案。细节——包括那次悄无声息什么都没改的编辑——都在 [Qwen-Image 页](./qwen-image.md)上。它在那个位置上的继任者 [FLUX 3 Image Klein](./flux3-klein.md) 同样在 git 里有两种安置方式：spark 上的 bf16，以及一块 4090 上的 fp8——后者通过网络借用 spark 的扩写器。还有一个模型被某台节点直接拉黑：[TRELLIS.2](./trellis2.md) 在 a3 这个控制平面上的两次测试生成，两次都让它 panic 重启，所以它住在 a2，永远不上 a3。
+
+**spark 只有一个 LLM 槽位。** spark 只有一块 GB10，所以一个 vLLM Deployment——`spark-llm`——一次只服务一个模型。每个模型是 [`services/vllm/models/`](https://github.com/briancaffey/home-lab/tree/main/services/vllm/models) 下的一个小 overlay，而 [`services/vllm/active/`](https://github.com/briancaffey/home-lab/blob/main/services/vllm/active/kustomization.yaml) 指向当前加载的那一个。换模型就是改那一行然后 push。2026 年 11 月，这个槽位从 Ripple-65B Preview（它的 overlay 还在）换成了 **NVFP4 量化的 Nemotron 3.5 Lightning 30B-A3B**，用的是 NVIDIA 官方给 DGX Spark 的配方，跑在 vLLM v0.27.1 上：Marlin MoE 内核、fp8 KV 缓存、给 Mamba 层用的 FlashInfer，以及一个推测解码的草稿模型。我实测的生成速度约为每秒 112 个 token，工具调用正常，上下文窗口是 80K，因为 Hermes 需要超过 64K。它只占用 spark 30% 的内存（`GPU_MEM_UTIL` 0.30），留下的 KV 缓存仍远超四个并发序列所需，spark 上的其他租户也保住了各自的空间。代价是大约四分钟的冷启动。
+
+:::warning[🔥 War story]
+**spark 的 WiFi 下不完大文件。** spark 仍然走 WiFi，几个 GB 的拉取经常被截断。这次换模型时，一个 4.7 GB 的镜像层就在中途被截断，只好重试。所以我不让 Pod 在启动时去下载任何东西。权重、草稿模型和 vLLM 镜像都在 overlay 生效*之前*就预先放到 spark 上，Pod 从这些本地副本离线启动。这和 a1 那块不稳定的 USB WiFi 是同一个教训：在无线节点上，就当网络一定会断，提前把文件放好。
+:::
 
 **"停放"是一等公民的生活方式。** 我没法同时跑所有东西——光是视频生成就能吃掉一整块卡——所以服务频繁地缩到零再扩回来。这塑造了两个实实在在的架构决策：
 

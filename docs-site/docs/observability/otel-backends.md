@@ -14,6 +14,10 @@ repo_path: observability/
 {/* screenshot: observability/otel-backends-homepage.png — the Observability group on Homepage with all nine tiles */}
 {/* screenshot: observability/otel-backends-same-trace.png — the same Hermes trace open in Jaeger, SigNoz and Uptrace side by side */}
 
+:::info[Mostly parked since November 2026]
+The novelty wore off, as planned. Hermes now sends to three backends: W&B Weave (cloud), Phoenix and Langfuse (in-cluster). OpenObserve, Jaeger, Tempo, the LGTM gateway (and Parseable behind it), SigNoz and Uptrace are scaled to 0. Their entries in [`hermes-otel-config.yaml`](https://github.com/briancaffey/home-lab/blob/main/clusters/home/hermes/hermes-otel-config.yaml) are commented out and marked "parked", so bringing one back is a scale-up and an uncomment. I kept the rest of this page as the record of what each one was like to run.
+:::
+
 ## The matrix
 
 | backend | hermes-otel `type` | traces | metrics | logs | where to look |
@@ -86,7 +90,7 @@ The fix is the boring one: the ConfigMap is mounted at `/etc/hermes-otel/` and `
 
 ## How it fits with the rest
 
-- **[Hermes](../ai/hermes.md)** is the only sender today. The plugin is installed from a pinned hermes-otel release tag on every boot, so "which version of the plugin is Hermes running" is one line in the deployment.
+- **[Hermes](../ai/hermes.md)** is the only sender today. The plugin is installed from a pinned hermes-otel release tag on every boot, so "which version of the plugin is Hermes running" is one line in the deployment. After the November upgrade to Hermes v0.23, the plugin's own Python dependencies live in Hermes's dependency generations. The [Hermes page](../ai/hermes.md) has the story of the missing PyYAML that briefly sent traces to Langfuse Cloud again.
 - **[Langfuse](./langfuse.md)** and Phoenix keep their own pages and their own reasons to exist; they're the two I'd actually reach for to read a trace. The rest are the comparison set.
 - **[Prometheus & Grafana](./prometheus-grafana.md)** gained an OTLP receiver and a Tempo datasource, so a Hermes trace is one TraceQL query away in the same Grafana I already live in.
 - **[Logs](./logs.md)** are the unfinished edge: the gateway's log pipeline is waiting on Loki 3.
