@@ -44,9 +44,13 @@ service:
 persistence:
   enabled: false
 
-# Cluster control center (PRD 21).
+# Cluster control center (PRD 21) + tsnet tailscale.com v1.104.4 (Tailscale
+# flagged v1.100.0 as having a known vulnerability). Built from
+# feat/control-center-scale-prd-21 @ fab8b78 and pushed to Harbor (a plain `gh`
+# token can't write GHCR packages).
 image:
-  tag: prd21-scale
+  repository: harbor.lan/apps/inference-club-agent
+  tag: sha-fab8b78
 controlToken:
   enabled: true
   secretName: agent-control-token-prod

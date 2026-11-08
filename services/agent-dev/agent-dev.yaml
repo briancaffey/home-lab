@@ -39,7 +39,8 @@ spec:
         kubernetes.io/hostname: a3
       containers:
         - name: agent
-          image: ghcr.io/inference-club/inference-club-agent:prd21-scale
+          # Harbor sha-fab8b78: PRD 21 branch + tsnet v1.104.4 (security fix).
+          image: harbor.lan/apps/inference-club-agent:sha-fab8b78
           env:
             # Discovery: identical to prod — build the manifest from labeled
             # Services in this namespace and poll.

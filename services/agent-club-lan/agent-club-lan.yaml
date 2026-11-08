@@ -40,12 +40,13 @@ spec:
                   - { key: inference-club.com/box, operator: In, values: [a2, a3] }
       containers:
         - name: agent
-          # prd21-qwen-03a3c43 = branch feat/control-center-scale-prd-21 @ 03a3c43
-          # (PRD 21 control center + model-aware /v1/images routing, PR #4).
-          # Hand-built with buildx like prd21-scale was; pushed to Harbor because
-          # a plain `gh` token can't write GHCR packages. Once PR #4 merges, CI
-          # produces the same thing as ghcr.io/inference-club/inference-club-agent:sha-….
-          image: harbor.lan/apps/inference-club-agent:prd21-qwen-03a3c43
+          # sha-fab8b78 = branch feat/control-center-scale-prd-21 @ fab8b78
+          # (PRD 21 control center + model-aware /v1/images routing, PR #4, plus
+          # tsnet tailscale.com v1.100.0 -> v1.104.4 for a flagged security fix).
+          # Hand-built with buildx; pushed to Harbor because a plain `gh` token
+          # can't write GHCR packages. Once PR #4 merges, CI produces the same
+          # thing as ghcr.io/inference-club/inference-club-agent:sha-….
+          image: harbor.lan/apps/inference-club-agent:sha-fab8b78
           env:
             - { name: AGENT_DISCOVERY, value: kubernetes }
             - { name: AGENT_DISCOVERY_NAMESPACE, value: inference-club }
