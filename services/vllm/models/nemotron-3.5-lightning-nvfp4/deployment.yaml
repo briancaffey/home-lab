@@ -1,0 +1,57 @@
+# NVIDIA Nemotron 3.5 Lightning 30B-A3B (NVFP4) — hybrid Mamba-2 + MoE +
+# attention, 30B total / 3B active. NVIDIA's DGX Spark (GB10) recipe from the
+# model card: vLLM v0.27.1, Marlin MoE, fp8 KV, FlashInfer Mamba, and the DSpark
+# speculative drafter (num_speculative_tokens 3 — NVIDIA's recommended default
+# for Spark / low-concurrency). Reasoning + tool calling via nemotron_v3 /
+# qwen3_coder parsers. Primary consumer: Hermes Agent (via LiteLLM).
+#
+# Context: validated to 1M, but we serve 80K (81920) — Hermes needs >64K and
+# nothing here needs more. Only a few layers are full attention (the rest are
+# Mamba state), so KV is tiny and 80K costs little.
+#
+# Memory on the 121.69 GiB unified GB10: weights ~21.6 GB + DSpark ~1.3 GB +
+# KV/Mamba state/activations. 0.45 (~55 GiB) is ample and leaves room for the
+# other spark tenants (acestep, nemotron-asr) without parking them.
+#
+# Weights + drafter are pre-downloaded on the spark host (~/.cache/huggingface)
+# and HF_HUB_OFFLINE=1 keeps startup off spark's WiFi; the image was pre-pulled
+# with retries on the host (IfNotPresent never re-contacts Docker Hub).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-llm
+spec:
+  template:
+    spec:
+      containers:
+        - name: vllm
+          image: docker.io/vllm/vllm-openai:v0.27.1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: HF_HUB_OFFLINE
+              value: "1"
+            - name: MAX_NUM_SEQS
+              value: "4"
+            - name: MAX_MODEL_LEN
+              value: "81920"
+            - name: GPU_MEM_UTIL
+              value: "0.45"
+          args:
+            - |
+              vllm serve --model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 \
+                --served-model-name nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 nemotron-3.5-lightning \
+                --tensor-parallel-size 1 \
+                --port 8000 --host 0.0.0.0 \
+                --max-model-len "$MAX_MODEL_LEN" \
+                --max-num-seqs "$MAX_NUM_SEQS" \
+                --gpu-memory-utilization "$GPU_MEM_UTIL" \
+                --moe-backend marlin \
+                --kv-cache-dtype fp8 \
+                --enable-prefix-caching \
+                --mamba-backend flashinfer \
+                --mamba-cache-mode align \
+                --speculative_config.model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark \
+                --speculative_config.num_speculative_tokens 3 \
+                --reasoning-parser nemotron_v3 \
+                --enable-auto-tool-choice \
+                --tool-call-parser qwen3_coder
