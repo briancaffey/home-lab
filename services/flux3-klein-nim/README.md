@@ -67,7 +67,9 @@ List them in the running pod with `list-model-profiles`.
 - The distilled version rejects `cfg_scale != 1` and `negative_prompt`; those
   need `-base`, whose HF licence must be accepted on the hf-token account
   (download currently 403).
-- The Cosmos guardrail + SigLIP filter give false positives ("a red brick
+- The Cosmos guardrail + SigLIP filter gave false positives ("a red brick
   wall", "…mounted on a brick wall") → HTTP 422 "filtered by the safety
-  checker".
+  checker". **Guardrails are now OFF** (`NIM_ALLOW_UNCHECKED_GENERATION=true`):
+  in NIM 1.0.1 that disables every check (prompt, input and output images) for
+  every request. Remove the env var to turn them back on.
 - Replicas are ignored by Argo (scale by hand to free spark memory).

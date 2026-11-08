@@ -67,6 +67,12 @@ spec:
             # deployments in inference.club's model routing.
             - { name: NIM_SERVED_MODEL_NAME, value: flux-3-image-klein-nim }
             - { name: NIM_TELEMETRY_MODE, value: "0" }
+            # Guardrails OFF (Brian's call, 2026-11-08): the Cosmos prompt
+            # blocklist + SigLIP image filter false-positived on ordinary
+            # prompts ("a red brick wall"). In NIM 1.0.1 this flag disables ALL
+            # checks — prompt, input images, output images — for every request,
+            # regardless of the per-request `disable_safety_checker` field.
+            - { name: NIM_ALLOW_UNCHECKED_GENERATION, value: "true" }
             # Shared GPU (spark's GB10 hosts several tenants; no exclusive
             # nvidia.com/gpu request — see CLAUDE.md GPU conventions).
             - { name: NVIDIA_VISIBLE_DEVICES, value: all }
