@@ -1,4 +1,5 @@
-# maxine-studio-voice (NVIDIA Maxine NIM) on a1 — speech ENHANCEMENT / audio
+# maxine-studio-voice (NVIDIA Maxine NIM) on blade (RTX 5090 Laptop, joined
+# 2026-11-08; ran on a1 before that) — speech ENHANCEMENT / audio
 # super-resolution: noisy/artifacted speech in → clean 48 kHz studio-quality
 # speech out (audio→audio). Migrated from the docker container that ran on a1
 # (`docker run ... nvcr.io/nim/nvidia/maxine-studio-voice`). Primary use: scrub
@@ -10,11 +11,11 @@
 #
 # PROTOCOLS: inference is gRPC-ONLY on :8001 (NIM_INFERENCE_TYPE=grpc). The HTTP
 # server on :8000 serves management only (/v1/health, /v1/metadata, /v1/metrics) —
-# there is no HTTP inference route. hostPort 8000/8001 on a1 preserves the LAN
-# endpoints the docker copy used (192.168.5.253:8000/:8001).
+# there is no HTTP inference route. hostPort 8000/8001 put them on blade's LAN IP
+# (192.168.6.3:8000/:8001).
 #
-# Shares a1's 4090 — stop any other resident model (magpie docker / etc.) if VRAM
-# is tight; Studio Voice 48k-hq needs a few GiB. Recreate strategy: 1 GPU + hostPort
+# Shares blade's 5090 Laptop GPU (24 GB) with whatever else lands there; Studio
+# Voice 48k-hq needs a few GiB. Recreate strategy: 1 GPU + hostPort
 # means the old pod must exit before the new one binds.
 #
 # Deploy:  kubectl apply -f services/studio-voice/studio-voice.yaml
@@ -38,7 +39,7 @@ spec:
         app: studio-voice
     spec:
       nodeSelector:
-        inference-club.com/box: a1
+        inference-club.com/box: blade
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ngc-registry
@@ -62,9 +63,8 @@ spec:
             # dir, same convention as magpie-tts) so restarts skip the re-download.
             - name: LOCAL_NIM_CACHE
               value: /opt/nim/.cache
-            # GPU SHARING: a1's single 4090 is already claimed by dia via the
-            # device plugin (nvidia.com/gpu: 1, exclusive). Rather than fight for
-            # that slot, we access the GPU through the nvidia runtime directly —
+            # GPU SHARING: no exclusive claim, so other blade workloads can use
+            # the rest of the 24 GB. We access the GPU through the nvidia runtime directly —
             # exactly how this ran as a docker container alongside other a1 GPU
             # users, and how the dcgm-exporter daemonset works. No nvidia.com/gpu
             # request, so the scheduler places us freely; both models share VRAM
@@ -141,8 +141,8 @@ spec:
       volumes:
         - name: nim-cache
           hostPath:
-            path: /mnt/d/nim
-            type: Directory
+            path: /opt/nim/.cache
+            type: DirectoryOrCreate
         - name: bridge-code
           configMap:
             name: studio-voice-bridge
