@@ -25,7 +25,7 @@ data:
   config.yaml: |
     project_name: hermes-agent
     # Python logs → the log-capable backends (OpenObserve, SigNoz, Uptrace,
-    # Parseable); trace-id correlated.
+    # Parseable — all parked below); trace-id correlated.
     capture_logs: true
     backends:
       # ── cloud ──────────────────────────────────────────────────────────
@@ -40,37 +40,41 @@ data:
       - type: phoenix
         endpoint: http://phoenix-svc.observability.svc.cluster.local:6006/v1/traces
       # Langfuse v4 — traces. https://langfuse.lan (project keys in hermes-secrets)
+      # base_url (not endpoint): since hermes-otel 1.2x `endpoint` means the
+      # FULL OTLP traces URL; base_url gets /api/public/otel/v1/traces appended.
       - type: langfuse
-        endpoint: http://langfuse-web.observability.svc.cluster.local:3000
+        base_url: http://langfuse-web.observability.svc.cluster.local:3000
         public_key_env: LANGFUSE_PUBLIC_KEY
         secret_key_env: LANGFUSE_SECRET_KEY
+      # ── parked (scaled to 0 in observability/ since 2026-11) ──────────
+      # Uncomment an entry when its backend is scaled back up.
       # OpenObserve — traces + metrics + logs. https://openobserve.lan
-      - type: openobserve
-        endpoint: http://openobserve-openobserve-standalone.observability.svc.cluster.local:5080/api/default/v1/traces
-        user: admin@openobserve.lan
-        password_env: OPENOBSERVE_PASSWORD
-        metrics: true
+      # - type: openobserve
+      #   endpoint: http://openobserve-openobserve-standalone.observability.svc.cluster.local:5080/api/default/v1/traces
+      #   user: admin@openobserve.lan
+      #   password_env: OPENOBSERVE_PASSWORD
+      #   metrics: true
       # Jaeger v2 — traces. https://jaeger.lan
-      - type: jaeger
-        endpoint: http://jaeger.observability.svc.cluster.local:4318/v1/traces
+      # - type: jaeger
+      #   endpoint: http://jaeger.observability.svc.cluster.local:4318/v1/traces
       # Grafana Tempo — traces. Grafana Explore → Tempo (https://grafana.lan)
-      - type: tempo
-        endpoint: http://tempo.observability.svc.cluster.local:4318/v1/traces
+      # - type: tempo
+      #   endpoint: http://tempo.observability.svc.cluster.local:4318/v1/traces
       # "LGTM" — OTel Collector gateway → Tempo (traces) + Prometheus (metrics).
-      - type: lgtm
-        endpoint: http://lgtm.observability.svc.cluster.local:4318/v1/traces
-        metrics: true
+      # - type: lgtm
+      #   endpoint: http://lgtm.observability.svc.cluster.local:4318/v1/traces
+      #   metrics: true
       # SigNoz — traces + metrics + logs. https://signoz.lan
-      - type: signoz
-        endpoint: http://signoz-otel-collector.observability.svc.cluster.local:4318/v1/traces
-        metrics: true
-        metrics_temporality: delta
+      # - type: signoz
+      #   endpoint: http://signoz-otel-collector.observability.svc.cluster.local:4318/v1/traces
+      #   metrics: true
+      #   metrics_temporality: delta
       # Uptrace — traces + metrics + logs. https://uptrace.lan (DSN in hermes-secrets)
-      - type: uptrace
-        endpoint: http://uptrace.observability.svc.cluster.local:80/v1/traces
-        dsn_env: UPTRACE_DSN
-        metrics: true
-        metrics_temporality: delta
+      # - type: uptrace
+      #   endpoint: http://uptrace.observability.svc.cluster.local:80/v1/traces
+      #   dsn_env: UPTRACE_DSN
+      #   metrics: true
+      #   metrics_temporality: delta
       # Parseable OSS is NOT listed here: it only accepts OTLP/JSON
       # ("Protobuf ingestion is not supported in Parseable OSS") and has no API
       # keys, while this plugin's exporter is protobuf-only. It is fed by the
