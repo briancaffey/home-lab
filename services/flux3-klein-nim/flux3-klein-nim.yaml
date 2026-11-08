@@ -1,0 +1,117 @@
+# FLUX.3 image klein as NVIDIA NIM (nvcr.io/nim/black-forest-labs/
+# flux-3-image-klein) — the THIRD way this model runs in the lab, kept apart by
+# name everywhere:
+#
+#   model id (inference.club)     what / where
+#   flux-3-image-klein            BFL reference package, bf16, spark  (services/flux3-klein)
+#   flux-3-image-klein-fp8        BFL reference package, fp8, a1 4090 (services/flux3-klein/a1)
+#   flux-3-image-klein-nim        THIS: NVIDIA NIM 1.0.0, SGLang Diffusion, spark
+#
+# Why spark: NVIDIA's support matrix asks for >=48 GB GPU memory (Ampere+) and
+# lists x86_64 + aarch64; the image is multi-arch. A 4090 (24 GB) is below the
+# stated minimum, so the DGX Spark's 128 GB unified memory is the supported
+# fit (see the 4090 experiment notes in README.md).
+#
+# Version: the step-distilled `flux-3-image-klein` (fast, few steps). The
+# undistilled `flux-3-image-klein-base` is NIM's default — switch with
+# NIM_MODEL_VERSION. Precision: BF16 (the profile NIM auto-picks; FP8 profiles
+# exist — set NIM_MODEL_PROFILE, ids in README.md).
+#
+# Image + weights: the 14.75 GB arm64 image was pre-pulled on spark with
+# retries (spark's WiFi truncates big layers), hence IfNotPresent. NIM
+# downloads weights from NGC/HF (gated: HF_TOKEN, licence accepted on that
+# account) into the hostPath NIM cache once; restarts reuse it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flux3-klein-nim
+  namespace: inference-club
+  labels:
+    app: flux3-klein-nim
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: flux3-klein-nim
+  template:
+    metadata:
+      labels:
+        app: flux3-klein-nim
+    spec:
+      nodeSelector:
+        inference-club.com/box: spark
+      runtimeClassName: nvidia
+      imagePullSecrets:
+        - name: ngc-registry
+      securityContext:
+        runAsUser: 1000 # brian on spark — owns the hostPath NIM cache
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: nim
+          image: nvcr.io/nim/black-forest-labs/flux-3-image-klein:1.0.0-variant
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NGC_API_KEY
+              valueFrom: { secretKeyRef: { name: ngc-api-key, key: api-key } }
+            - name: HF_TOKEN
+              valueFrom: { secretKeyRef: { name: hf-token, key: token } }
+            - { name: NIM_MODEL_VERSION, value: flux-3-image-klein }
+            # Distinct API name so it never collides with the other two klein
+            # deployments in inference.club's model routing.
+            - { name: NIM_SERVED_MODEL_NAME, value: flux-3-image-klein-nim }
+            - { name: NIM_TELEMETRY_MODE, value: "0" }
+            # Shared GPU (spark's GB10 hosts several tenants; no exclusive
+            # nvidia.com/gpu request — see CLAUDE.md GPU conventions).
+            - { name: NVIDIA_VISIBLE_DEVICES, value: all }
+          ports:
+            - { name: http, containerPort: 8000 }
+            - { name: metrics, containerPort: 8002 }
+          volumeMounts:
+            - { name: nim-cache, mountPath: /opt/nim/.cache }
+            - { name: shm, mountPath: /dev/shm }
+          startupProbe:
+            # First boot downloads the weights over spark's WiFi: budget 2 h.
+            httpGet: { path: /v1/health/ready, port: http }
+            periodSeconds: 30
+            failureThreshold: 240
+          readinessProbe:
+            httpGet: { path: /v1/health/ready, port: http }
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /v1/health/live, port: http }
+            periodSeconds: 30
+            failureThreshold: 6
+      volumes:
+        - name: nim-cache
+          hostPath: { path: /home/brian/.cache/nim, type: DirectoryOrCreate }
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 16Gi }
+---
+# Discovery: type=image → inference.club routes /v1/images/generations|edits
+# for model `flux-3-image-klein-nim` here (OpenAI-compatible under /v1).
+apiVersion: v1
+kind: Service
+metadata:
+  name: flux3-klein-nim
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: image
+    inference-club.com/engine: other # NIM (SGLang Diffusion backend); agent enum has no "nim"
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: flux-3-image-klein-nim
+        name: FLUX 3 Image Klein (NVIDIA NIM)
+        input_modalities: [text, image]
+        output_modalities: [image]
+        features: [image-edit, multi-reference, seed, steps, custom-size]
+spec:
+  selector:
+    app: flux3-klein-nim
+  ports:
+    - { name: http, port: 8000, targetPort: http }
+    - { name: metrics, port: 8002, targetPort: metrics }

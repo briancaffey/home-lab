@@ -756,6 +756,34 @@ spec:
     syncOptions:
       - RespectIgnoreDifferences=true
 ---
+# FLUX.3 image klein as NVIDIA NIM on spark (model id flux-3-image-klein-nim) —
+# separate from svc-flux3-klein (BFL reference package). Same replicas-ignore
+# pattern: scale it by hand to free spark's unified memory.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-flux3-klein-nim
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/flux3-klein-nim
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
