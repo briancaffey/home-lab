@@ -1,0 +1,21 @@
+# https://hermes.<tailnet>.ts.net  ->  Hermes gateway API (:8642), ALL paths
+# For the Hermes iOS app ("gateway address"; sign in with Token =
+# API_SERVER_KEY). The whole host goes to the gateway, not the dashboard: the
+# app uses /api/* and /v1/*, and on hermes.lan /api/* lands on the dashboard.
+# The gateway runs agent tools in-cluster: bearer-auth'd (v0.23 refuses weak
+# keys), tailnet-only — never enable Funnel on this.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hermes-ts
+  namespace: hermes
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: hermes
+      port:
+        number: 8642
+  tls:
+    - hosts:
+        - hermes
