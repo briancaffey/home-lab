@@ -1,9 +1,10 @@
-# https://hermes.<tailnet>.ts.net  ->  Hermes gateway API (:8642), ALL paths
-# For the Hermes iOS app ("gateway address"; sign in with Token =
-# API_SERVER_KEY). The whole host goes to the gateway, not the dashboard: the
-# app uses /api/* and /v1/*, and on hermes.lan /api/* lands on the dashboard.
-# The gateway runs agent tools in-cluster: bearer-auth'd (v0.23 refuses weak
-# keys), tailnet-only — never enable Funnel on this.
+# https://hermes.<tailnet>.ts.net  ->  Hermes DASHBOARD (:9119), all paths
+# For the Hermes iOS app: it connects to the dashboard (not the :8642 gateway
+# API — pointing it there gives "not the Hermes dashboard (HTTP 404)"). Sign in
+# with Password = dashboard basic auth (user brian, Vaultwarden
+# hermes-dashboard-password). The dashboard drives agent runs: tailnet-only,
+# never enable Funnel on this. (After changing the backend port, delete the
+# ts-hermes-ts-* proxy pod — it doesn't pick up the change on its own.)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -15,7 +16,7 @@ spec:
     service:
       name: hermes
       port:
-        number: 8642
+        number: 9119
   tls:
     - hosts:
         - hermes
