@@ -21,13 +21,16 @@ data:
         key_env: LITELLM_API_KEY
         api_mode: chat_completions
         models:
+          # Local: Nemotron 3.5 Lightning on spark's vLLM slot (80K served).
+          nemotron-lightning:
+            context_length: 81920
           nvidia-nemotron-super:
             context_length: 131072
           groq-llama-3.3-70b:
             context_length: 131072
 
     model:
-      default: nvidia-nemotron-super
+      default: nemotron-lightning
       provider: custom:litellm
 
     # The pod IS the sandbox: tool commands run inside this container

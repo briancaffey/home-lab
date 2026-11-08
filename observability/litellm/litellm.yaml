@@ -130,15 +130,28 @@ data:
     model_list:
       # ── In-cluster (primary, free, private) ───────────────────────────────
       # The in-cluster vLLM "active slot" on spark (Service always spark-llm;
-      # currently loaded: Qwen3.6-27B). "nemotron-omni" is kept as the stable
-      # public alias so callers (Dagster LITELLM_MODEL, the fallbacks below)
-      # don't churn on model swaps — only model/api_base below track the live
-      # model. vLLM ignores auth, so api_key is a stub.
+      # currently loaded: Nemotron 3.5 Lightning 30B-A3B NVFP4, 80K ctx).
+      # "nemotron-omni" is kept as the stable public alias so callers (Dagster
+      # LITELLM_MODEL, the fallbacks below) don't churn on model swaps — only
+      # model/api_base below track the live model. vLLM ignores auth, so
+      # api_key is a stub.
       - model_name: nemotron-omni
         litellm_params:
-          model: openai/qwen3.6-27b
+          model: openai/nemotron-3.5-lightning
           api_base: http://spark-llm.inference-club.svc.cluster.local:8000/v1
           api_key: "vllm-local"
+      # Explicit name for the Lightning model itself — Hermes Agent's local
+      # model. Deliberately NOT in router_settings.fallbacks: asking for it by
+      # name means "local or error", never a silent cloud hop.
+      - model_name: nemotron-lightning
+        litellm_params:
+          model: openai/nemotron-3.5-lightning
+          api_base: http://spark-llm.inference-club.svc.cluster.local:8000/v1
+          api_key: "vllm-local"
+        model_info:
+          max_input_tokens: 81920
+          supports_function_calling: true
+          supports_reasoning: true
       # LM Studio host process (scaled to 0 today). Wildcard passthrough so
       # whichever model LM Studio has loaded just works when it's up.
       - model_name: lmstudio/*
