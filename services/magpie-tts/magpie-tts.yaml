@@ -1,17 +1,20 @@
-# magpie-tts-multilingual (NVIDIA Riva NIM) on a1 — Phase 4, the first real
-# workload migrated from docker. The NGC key lives in Secret ngc-api-key,
-# and nvcr.io pulls need the same key as a registry credential (create once:
+# magpie-tts-multilingual (NVIDIA Riva NIM) on blade (RTX 5090 Laptop) since
+# 2026-11-09; originally on a1 (Phase 4, the first workload migrated from docker)
+# until flux3-klein-4090 filled a1's 4090. On blade it requests the GPU
+# (nvidia.com/gpu: 1) while studio-voice shares it unmanaged (~3 GiB); magpie
+# needs ~14 GiB, so both fit in the 24 GiB. The NGC key lives in Secret
+# ngc-api-key, and nvcr.io pulls need the same key as a registry credential
+# (create once:
 #   kubectl -n inference-club create secret generic ngc-api-key \
 #     --from-literal=api-key=<NGC_API_KEY>
 #   kubectl -n inference-club create secret docker-registry ngc-registry \
 #     --docker-server=nvcr.io --docker-username='$oauthtoken' \
 #     --docker-password=<NGC_API_KEY>  ).
 #
-# Cutover note: a1's 4090 cannot hold two magpie copies (~13.7 GiB each with
-# maxine's 3.2 GiB also resident), so the docker container must be stopped
-# BEFORE this pod can load the model. hostPort 9000/50051 on a1 preserves the
-# prod agent's hard-coded http://192.168.5.253:9000/v1 path across the swap;
-# the in-cluster agent discovers the Service by labels and uses cluster DNS.
+# Replicas are NOT managed by Argo (ignoreDifferences on /spec/replicas) — park
+# it with `kubectl -n inference-club scale deploy/magpie-tts --replicas=0`.
+# The in-cluster agent discovers the Service by labels and uses cluster DNS;
+# hostPort 9000/50051 also expose it on blade's LAN IP (192.168.6.3).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,7 +35,7 @@ spec:
         app: magpie-tts
     spec:
       nodeSelector:
-        inference-club.com/box: a1
+        inference-club.com/box: blade
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ngc-registry
@@ -129,11 +132,11 @@ spec:
       volumes:
         - name: nim-cache
           hostPath:
-            path: /mnt/d/nim
-            type: Directory
+            path: /opt/nim/.cache # same NIM cache dir studio-voice uses on blade
+            type: DirectoryOrCreate
         - name: model-repo
           hostPath:
-            path: /mnt/d/magpie-data
+            path: /opt/nim/magpie-data
             type: DirectoryOrCreate
 ---
 # Discovery: the in-cluster agent finds this Service by labels and reports
