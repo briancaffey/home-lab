@@ -20,10 +20,11 @@ nodeSelector:
   kubernetes.io/arch: amd64
   inference-club.com/box: a2
 
-# LLM goes through LiteLLM in-cluster as route `spark-omni` (chart default):
-# LM Studio on the spark box, no fallbacks, so nothing paid can be substituted.
-# To bypass the gateway during an outage, as the Mac .env does, the model must
-# switch to the id LM Studio itself reports:
+# LLM goes through LiteLLM in-cluster as route `nemotron-lightning` (chart
+# default): Nemotron 3.5 Lightning on vLLM on the spark box. The earlier
+# route, `spark-omni` (LM Studio), stopped answering in November 2026.
+# To bypass the gateway during an outage the model must switch to the id the
+# server itself reports:
 #   inference:
 #     llm:
 #       baseUrl: http://192.168.6.19:1234/v1
@@ -37,6 +38,13 @@ features:
   hyperframes: true
   metaSequencer: true
   schedule: true        # beat: fetch /new + /top, digests to Kindle, one video per 6h
+
+# HNFM on air: the radio station (hn.fm issue #37). Stream at /radio/hnfm.mp3,
+# page at /listen, control room at /radio. It makes new programming only
+# while someone is tuned in, plus three editions a day; otherwise it plays
+# from its own library. Needs no secret of its own.
+radio:
+  enabled: true
 
 flower:
   enabled: true         # https://hnfm.lan/flower
