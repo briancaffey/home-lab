@@ -48,5 +48,11 @@ radio:
   produce: "off"
   editionHours: ""
 
+# Story videos are directed by Hermes: hn.fm talks to a profile of its own
+# (`hnfm`: no tools, its own key) over the agent's API. The key is in the
+# `hnfm-hermes` secret, made by hn.fm's deploy/hermes-profile.sh.
+hermes:
+  enabled: true
+
 flower:
   enabled: true         # https://hnfm.lan/flower
