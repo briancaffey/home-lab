@@ -40,11 +40,13 @@ features:
   schedule: true        # beat: fetch /new + /top, digests to Kindle, one video per 6h
 
 # HNFM on air: the radio station (hn.fm issue #37). Stream at /radio/hnfm.mp3,
-# page at /listen, control room at /radio. It makes new programming only
-# while someone is tuned in, plus three editions a day; otherwise it plays
-# from its own library. Needs no secret of its own.
+# page at /listen, control room at /radio. Production is off: the station
+# plays what it has already made and makes nothing new unless an edition is
+# asked for from the control room. Needs no secret of its own.
 radio:
   enabled: true
+  produce: "off"
+  editionHours: ""
 
 flower:
   enabled: true         # https://hnfm.lan/flower
