@@ -22,7 +22,7 @@ resources:
 helmCharts:
   - name: milvus
     repo: https://zilliztech.github.io/milvus-helm/
-    version: 5.0.25
+    version: 5.0.34
     releaseName: milvus
     namespace: milvus
     valuesFile: values.yaml
