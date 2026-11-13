@@ -74,7 +74,7 @@ spec:
         # image (image/Dockerfile) is pulled from Harbor on x1
         # (TODO(x1-harbor-trust)).
         - name: install-kubectl
-          image: nousresearch/hermes-agent:v0.23.0
+          image: nousresearch/hermes-agent:v0.23.1
           command: ["sh", "-c", "[ -x /opt/data/.local/bin/kubectl ] && echo 'kubectl present' || (mkdir -p /opt/data/.local/bin && curl -fsSL -o /opt/data/.local/bin/kubectl https://dl.k8s.io/release/v1.35.5/bin/linux/amd64/kubectl && chmod +x /opt/data/.local/bin/kubectl)"]
           volumeMounts:
             - { name: data, mountPath: /opt/data }
@@ -84,7 +84,7 @@ spec:
         # bw (a ~100 MB pkg'd Node binary, no unzip in image → python zipfile)
         # only downloads once. TODO(x1-harbor-trust): fold into image/Dockerfile.
         - name: install-vault-tools
-          image: nousresearch/hermes-agent:v0.23.0
+          image: nousresearch/hermes-agent:v0.23.1
           command:
             - sh
             - -c
@@ -109,7 +109,7 @@ spec:
         # refresh each boot so plugin updates deploy on restart. The release
         # declares requires_hermes >=0.21 (image is v0.23.0, OTel bundled).
         - name: install-hermes-otel
-          image: nousresearch/hermes-agent:v0.23.0
+          image: nousresearch/hermes-agent:v0.23.1
           command:
             - sh
             - -c
@@ -155,7 +155,7 @@ spec:
             - { name: data, mountPath: /opt/data }
       containers:
         - name: hermes
-          image: nousresearch/hermes-agent:v0.23.0
+          image: nousresearch/hermes-agent:v0.23.1
           # Keep the image ENTRYPOINT (/init = s6 PID 1); this is the CMD.
           args: ["gateway", "run"]
           ports:
