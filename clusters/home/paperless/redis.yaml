@@ -19,7 +19,7 @@ spec:
       containers:
         - name: redis
           # Valkey (Redis-compatible) task broker — ephemeral (emptyDir).
-          image: docker.io/valkey/valkey:9@sha256:3acc0687f2a2e1091fae6450d7842dd658c941338cf0a873ddd9e14b9e4ea4dd
+          image: docker.io/valkey/valkey:9@sha256:3add1a336a920ea54770a001ab6feb3da5fceea96a40373a3a2cd469b815f0b7
           ports:
             - name: redis
               containerPort: 6379
