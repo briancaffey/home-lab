@@ -18,7 +18,7 @@ spec:
         kubernetes.io/hostname: a3
       containers:
         - name: gatus
-          image: ghcr.io/twin/gatus:v5.36.0
+          image: ghcr.io/twin/gatus:v5.38.0
           env:
             - { name: GATUS_CONFIG_PATH, value: /config/config.yaml }
           # SMTP creds for email alerting. `optional: true` → the pod still

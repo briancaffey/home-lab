@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: karma
-          image: ghcr.io/prymitive/karma:v0.131
+          image: ghcr.io/prymitive/karma:v0.134
           env:
             - { name: ALERTMANAGER_URI, value: "http://alertmanager:9093" }
             - { name: ALERTMANAGER_NAME, value: "home" }

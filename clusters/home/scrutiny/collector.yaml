@@ -21,7 +21,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: collector
-          image: ghcr.io/analogj/scrutiny:v0.9.2-collector
+          image: ghcr.io/analogj/scrutiny:v0.10.0-collector
           securityContext:
             privileged: true
           env:

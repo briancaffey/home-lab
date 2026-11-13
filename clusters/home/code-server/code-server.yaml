@@ -36,7 +36,7 @@ spec:
         inference-club.com/box: x1
       containers:
         - name: code-server
-          image: linuxserver/code-server:4.127.0
+          image: linuxserver/code-server:4.145.2
           env:
             # hermes files on the PVC are uid 10000 with 600/700 modes —
             # run as that user or nothing is editable.
