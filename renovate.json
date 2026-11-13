@@ -168,12 +168,12 @@
       "allowedVersions": "<3.15"
     },
     {
-      "description": "linuxserver/qbittorrent has old date-style tags (20.04.1) that sort above real 5.x releases \u2014 ignore them",
+      "description": "linuxserver/qbittorrent has ancient tags (20.04.1, 14.3.9) that sort above the real 5.x releases \u2014 ignore them",
       "matchPackageNames": [
         "linuxserver/qbittorrent",
         "lscr.io/linuxserver/qbittorrent"
       ],
-      "allowedVersions": "<20"
+      "allowedVersions": "<10"
     },
     {
       "description": "vLLM serving-engine bumps get their own PR (flag/behaviour changes across releases), never ride the grouped non-major image PR",
