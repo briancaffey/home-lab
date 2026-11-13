@@ -41,7 +41,7 @@ spec:
     spec:
       runtimeClassName: nvidia
       containers:
-        - image: nvcr.io/nvidia/k8s-device-plugin:v0.19.3
+        - image: nvcr.io/nvidia/k8s-device-plugin:v0.20.1
           name: gpu-feature-discovery
           # v0.19 defaults to publishing NodeFeature API objects (needs RBAC
           # + an NFD master that watches them). Our NFD pipeline is the
