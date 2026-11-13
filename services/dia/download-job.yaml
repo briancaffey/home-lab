@@ -16,8 +16,9 @@ metadata:
   annotations:
     # A finished Job's pod template is immutable, so any image bump (Renovate)
     # left svc-dia OutOfSync. Replace = delete + recreate, i.e. a re-run —
-    # cheap, since the weights are already on the volume (~12 s).
-    argocd.argoproj.io/sync-options: Replace=true
+    # cheap, since the weights are already on the volume (~12 s). Force is
+    # needed too: a plain replace still trips the immutable selector.
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
 spec:
   backoffLimit: 2
   template:
