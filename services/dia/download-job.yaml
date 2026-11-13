@@ -13,6 +13,11 @@ kind: Job
 metadata:
   name: dia-download
   namespace: inference-club
+  annotations:
+    # A finished Job's pod template is immutable, so any image bump (Renovate)
+    # left svc-dia OutOfSync. Replace = delete + recreate, i.e. a re-run —
+    # cheap, since the weights are already on the volume (~12 s).
+    argocd.argoproj.io/sync-options: Replace=true
 spec:
   backoffLimit: 2
   template:
