@@ -23,7 +23,7 @@ spec:
           # This exact digest ran here for 7 days. To adopt a newer build, pull
           # it somewhere with reliable Docker Hub egress and pin its digest (or
           # a :vX.Y.Z tag) here.
-          image: vllm/vllm-openai@sha256:479c3b5c4be836b716bf7b65a9755ceb5145ee30ad3e8afd7832366dcee60c92
+          image: vllm/vllm-openai@sha256:d825baf9ce4b1b6bfc5ecc7b79880c7e6748c65a72d697ce3d47607aafa84c6e
           # IfNotPresent → use cached content, never contact the registry.
           imagePullPolicy: IfNotPresent
           env:
