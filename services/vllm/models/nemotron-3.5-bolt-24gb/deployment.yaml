@@ -5,10 +5,11 @@
 # why it fits spark beside acestep / flux3-klein-nim / nemotron-asr where the
 # 75 GB Super VL does not.
 #
-# Recipe = NVIDIA's model card, on the EXACT vLLM nightly it pins (77154ca,
-# Oct 14). v0.33.0 contains that commit but segfaults in CUDA-graph replay on
-# the 2nd streamed request with b12x 1.5.1 (released for that nightly) — keep
-# the pin until a stable vLLM + b12x pair is verified. b12x kernels (pip +
+# Recipe = NVIDIA's model card on vLLM v0.33.0 (contains the card's pinned
+# nightly 77154ca; that nightly is only published as a CUDA 12.9 build here,
+# and b12x pulls a CUDA 13 torch, so it can't start). With full CUDA graphs
+# v0.33.0 segfaults in graph replay after the DFlash input kernel JITs on the
+# 2nd streamed request, so cudagraph_mode is PIECEWISE. b12x kernels (pip +
 # `vllm download-kernels` at start — needs network), V2 model runner, DFlash
 # speculative decoding with the LiLiCorr drafter (7 tokens), ultra_v3 reasoning
 # parser shipped in the model repo. Deviations from the card: 128K context
@@ -25,7 +26,7 @@ spec:
     spec:
       containers:
         - name: vllm
-          image: docker.io/vllm/vllm-openai:cu129-nightly-77154ca6116ae34cbfe314beef1016bde9b63989
+          image: docker.io/vllm/vllm-openai:v0.33.0
           imagePullPolicy: IfNotPresent
           env:
             - name: HF_HUB_OFFLINE
@@ -64,6 +65,7 @@ spec:
                 --mamba-cache-dtype bfloat16 \
                 --mamba-cache-mode align \
                 --seed 42 \
+                --compilation-config '{"cudagraph_mode":"PIECEWISE"}' \
                 --limit-mm-per-prompt '{"video":1,"image":1}' \
                 --video-pruning-rate 0.5 \
                 --media-io-kwargs '{"video":{"fps":2,"num_frames":256}}' \
