@@ -8,8 +8,8 @@
 # Recipe = NVIDIA's model card on vLLM v0.33.0 (contains the card's pinned
 # nightly 77154ca; that nightly is only published as a CUDA 12.9 build here,
 # and b12x pulls a CUDA 13 torch, so it can't start). With full CUDA graphs
-# v0.33.0 segfaults in graph replay after the DFlash input kernel JITs on the
-# 2nd streamed request, so cudagraph_mode is PIECEWISE. b12x kernels (pip +
+# v0.33.0 segfaults in CUDA-graph replay right after the DFlash input kernel
+# JITs (b12x warns vLLM lacks its preparation hooks), so DFlash is off here. b12x kernels (pip +
 # `vllm download-kernels` at start — needs network), V2 model runner, DFlash
 # speculative decoding with the LiLiCorr drafter (7 tokens), ultra_v3 reasoning
 # parser shipped in the model repo. Deviations from the card: 128K context
@@ -65,12 +65,12 @@ spec:
                 --mamba-cache-dtype bfloat16 \
                 --mamba-cache-mode align \
                 --seed 42 \
-                --compilation-config '{"cudagraph_mode":"PIECEWISE"}' \
                 --limit-mm-per-prompt '{"video":1,"image":1}' \
                 --video-pruning-rate 0.5 \
                 --media-io-kwargs '{"video":{"fps":2,"num_frames":256}}' \
                 --enable-auto-tool-choice \
                 --tool-call-parser qwen3_coder \
                 --reasoning-parser-plugin "$SNAP/ultra_v3_reasoning_parser.py" \
-                --reasoning-parser ultra_v3 \
-                --speculative-config '{"method":"dflash","model":"nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr","num_speculative_tokens":7,"rejection_sample_method":"standard","attention_backend":"FLASHINFER","draft_load_config":{"load_format":"auto"}}'
+                --reasoning-parser ultra_v3
+              # DFlash speculative decoding disabled on v0.33.0 (segfault, see top):
+              #   --speculative-config '{"method":"dflash","model":"nvidia/NVIDIA-Nemotron-3.5-Bolt-74B-A9B-24GB-LiLiCorr","num_speculative_tokens":7,"rejection_sample_method":"standard","attention_backend":"FLASHINFER","draft_load_config":{"load_format":"auto"}}'
