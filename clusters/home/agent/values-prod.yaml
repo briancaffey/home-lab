@@ -50,7 +50,7 @@ persistence:
 # token can't write GHCR packages).
 image:
   repository: harbor.lan/apps/inference-club-agent
-  tag: sha-fab8b78
+  tag: sha-3c70d62  # fab8b78 + tts-slot router fix (fix/tts-prefer-riva-prd21)
 controlToken:
   enabled: true
   secretName: agent-control-token-prod
