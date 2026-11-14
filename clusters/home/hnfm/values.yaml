@@ -54,5 +54,12 @@ radio:
 hermes:
   enabled: true
 
+# Images and voice go through Inference Club (club.lan), recorded and filed
+# per story in collection hn.fm/story-<id>, private; text stays on LiteLLM.
+# Token: the `hnfm-club` secret (the club's `hnfm` account). If the club
+# fails, hn.fm calls the services directly. hn.fm docs/HOW-IT-WORKS.md.
+club:
+  enabled: true
+
 flower:
   enabled: true         # https://hnfm.lan/flower
