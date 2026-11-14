@@ -5,9 +5,11 @@
 # why it fits spark beside acestep / flux3-klein-nim / nemotron-asr where the
 # 75 GB Super VL does not.
 #
-# Recipe = NVIDIA's model card (vLLM >= nightly-77154ca, which v0.33.0 contains):
-# b12x kernels (pip + `vllm download-kernels` at start — needs network on first
-# boot; pip wheels are cached under the HF hostPath), V2 model runner, DFlash
+# Recipe = NVIDIA's model card, on the EXACT vLLM nightly it pins (77154ca,
+# Oct 14). v0.33.0 contains that commit but segfaults in CUDA-graph replay on
+# the 2nd streamed request with b12x 1.5.1 (released for that nightly) — keep
+# the pin until a stable vLLM + b12x pair is verified. b12x kernels (pip +
+# `vllm download-kernels` at start — needs network), V2 model runner, DFlash
 # speculative decoding with the LiLiCorr drafter (7 tokens), ultra_v3 reasoning
 # parser shipped in the model repo. Deviations from the card: 128K context
 # (card: 256K) and no --allowed-local-media-path (images come in as data/https
@@ -23,15 +25,13 @@ spec:
     spec:
       containers:
         - name: vllm
-          image: docker.io/vllm/vllm-openai:v0.33.0
+          image: docker.io/vllm/vllm-openai:cu129-nightly-77154ca6116ae34cbfe314beef1016bde9b63989
           imagePullPolicy: IfNotPresent
           env:
             - name: HF_HUB_OFFLINE
               value: "1"
             - name: VLLM_USE_V2_MODEL_RUNNER
               value: "1"
-            - name: PIP_CACHE_DIR
-              value: /root/.cache/huggingface/.pip-cache
             - name: MAX_NUM_SEQS
               value: "2"
             - name: MAX_MODEL_LEN
