@@ -24,3 +24,4 @@ resources:
   - ingress-hnfm.yaml
   - ingress-litellm.yaml
   - ingress-hermes.yaml
+  - ingress-club.yaml

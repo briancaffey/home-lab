@@ -1,0 +1,92 @@
+# https://club.<tailnet>.ts.net  ->  Inference Club, the home-cluster instance
+# (club.lan; NOT the public inference.club). Path-routed like the .lan ingress
+# (inference-club-deploy deploy/ingress.yaml):
+#   /api /v1 /oauth /admin /static /media /openapi /healthz /readyz -> backend:8001
+#   /                                                              -> frontend:3000
+# The app is hostname-agnostic: the frontend calls the API same-origin
+# (NUXT_PUBLIC_API_BASE=""), and Django accepts any .ts.net host
+# (DJANGO_ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS in the deploy repo). Sign in
+# separately on this host: the session is per origin.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: club-ts
+  namespace: inference-club-web
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - club
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /oauth
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /static
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /media
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /openapi
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /healthz
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /readyz
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000

@@ -146,6 +146,11 @@ config:
             icon: mdi-podcast
             description: Hacker News, watchable
             siteMonitor: http://hnfm-web.hnfm:8000
+        - Inference Club:
+            href: https://club.{{HOMEPAGE_VAR_TAILNET}}.ts.net
+            icon: mdi-rocket-launch
+            description: The home cluster's own club (not the public site)
+            siteMonitor: http://frontend.inference-club-web:3000
         - LiteLLM:
             href: https://litellm.{{HOMEPAGE_VAR_TAILNET}}.ts.net
             icon: sh-litellm
