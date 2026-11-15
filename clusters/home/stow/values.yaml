@@ -1,0 +1,47 @@
+# Stow environment overlay for the home cluster. Chart defaults live with the
+# app: forgejo.lan/brian/stow -> chart/values.yaml. Only what differs belongs
+# here.
+#
+# Secrets come from Vaultwarden item `stow-stow-secrets` via External Secrets
+# (stow repo: deploy/bootstrap-secrets.sh). Nothing sensitive goes in this file.
+
+image:
+  # CI writes this line on every push to stow main (12-char commit SHA).
+  # Do not edit by hand: the next build overwrites it.
+  tag: "latest"
+
+secrets:
+  create: false
+externalSecret:
+  enabled: true
+
+# Postgres and the photo store are local-path volumes, so everything shares
+# one node. a2 has the disk and trusts Harbor. When a2 is booted into Windows,
+# Stow is down with it.
+nodeSelector:
+  kubernetes.io/arch: amd64
+  inference-club.com/box: a2
+
+ingress:
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Stow"
+    gethomepage.dev/description: "Everything you own, and where it is"
+    gethomepage.dev/group: "Apps"
+    gethomepage.dev/icon: "mdi-package-variant-closed"
+    gethomepage.dev/href: "https://stow.lan"
+
+admin:
+  email: brian@stow.lan
+  name: Brian
+  householdName: Home
+
+# Autofill: photos are described by a vision model on NVIDIA's API
+# (build.nvidia.com), not a local one: the spark-llm slot runs Nemotron
+# Lightning, which is text-only. This means each captured photo is sent to
+# NVIDIA. The key is the vault item's AI_API_KEY field (same key LiteLLM uses).
+# To move autofill back in-house, point baseUrl at a local vision model.
+inference:
+  vision:
+    baseUrl: https://integrate.api.nvidia.com/v1
+    model: nvidia/nemotron-3.5-bolt-e4b

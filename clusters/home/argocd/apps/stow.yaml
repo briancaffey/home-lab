@@ -1,0 +1,35 @@
+# Stow (forgejo.lan/brian/stow, Forgejo only): a catalog of every physical
+# thing in the house and where it is. Next.js + FastAPI + Celery, with
+# chart-owned Postgres, Redis and RustFS.
+#
+# Multi-source: the chart lives with the app (chart/ in the stow repo), the
+# environment values live here (clusters/home/stow/values.yaml). The app
+# repo's CI builds the two images, pushes them to harbor.lan/apps, and commits
+# the new image.tag into that values file: that commit is the rollout.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: stow
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://forgejo.lan/brian/stow.git
+      targetRevision: main
+      path: chart
+      helm:
+        releaseName: stow   # object names derive from this; keep it stable
+        valueFiles:
+          - $values/clusters/home/stow/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: stow
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

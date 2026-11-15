@@ -1,0 +1,24 @@
+# https://stow.<tailnet>.ts.net  ->  Stow
+# One backend: the web pod forwards /api/* to the API itself, so there are no
+# path rules to mirror. The app is hostname-agnostic (same-origin API calls,
+# images served through the API) and has its own login.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stow-ts
+  namespace: stow
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - stow
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: stow-web
+                port:
+                  number: 3000

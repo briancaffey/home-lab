@@ -13,3 +13,4 @@ resources:
   - inference-club.yaml
   - external-secrets.yaml
   - hnfm.yaml
+  - stow.yaml
