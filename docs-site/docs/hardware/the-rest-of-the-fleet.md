@@ -42,6 +42,6 @@ None of these exist yet, but each is a small project.
 2. **A second Pi-hole / DNS failure domain** — see above; also enables household-wide ad-blocking.
 3. **Offsite backups** — the remaining gap in the disaster-recovery plan.
 4. **a3's storage and firmware** — the control plane's data disk is the fullest in the fleet, and the [September 2026 lockup](/hardware/nodes#a3--control-plane) added two more items: move the k3s data directory off the 5400 rpm hard disk onto the SSD, and flash a current BIOS on the Z790 board (it is on a 2023 release; newer ones ship the 14900K stability microcode natively). Both are hands-on-the-box jobs, which is why they are still on this list.
-5. **More nodes from hardware I already own** — done once, now: an old ThinkPad (t430) joined as a sixth node. It cost nothing and added CPU headroom, which is the right kind of expansion. New computers are still not the priority — cables are.
+5. **More nodes from hardware I already own** — done once, now: an old ThinkPad (t430) joined as a sixth node. It cost nothing and added CPU headroom, which is the right kind of expansion. It now earns its keep, too: it runs the lab's [CPU-only text-to-speech service](/ai/nano-edge-tts). New computers are still not the priority — cables are.
 
 {/* screenshot: hardware/wishlist-cables.jpg — optional: unused ethernet cable, Brian-provided */}

@@ -16,7 +16,7 @@ It is six different computers, all on home WiFi, running k3s. They are not ident
 | **a2** | worker | amd64 | RTX 4090 | the busiest node; most disk |
 | **a1** | worker | amd64 | RTX 4090 | speech models; most spare GPU; now on the .4.x subnet |
 | **x1** | worker | amd64 | none | CPU-only laptop |
-| **t430** | worker | amd64 | none | CPU-only ThinkPad; its own subnet |
+| **t430** | worker | amd64 | none | CPU-only ThinkPad; its own subnet; runs the CPU-only TTS |
 | **spark** | worker | arm64 | GB10 (128 GB unified) | arm64; often offline |
 
 ```mermaid
@@ -81,6 +81,8 @@ A ThinkPad X1 Carbon, CPU-only, added to the cluster to host [Hermes](/ai/hermes
 ## t430 — the second laptop node
 
 An old ThinkPad T430: four cores, 8 GB of RAM, a ~108 GB SATA SSD, and no GPU. It's the weakest machine in the fleet by a wide margin, which is exactly the point — it's here to soak up small CPU-only services and free the 4090 machines to do GPU work. Like x1, it is deliberately **not** a Longhorn storage member and holds no GPU role: a weak, WiFi-only laptop is a bad home for replicated storage or model weights. It also sits on its own subnet (192.168.4.x), so it was a useful test that a node doesn't have to share the main LAN to join.
+
+For months it had no workloads at all. In November 2026 it got its first one, and to my surprise it's an inference service: [nano-edge-tts](/ai/nano-edge-tts), a text-to-speech model small enough that this 2012 i5-3320M runs it about 7 times faster than real time. The weights are baked into the image, so the "no model weights on a weak laptop" rule still holds in spirit: there's no volume and nothing to lose if the node dies.
 
 Onboarding it is where the interesting part happened.
 

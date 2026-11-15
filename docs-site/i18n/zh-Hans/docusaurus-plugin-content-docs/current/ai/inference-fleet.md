@@ -1,6 +1,6 @@
 ---
 title: 推理服务舰队
-description: 十几个 AI 模型服务器共享三块 RTX 4090 和一台奇特的 ARM 机器——以及为什么任何时刻都有一半在沉睡。
+description: 十几个 AI 模型服务器共享三块 RTX 4090 和一台奇特的 ARM 机器（外加一个跑在旧笔记本 CPU 上的）——以及为什么任何时刻都有一半在沉睡。
 tags: [ai, inference, vllm, gpu]
 repo_path: services/
 ---
@@ -25,6 +25,7 @@ flowchart LR
         fc["firecrawl<br/>URL→markdown"]
         klein["flux3-klein<br/>图像 + 编辑（spark）"]
         trellis["trellis2<br/>图→3D 网格（a2）"]
+        nano["nano-edge-tts<br/>文字→语音，纯 CPU（t430）"]
     end
     subgraph parked["替补席（replicas: 0）"]
         flux["flux2-klein<br/>图像"]
@@ -37,14 +38,16 @@ flowchart LR
     gpu2[("a2 · RTX 4090")]
     gpu3[("a3 · RTX 4090")]
     spark[("spark · GB10<br/>128 GB 统一内存")]
+    cpu[("t430 · ThinkPad CPU<br/>无 GPU")]
     active --> gpu1 & gpu2 & gpu3 & spark
+    nano --> cpu
 ```
 
 ## 日常主力
 
 - **聊天、推理与智能体任务**来自 spark 的 LLM 槽位，几乎总是经由 [LiteLLM](./litellm.md)，而不是直接调用。从 2026 年 11 月起，这个槽位跑的是 NVIDIA 的 Nemotron 3.5 Lightning，它同时也是 [Hermes](./hermes.md) 的本地大脑
 - **转录**用 `asr.lan`——音频进、文字出，跑在 spark 的统一内存上
-- **配音**来自 `magpie.lan`——各种项目背后的 TTS
+- **配音**来自 `magpie.lan`——各种项目背后的 TTS；从 2026 年 11 月起还有 `nano.lan`：[nano-edge-tts](./nano-edge-tts.md)，一个只支持英语、完全不需要 GPU 的 Kokoro 变体。它跑在 t430 这台 2012 年的 ThinkPad 上，速度约为实时的 7 倍，启动后大约 20 秒就绪
 - **抓取**用 `firecrawl.lan`——URL 进、干净的 markdown 出，喂给各路智能体
 - **图像与编辑**来自 `klein.lan`——[FLUX 3 Image Klein](./flux3-klein.md)：文生图、基于最多十张参考图的编辑、边界框布局，前面还有一个提示词扩写器。它住在 spark 上（常驻约 45 GB）。给 a1 那块 4090 用的 fp8 版本停放在一旁
 - **带字的图**来自 `qwen.lan`——[Qwen-Image 2.1](./qwen-image.md)，目前处于停放状态。Klein 接替了它在 spark 上的位置，因为两者放不下、挤不进 spark 上其他租户的旁边。换回去只需要两条 `kubectl scale` 命令
@@ -55,7 +58,7 @@ flowchart LR
 
 **GPU 是刻意共享的，不是自动共享的。** 一个 Pod 要么独占整块 GPU（`nvidia.com/gpu: 1`——由调度器强制排他），要么加入"君子协定"（`NVIDIA_VISIBLE_DEVICES=all` 且*不*声明 GPU 资源——几个 Pod 共享一块卡，而调度器对此一无所知）。这里没有 time-slicing 也没有 MPS；一个自制的 `vram-reporter` 在带外记账。一块 RTX 4090 有 24 GB VRAM，每个模型大概吃多少，我心里有数。
 
-**有些模型会自己挑节点。** 舰队里大多数模型一块 4090 就装得下，哪里有 VRAM 就去哪里；但 Qwen-Image 那条 33 GB 的流水线逼出了一段值得单独一读的安置故事：在 a3 上的两次尝试（先是 CPU 卸载，再是 4-bit 编码器）各自牺牲了我想要的东西，而 spark 的 128 GB 统一内存是唯一诚实的答案。细节——包括那次悄无声息什么都没改的编辑——都在 [Qwen-Image 页](./qwen-image.md)上。它在那个位置上的继任者 [FLUX 3 Image Klein](./flux3-klein.md) 同样在 git 里有两种安置方式：spark 上的 bf16，以及一块 4090 上的 fp8——后者通过网络借用 spark 的扩写器。还有一个模型被某台节点直接拉黑：[TRELLIS.2](./trellis2.md) 在 a3 这个控制平面上的两次测试生成，两次都让它 panic 重启，所以它住在 a2，永远不上 a3。
+**有些模型会自己挑节点。** 舰队里大多数模型一块 4090 就装得下，哪里有 VRAM 就去哪里；但 Qwen-Image 那条 33 GB 的流水线逼出了一段值得单独一读的安置故事：在 a3 上的两次尝试（先是 CPU 卸载，再是 4-bit 编码器）各自牺牲了我想要的东西，而 spark 的 128 GB 统一内存是唯一诚实的答案。细节——包括那次悄无声息什么都没改的编辑——都在 [Qwen-Image 页](./qwen-image.md)上。它在那个位置上的继任者 [FLUX 3 Image Klein](./flux3-klein.md) 同样在 git 里有两种安置方式：spark 上的 bf16，以及一块 4090 上的 fp8——后者通过网络借用 spark 的扩写器。还有一个模型被某台节点直接拉黑：[TRELLIS.2](./trellis2.md) 在 a3 这个控制平面上的两次测试生成，两次都让它 panic 重启，所以它住在 a2，永远不上 a3。而在另一头，[nano-edge-tts](./nano-edge-tts.md) 是这里第一个不需要 GPU 的服务，所以它去了我手头最闲的那台机器，而不是去挤占某台 GPU 机器。
 
 **spark 只有一个 LLM 槽位。** spark 只有一块 GB10，所以一个 vLLM Deployment——`spark-llm`——一次只服务一个模型。每个模型是 [`services/vllm/models/`](https://github.com/briancaffey/home-lab/tree/main/services/vllm/models) 下的一个小 overlay，而 [`services/vllm/active/`](https://github.com/briancaffey/home-lab/blob/main/services/vllm/active/kustomization.yaml) 指向当前加载的那一个。换模型就是改那一行然后 push。2026 年 11 月，这个槽位从 Ripple-65B Preview（它的 overlay 还在）换成了 **NVFP4 量化的 Nemotron 3.5 Lightning 30B-A3B**，用的是 NVIDIA 官方给 DGX Spark 的配方，跑在 vLLM v0.27.1 上：Marlin MoE 内核、fp8 KV 缓存、给 Mamba 层用的 FlashInfer，以及一个推测解码的草稿模型。我实测的生成速度约为每秒 112 个 token，工具调用正常，上下文窗口是 80K，因为 Hermes 需要超过 64K。它只占用 spark 30% 的内存（`GPU_MEM_UTIL` 0.30），留下的 KV 缓存仍远超四个并发序列所需，spark 上的其他租户也保住了各自的空间。代价是大约四分钟的冷启动。
 

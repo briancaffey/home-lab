@@ -1,6 +1,6 @@
 ---
 title: The Inference Fleet
-description: A dozen AI model servers sharing three RTX 4090s and one exotic ARM box — and why half of them are asleep at any given moment.
+description: A dozen AI model servers sharing three RTX 4090s and one exotic ARM box (plus one that runs on an old laptop's CPU) — and why half of them are asleep at any given moment.
 tags: [ai, inference, vllm, gpu]
 repo_path: services/
 ---
@@ -25,6 +25,7 @@ flowchart LR
         fc["firecrawl<br/>URL→markdown"]
         klein["flux3-klein<br/>images + edits (spark)"]
         trellis["trellis2<br/>image→3D mesh (a2)"]
+        nano["nano-edge-tts<br/>text→speech, CPU only (t430)"]
     end
     subgraph parked["The bench (replicas: 0)"]
         flux["flux2-klein<br/>images"]
@@ -37,14 +38,16 @@ flowchart LR
     gpu2[("a2 · RTX 4090")]
     gpu3[("a3 · RTX 4090")]
     spark[("spark · GB10<br/>128 GB unified")]
+    cpu[("t430 · ThinkPad CPU<br/>no GPU")]
     active --> gpu1 & gpu2 & gpu3 & spark
+    nano --> cpu
 ```
 
 ## Daily drivers
 
 - **Chat, reasoning and agent work** from the spark LLM slot, almost always through [LiteLLM](./litellm.md) rather than called directly. Since November 2026 the slot runs NVIDIA's Nemotron 3.5 Lightning, which is also [Hermes](./hermes.md)'s local brain
 - **Transcription** via `asr.lan` — audio in, text out, runs on spark's unified memory
-- **Voices** from `magpie.lan` — the TTS behind various projects
+- **Voices** from `magpie.lan` — the TTS behind various projects — and, since November 2026, from `nano.lan`: [nano-edge-tts](./nano-edge-tts.md), an English-only Kokoro variant that needs no GPU at all. It runs on t430, a 2012 ThinkPad, at about 7x real time, and is ready about 20 seconds after it starts
 - **Scraping** with `firecrawl.lan` — URL in, clean markdown out, feeds agents
 - **Images and edits** from `klein.lan` — [FLUX 3 Image Klein](./flux3-klein.md): text-to-image, edits from up to ten references, bounding-box layout, and a prompt upsampler in front. It lives on spark (about 45 GB resident). An fp8 variant for a1's 4090 is parked next to it
 - **Images with words in them** from `qwen.lan` — [Qwen-Image 2.1](./qwen-image.md), currently parked. Klein took its spark slot because the two don't fit together next to the rest of spark's tenants. Swapping back is two `kubectl scale` commands
@@ -55,7 +58,7 @@ flowchart LR
 
 **GPUs are shared deliberately, not automatically.** A pod either claims a whole GPU (`nvidia.com/gpu: 1` — the scheduler enforces exclusivity) or joins the honor system (`NVIDIA_VISIBLE_DEVICES=all` with *no* GPU request — several pods share one card, and the scheduler is blind to it). There's no time-slicing or MPS; a custom `vram-reporter` keeps score out-of-band. One RTX 4090 has 24 GB of VRAM, and I know roughly what every model costs.
 
-**Some models choose their own node.** Most of the fleet fits a 4090 and goes wherever there is VRAM, but Qwen-Image's 33 GB pipeline forced a placement story worth reading on its own: two attempts on a3 (CPU offload, then a 4-bit encoder) each traded away something I wanted, and spark's 128 GB of unified memory was the only honest answer. The details, including the edit that silently did nothing, are on the [Qwen-Image page](./qwen-image.md). Its successor in that slot, [FLUX 3 Image Klein](./flux3-klein.md), also has two placements in git: bf16 on spark, and fp8 on a 4090 that borrows spark's upsampler over the network. And one model is banned from a node outright: [TRELLIS.2](./trellis2.md) panic-rebooted a3, the control plane, on both of its test generations, so it lives on a2 and never on a3.
+**Some models choose their own node.** Most of the fleet fits a 4090 and goes wherever there is VRAM, but Qwen-Image's 33 GB pipeline forced a placement story worth reading on its own: two attempts on a3 (CPU offload, then a 4-bit encoder) each traded away something I wanted, and spark's 128 GB of unified memory was the only honest answer. The details, including the edit that silently did nothing, are on the [Qwen-Image page](./qwen-image.md). Its successor in that slot, [FLUX 3 Image Klein](./flux3-klein.md), also has two placements in git: bf16 on spark, and fp8 on a 4090 that borrows spark's upsampler over the network. And one model is banned from a node outright: [TRELLIS.2](./trellis2.md) panic-rebooted a3, the control plane, on both of its test generations, so it lives on a2 and never on a3. At the other end of the scale, [nano-edge-tts](./nano-edge-tts.md) is the first service here that needs no GPU, so it went to the idlest machine I have instead of taking room on a GPU box.
 
 **spark has exactly one LLM slot.** spark has one GB10, so one vLLM Deployment, `spark-llm`, serves one model at a time. Each model is a small overlay under [`services/vllm/models/`](https://github.com/briancaffey/home-lab/tree/main/services/vllm/models), and [`services/vllm/active/`](https://github.com/briancaffey/home-lab/blob/main/services/vllm/active/kustomization.yaml) points at the one that's loaded. Swapping models means changing that line and pushing. In November 2026 the slot went from Ripple-65B Preview (its overlay is still there) to **Nemotron 3.5 Lightning 30B-A3B in NVFP4**, served with NVIDIA's own DGX Spark recipe on vLLM v0.27.1: Marlin MoE kernels, fp8 KV cache, FlashInfer for the Mamba layers, and a speculative drafter. I measured about 112 tokens/s of generation, tool calls work, and the context window is 80K, since Hermes needs more than 64K. It only claims 30% of spark's memory (`GPU_MEM_UTIL` 0.30). That still leaves far more KV cache than four concurrent sequences need, and the rest of spark's tenants keep their room. The cost is a cold start of about four minutes.
 
