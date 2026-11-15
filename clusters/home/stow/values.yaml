@@ -8,7 +8,7 @@
 image:
   # CI writes this line on every push to stow main (12-char commit SHA).
   # Do not edit by hand: the next build overwrites it.
-  tag: "fec8e173648c"
+  tag: "a021fc41ebd8"
 
 secrets:
   create: false
