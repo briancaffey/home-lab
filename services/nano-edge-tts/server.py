@@ -34,7 +34,7 @@ import soxr
 import torch
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from huggingface_hub import snapshot_download
+from huggingface_hub import hf_hub_download, snapshot_download
 from kokoro import KPipeline
 
 import nano_edge_tts
@@ -72,7 +72,12 @@ class Engine:
             self.kokoro = KModel(repo_id=KOKORO_REPO).eval().decoder
         self.pipes = {}
         self.lock = threading.Lock()  # one synthesis at a time; torch uses all cores
-        root = snapshot_download(KOKORO_REPO, allow_patterns=["voices/*.pt"])
+        # Voices = whatever is in the local Kokoro snapshot. The image bakes in
+        # only the languages in LANGS and runs offline, so list the directory
+        # (snapshot_download refuses a partial snapshot when offline).
+        if os.environ.get("HF_HUB_OFFLINE") != "1":
+            snapshot_download(KOKORO_REPO, allow_patterns=["voices/[abefhip]*.pt"])
+        root = os.path.dirname(hf_hub_download(KOKORO_REPO, "config.json"))
         self.voices = sorted(f[:-3] for f in os.listdir(os.path.join(root, "voices")) if f.endswith(".pt"))
         self.voices = [v for v in self.voices if v[0] in LANGS]
         self.pipe("a")

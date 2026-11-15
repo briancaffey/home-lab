@@ -36,7 +36,7 @@ spec:
         runAsUser: 65534
       containers:
         - name: nano-edge-tts
-          image: harbor.lan/apps/nano-edge-tts:37b4935-r1
+          image: harbor.lan/apps/nano-edge-tts:37b4935-r2
           env:
             - name: PORT
               value: "8880"
@@ -80,6 +80,8 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
       volumes:
+        # /tmp must allow exec: the espeak loader copies libespeak-ng.so there
+        # and dlopens it (a noexec tmpfs breaks the non-English voices).
         - name: tmp
           emptyDir: {}
 ---
