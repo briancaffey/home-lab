@@ -103,6 +103,20 @@ spec:
               path: /health
               port: http
             periodSeconds: 15
+          # After a CUDA out-of-memory failure the server keeps ~22 GB allocated
+          # and fails every later request while /health still says ok (seen
+          # twice on 2026-11-15). A normal generation peaks near 16 GB on this
+          # card for about a minute, so "nearly full for 4 minutes" means stuck:
+          # restart the container (reload takes ~2 min from the weight cache).
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - test "$(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits | head -1)" -lt 21500
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 8
       volumes:
         - name: hf-cache
           hostPath:
