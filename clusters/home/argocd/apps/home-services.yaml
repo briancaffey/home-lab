@@ -859,6 +859,33 @@ spec:
     syncOptions:
       - RespectIgnoreDifferences=true
 ---
+# nano-edge-tts: CPU-only TTS (Kokoro text side + 1.75M-parameter decoder) on
+# t430. Plain manifests; the image is built from services/nano-edge-tts/Dockerfile.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: svc-nano-edge-tts
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: services/nano-edge-tts
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: inference-club
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers: ["/spec/replicas"]
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - RespectIgnoreDifferences=true
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

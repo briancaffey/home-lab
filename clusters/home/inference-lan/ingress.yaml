@@ -13,7 +13,7 @@
 #
 # Naming: short, memorable, one label:
 #   omni.lan asr.lan magpie.lan flux.lan ltx.lan studio-voice.lan
-#   firecrawl.lan acestep.lan dia.lan trellis.lan lmstudio.lan
+#   firecrawl.lan acestep.lan dia.lan trellis.lan lmstudio.lan nano.lan
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -93,6 +93,31 @@ spec:
           - path: /
             pathType: Prefix
             backend: { service: { name: magpie-tts, port: { number: 9000 } } }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lan-nano-tts
+  namespace: inference-club
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "nano-edge-tts"
+    gethomepage.dev/description: "CPU TTS: Kokoro + 1.75M-param decoder (t430)"
+    gethomepage.dev/group: "Inference"
+    gethomepage.dev/icon: "mdi-account-voice-outline"
+    gethomepage.dev/href: "https://nano.lan/"
+    gethomepage.dev/pod-selector: "app=nano-edge-tts"
+    gethomepage.dev/siteMonitor: "http://nano-edge-tts.inference-club:8880/health"
+spec:
+  ingressClassName: traefik
+  tls: [{ hosts: ["nano.lan"], secretName: inference-tls }]
+  rules:
+    - host: nano.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: nano-edge-tts, port: { number: 8880 } } }
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

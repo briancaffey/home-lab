@@ -1,0 +1,111 @@
+# nano-edge-tts (drmhse/nano-edge-tts): Kokoro-82M's text side with its 53M
+# waveform decoder replaced by a 1.75M-parameter harmonic-plus-noise decoder.
+# CPU ONLY: no GPU, no runtimeClass, no volume. Weights, voices and the G2P
+# model are baked into the image (Dockerfile here; multi-arch amd64 + arm64,
+# built off-cluster and pushed to harbor.lan/apps), so the pod needs no network.
+#
+# Placement: t430, the old ThinkPad with no other workloads. The model is the
+# only inference service that fits a box without a GPU, so it takes the idlest
+# node instead of crowding a GPU box (bin-packing). It runs anywhere: change
+# the nodeSelector (spark's arm64 works too).
+#
+# API (server.py): Riva-shaped /v1/audio/synthesize + /v1/audio/list_voices
+# (what inference.club's backend speaks to a tts service, same as Magpie),
+# OpenAI-shaped /v1/audio/speech, and a small try-it page at /.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nano-edge-tts
+  namespace: inference-club
+  labels:
+    app: nano-edge-tts
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nano-edge-tts
+  template:
+    metadata:
+      labels:
+        app: nano-edge-tts
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: t430
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+        - name: nano-edge-tts
+          image: harbor.lan/apps/nano-edge-tts:37b4935-r1
+          env:
+            - name: PORT
+              value: "8880"
+            # Keep Kokoro's original decoder loaded too (+~250 MB RAM) so
+            # `decoder: kokoro` works for A/B listening. Set to "0" for the
+            # lean footprint.
+            - name: KEEP_KOKORO_DECODER
+              value: "1"
+          ports:
+            - name: http
+              containerPort: 8880
+          resources:
+            requests:
+              cpu: 250m
+              memory: 800Mi
+            limits:
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+# Discovery: the in-cluster agent finds this Service by labels. type=tts with
+# no voice-cloning feature = a plain Riva-shaped tts service, like Magpie; the
+# agent tells the two apart by the model id on the request.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nano-edge-tts
+  namespace: inference-club
+  labels:
+    inference-club.com/managed: "true"
+    inference-club.com/type: tts
+    inference-club.com/engine: other
+  annotations:
+    inference-club.com/base-path: /v1
+    inference-club.com/models: |
+      - id: nano-edge-tts
+        name: nano-edge-tts (Kokoro, CPU)
+        input_modalities: [text]
+        output_modalities: [audio]
+spec:
+  selector:
+    app: nano-edge-tts
+  ports:
+    - name: http
+      port: 8880
+      targetPort: http

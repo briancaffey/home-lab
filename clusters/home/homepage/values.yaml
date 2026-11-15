@@ -187,6 +187,9 @@ config:
         - magpie-tts:
             - abbr: TTS
               href: https://magpie.lan/docs
+        - nano-edge-tts:
+            - abbr: NAN
+              href: https://nano.lan/docs
         - flux3-klein:
             - abbr: KLN
               href: https://klein.lan/docs
