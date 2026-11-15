@@ -36,12 +36,22 @@ admin:
   name: Brian
   householdName: Home
 
-# Autofill: photos are described by a vision model on NVIDIA's API
-# (build.nvidia.com), not a local one: the spark-llm slot runs Nemotron
-# Lightning, which is text-only. This means each captured photo is sent to
-# NVIDIA. The key is the vault item's AI_API_KEY field (same key LiteLLM uses).
-# To move autofill back in-house, point baseUrl at a local vision model.
+# Every model call goes through Inference Club (club.lan), under Stow's own
+# club account (stow@club.lan), so its requests are recorded there and kept
+# apart from everyone else's. The token is the vault item's AI_API_KEY and
+# IMAGE_API_KEY fields.
+#   vision: the club has no local vision model (the spark-llm slot runs the
+#     text-only Nemotron Lightning), so it passes these calls to NVIDIA's API
+#     with the NVIDIA key saved on the stow account. Each captured photo
+#     therefore still goes to NVIDIA. To keep photos in-house, load a local
+#     vision model and change `model` to its club id.
+#   image: FLUX 3 Klein on the cluster, for sample data now and outfits later.
 inference:
   vision:
-    baseUrl: https://integrate.api.nvidia.com/v1
-    model: nvidia/nemotron-3.5-bolt-e4b
+    baseUrl: http://backend.inference-club-web.svc.cluster.local:8001/v1
+    hostHeader: club.lan
+    model: "nvidia:nvidia/nemotron-3.5-bolt-e4b"
+  image:
+    baseUrl: http://backend.inference-club-web.svc.cluster.local:8001/v1
+    hostHeader: club.lan
+    model: flux-3-image-klein-fp8
