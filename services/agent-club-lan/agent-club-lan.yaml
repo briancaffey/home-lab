@@ -49,7 +49,7 @@ spec:
           # Hand-built with buildx; pushed to Harbor because a plain `gh` token
           # can't write GHCR packages. Once PR #4 merges, CI produces the same
           # thing as ghcr.io/inference-club/inference-club-agent:sha-….
-          image: harbor.lan/apps/inference-club-agent:sha-3c70d62
+          image: harbor.lan/apps/inference-club-agent:sha-98ab7f3
           env:
             - { name: AGENT_DISCOVERY, value: kubernetes }
             - { name: AGENT_DISCOVERY_NAMESPACE, value: inference-club }
