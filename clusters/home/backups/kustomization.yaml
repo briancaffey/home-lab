@@ -30,3 +30,4 @@ resources:
   - immich-backup.yaml
   - paperless-backup.yaml
   - hermes-backup.yaml
+  - stow-backup.yaml

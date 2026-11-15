@@ -1,0 +1,71 @@
+# Nightly Stow backup: the catalog (Postgres, pg_dump) and every photo, clean
+# picture and 3D model (the RustFS volume, read in place). Redis is only a job
+# queue and is not backed up.
+#
+# Restore: restic restore the snapshot; `pg_restore -d stow /snap/stow.pgdump`
+# into a fresh stow-postgres; copy pvc-rustfs/ back into the RustFS volume.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-stow
+  namespace: stow
+spec:
+  schedule: "40 4 * * *"
+  timeZone: America/New_York
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600
+      template:
+        spec:
+          restartPolicy: Never
+          nodeSelector:
+            inference-club.com/box: a2
+          initContainers:
+            - name: pgdump
+              image: pgvector/pgvector:pg17
+              command: ["sh","-c","pg_dump -h stow-postgres -U stow -d stow -F c -f /snap/stow.pgdump && ls -la /snap/"]
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: stow-secrets, key: POSTGRES_PASSWORD }
+              volumeMounts:
+                - { name: snap, mountPath: /snap }
+          containers:
+            - name: restic
+              image: restic/restic:0.19.1
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  restic snapshots -q >/dev/null 2>&1 || restic init
+                  restic backup /snap /pvc-rustfs --tag nightly --host stow
+                  restic forget --prune --keep-daily 14 --keep-weekly 8
+                  restic check --read-data-subset=10%
+              env:
+                - { name: RESTIC_REPOSITORY, value: "s3:http://minio-backups.minio-backups.svc.cluster.local:9000/restic/stow" }
+                - name: RESTIC_PASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: restic-password }
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: s3-access-key }
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef: { name: backup-secrets, key: s3-secret-key }
+              volumeMounts:
+                - { name: snap, mountPath: /snap, readOnly: true }
+                - { name: pvc-rustfs, mountPath: /pvc-rustfs, readOnly: true }
+              resources:
+                requests: { cpu: 200m, memory: 256Mi }
+                limits: { memory: 1Gi }
+          volumes:
+            - name: pvc-rustfs
+              persistentVolumeClaim:
+                claimName: data-stow-rustfs-0
+            - name: snap
+              emptyDir: {}
