@@ -40,6 +40,9 @@ spec:
                   - { key: inference-club.com/box, operator: In, values: [a2, a3] }
       containers:
         - name: agent
+          # sha-98ab7f3 = 3c70d62 + the Riva tts paths route by model (?model=),
+          #   so Magpie and nano-edge-tts share this agent; branch
+          #   feat/tts-route-by-model. Before that:
           # sha-3c70d62 = fab8b78 + router fix (a plain Riva tts service takes
           #   the tts slot from the Dia voice cloner, so Magpie requests via the
           #   club stop 404ing), branch fix/tts-prefer-riva-prd21. Before that:

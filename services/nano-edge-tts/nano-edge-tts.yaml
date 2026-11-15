@@ -36,7 +36,7 @@ spec:
         runAsUser: 65534
       containers:
         - name: nano-edge-tts
-          image: harbor.lan/apps/nano-edge-tts:37b4935-r2
+          image: harbor.lan/apps/nano-edge-tts:37b4935-r3
           env:
             - name: PORT
               value: "8880"

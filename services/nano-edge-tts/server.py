@@ -117,8 +117,10 @@ class Engine:
         canonical = "+".join(f"{n}:{w / total:.2f}" for n, w in zip(names, weights))
         return lang, pack, canonical
 
-    def segments(self, text, voice, speed=1.0, decoder="nano", lang=None):
-        """Yield float32 numpy chunks, one per Kokoro segment (roughly a sentence group)."""
+    def segments(self, text, voice, speed=1.0, decoder="nano", lang=None, by_sentence=False):
+        """Yield float32 numpy chunks, one per Kokoro segment. Kokoro packs up to
+        ~510 phonemes (about 30 s of speech) into a segment; by_sentence splits at
+        sentence ends instead, so a stream's first audio arrives after one sentence."""
         vlang, pack, _ = self.resolve_voice(voice)
         pipe = self.pipe(lang or vlang)
         with self.lock:
@@ -128,7 +130,8 @@ class Engine:
                 self.model.decoder = self.kokoro
             try:
                 with torch.inference_mode():
-                    for r in pipe(text, voice=pack, speed=speed):
+                    split = r"(?<=[.!?…])\s+|\n+" if by_sentence else r"\n+"
+                    for r in pipe(text, voice=pack, speed=speed, split_pattern=split):
                         if r.audio is not None:
                             yield r.audio.numpy().astype(np.float32)
             finally:
@@ -279,7 +282,7 @@ async def _speak(text, voice, fmt, rate, speed, decoder, stream, lang):
 
         def work():
             try:
-                for chunk in engine.segments(text, voice, **kw):
+                for chunk in engine.segments(text, voice, by_sentence=True, **kw):
                     loop.call_soon_threadsafe(q.put_nowait, _pcm16(_resample(chunk, rate)))
             except Exception as e:  # noqa: BLE001
                 log.exception("stream failed: %s", e)
