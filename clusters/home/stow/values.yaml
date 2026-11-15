@@ -47,6 +47,7 @@ admin:
 #     vision model and change `model` to its club id.
 #   image: FLUX 3 Klein on the cluster, for sample data now and outfits later.
 inference:
+  clubCollection: stow
   vision:
     baseUrl: http://backend.inference-club-web.svc.cluster.local:8001/v1
     hostHeader: club.lan
