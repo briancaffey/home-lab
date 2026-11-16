@@ -14,3 +14,4 @@ resources:
   - external-secrets.yaml
   - hnfm.yaml
   - stow.yaml
+  - supreme-opinions.yaml

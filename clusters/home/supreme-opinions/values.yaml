@@ -1,0 +1,44 @@
+# Supreme Opinions environment overlay for the home cluster. Chart defaults
+# live with the app: forgejo.lan/brian/supreme-opinions -> chart/values.yaml.
+# Only what differs belongs here.
+#
+# Secrets come from Vaultwarden item `supreme-opinions-secrets` via External
+# Secrets. Nothing sensitive goes in this file.
+
+image:
+  # CI writes this line on every push to supreme-opinions main (12-char commit
+  # SHA). Do not edit by hand: the next build overwrites it.
+  tag: "latest"
+
+secrets:
+  create: false
+externalSecret:
+  enabled: true
+
+# Postgres and the RustFS media store are local-path volumes, so everything
+# shares one node. a2 has the disk and trusts Harbor. When a2 is booted into
+# Windows, Supreme Opinions is down with it.
+nodeSelector:
+  kubernetes.io/arch: amd64
+  inference-club.com/box: a2
+
+ingress:
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Supreme Opinions"
+    gethomepage.dev/description: "Supreme Court opinions as narrated videos"
+    gethomepage.dev/group: "Apps"
+    gethomepage.dev/icon: "mdi-bank"
+    gethomepage.dev/href: "https://supreme.lan"
+
+# Every model call goes through Inference Club under the project's own club
+# account (supreme@club.lan): Dia narration, FLUX pictures, ACE-Step music,
+# the language model. The token is the vault item's CLUB_API_TOKEN field.
+club:
+  baseUrl: http://backend.inference-club-web.svc.cluster.local:8001
+  hostHeader: club.lan
+
+# All generated media (takes, pictures, music, renders) and the imported
+# archive live in this RustFS volume.
+rustfs:
+  storage: 150Gi

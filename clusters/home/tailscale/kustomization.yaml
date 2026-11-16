@@ -26,3 +26,4 @@ resources:
   - ingress-hermes.yaml
   - ingress-club.yaml
   - ingress-stow.yaml
+  - ingress-supreme.yaml

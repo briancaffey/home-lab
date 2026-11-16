@@ -1,0 +1,38 @@
+# Supreme Opinions (forgejo.lan/brian/supreme-opinions, private): Supreme
+# Court opinions turned into narrated videos. Nuxt + FastAPI + Celery, a
+# HyperFrames render sidecar, and chart-owned Postgres, Redis and RustFS.
+#
+# Multi-source: the chart lives with the app (chart/ in its repo), the
+# environment values live here (clusters/home/supreme-opinions/values.yaml).
+# The app repo's CI builds three images, pushes them to harbor.lan/apps, and
+# commits the new image.tag into that values file: that commit is the rollout.
+#
+# Out-of-band prereq (private repo): the `repo-supreme-opinions` Secret in the
+# argocd namespace, made by the app repo's deploy/bootstrap-forgejo.sh.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: supreme-opinions
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://forgejo.lan/brian/supreme-opinions.git
+      targetRevision: main
+      path: chart
+      helm:
+        releaseName: supreme   # object names derive from this; keep it stable
+        valueFiles:
+          - $values/clusters/home/supreme-opinions/values.yaml
+    - repoURL: https://forgejo.lan/brian/home-lab.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: supreme-opinions
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
