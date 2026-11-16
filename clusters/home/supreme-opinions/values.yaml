@@ -8,7 +8,7 @@
 image:
   # CI writes this line on every push to supreme-opinions main (12-char commit
   # SHA). Do not edit by hand: the next build overwrites it.
-  tag: "latest"
+  tag: "257b26118d18"
 
 secrets:
   create: false
