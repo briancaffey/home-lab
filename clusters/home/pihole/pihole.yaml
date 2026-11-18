@@ -62,7 +62,11 @@ spec:
             # /etc/resolver entries, so per-host /etc/hosts hacks don't scale.
             # Point clients (or the router's DHCP DNS) at Pi-hole to use it.
             - { name: FTLCONF_misc_dnsmasq_lines, value: "address=/lan/192.168.5.173" }
-            - { name: FTLCONF_webserver_port, value: "80,443s" }
+            # Plain HTTP only — Traefik terminates TLS and nothing reaches 443.
+            # With "443s" FTL keeps a self-signed cert, and its renewal restart
+            # failed to rebind (2026-11-14: "cannot bind to 80: Address in use"),
+            # leaving the web UI dead and the pod unready for days.
+            - { name: FTLCONF_webserver_port, value: "80" }
             - name: FTLCONF_webserver_api_password
               valueFrom:
                 secretKeyRef: { name: pihole-secrets, key: WEBPASSWORD }
