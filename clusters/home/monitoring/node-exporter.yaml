@@ -32,6 +32,11 @@ spec:
             - "--path.procfs=/host/proc"
             - "--path.sysfs=/host/sys"
             - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)"
+            # spark (GB10, cppc_cpufreq): reading cpufreq sysfs blocks forever, so
+            # every scrape hung until the exporter hit its 40-request cap and
+            # answered 503 (NodeDown/TargetDown for 5 days, 2026-11-13). Nothing
+            # graphs node_cpu_frequency_*, so the collector is off everywhere.
+            - "--no-collector.cpufreq"
           ports:
             - { name: metrics, containerPort: 9100, hostPort: 9100 }
           resources:
