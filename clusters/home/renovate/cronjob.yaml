@@ -39,7 +39,11 @@ spec:
               env:
                 - { name: RENOVATE_PLATFORM, value: forgejo }
                 - { name: RENOVATE_ENDPOINT, value: "https://forgejo.lan/api/v1" }
-                - { name: RENOVATE_REPOSITORIES, value: "brian/home-lab,brian/rampart" }
+                # brian/rampart is off the list until the Renovate account can
+                # see it: the token gets a 404 there, and since v44 one
+                # unreachable repo makes the whole run exit 1 (every nightly job
+                # failed 2026-11-13 onward). Re-add it once access is granted.
+                - { name: RENOVATE_REPOSITORIES, value: "brian/home-lab" }
                 - { name: RENOVATE_GIT_AUTHOR, value: "Renovate Bot <renovate@home-cluster.lan>" }
                 - { name: RENOVATE_ONBOARDING, value: "false" }
                 - name: RENOVATE_TOKEN
