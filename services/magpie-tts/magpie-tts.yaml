@@ -64,12 +64,19 @@ spec:
         # non-root and must mkdir under /data.
         - name: fix-perms
           image: busybox:1.38
-          command: ["sh", "-c", "rm -rf /data/* /data/.[!.]* 2>/dev/null; mkdir -p /data && chmod 0777 /data"]
+          # The NIM cache hostPath gets the same treatment: on a node that has
+          # never run a NIM (a2, 2026-11-22) the kubelet creates /opt/nim/.cache
+          # root:root 0755 and the non-root NIM crash-loops on the model
+          # download with "I/O error Permission denied (os error 13)". Opened
+          # up, never wiped: the downloaded model is worth keeping.
+          command: ["sh", "-c", "rm -rf /data/* /data/.[!.]* 2>/dev/null; mkdir -p /data && chmod 0777 /data; chmod -R a+rwX /cache"]
           securityContext:
             runAsUser: 0
           volumeMounts:
             - name: model-repo
               mountPath: /data
+            - name: nim-cache
+              mountPath: /cache
       containers:
         - name: magpie-tts
           # same image + tag the docker copy runs, sharing its /mnt/d/nim cache
