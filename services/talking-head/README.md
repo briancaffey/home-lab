@@ -43,6 +43,21 @@ runs long if `max_new_tokens` (the last argument, ~86 per second) is too high.
 | Blender, MPFB2 add-on | GPL |
 | MakeHuman system assets, `faceunits01` ARKit shapes | CC0 |
 
+## Experiment: per-frame restyle (round 3)
+
+`experiments/restyle.py` and `experiments/restyle_same_shot.py` send each rendered
+frame to FLUX 3 Klein (`services/flux3-klein`, the 4090 placement) with a reference
+image and ask for a photograph. Result on 30 frames at 576x1024, 16 steps:
+
+| Strategy | References | Result | s/frame |
+|---|---|---|---|
+| A | portrait + frame | stable, but re-frames and loses the mouth | 14.9 |
+| B | A + previous output | artefacts accumulate | 19.7 |
+| C | A + output 3 frames back | accumulates more slowly | 18.6 |
+| D | restyled frame from the same shot + frame | steady framing and person; mouth tracks loosely | 13.6 |
+
+The look holds; lip sync does not. FLUX 3 Klein is under the FLUX Kommunity License.
+
 ## Known limits
 
 - The model only drives the mouth, jaw and blinks: no head motion, brows or gaze.
