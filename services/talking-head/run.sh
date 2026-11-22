@@ -1,16 +1,16 @@
 #!/bin/bash
 # Submit one stage of the pipeline as a Job and follow its log.
 #   ./run.sh a2e   <run-name> "<text with [S1] tag>" [seed] [max_new_tokens]
-#   ./run.sh blender <run-name>
+#   ./run.sh blender <run-name>     (STILL_ONLY=1 ./run.sh blender <run> renders one frame)
 set -euo pipefail
 cd "$(dirname "$0")"
-STAGE=$1; export RUN=$2 TEXT=${3:-} SEED=${4:--1} MAX_NEW_TOKENS=${5:-1300}
+STAGE=$1; export STILL_ONLY=${STILL_ONLY:-}; export RUN=$2 TEXT=${3:-} SEED=${4:--1} MAX_NEW_TOKENS=${5:-1300}
 kubectl apply -k . >/dev/null
 kubectl -n talking-head delete job "$STAGE-$RUN" --ignore-not-found --cascade=foreground >/dev/null
 python3 - <<PY | kubectl apply -f -
 import os, string, json
 src = open("job-$STAGE.yaml").read()
-env = {k: json.dumps(os.environ.get(k, ""))[1:-1] for k in ("RUN", "TEXT", "SEED", "MAX_NEW_TOKENS")}
+env = {k: json.dumps(os.environ.get(k, ""))[1:-1] for k in ("RUN", "TEXT", "SEED", "MAX_NEW_TOKENS", "STILL_ONLY")}
 print(string.Template(src).safe_substitute(env))
 PY
 # The first run on a node pulls a multi-GB image, so wait for the pod to leave

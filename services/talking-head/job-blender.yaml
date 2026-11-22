@@ -24,6 +24,7 @@ spec:
           command: ["bash", "/scripts/blender.sh"]
           env:
             - { name: RUN, value: "${RUN}" }
+            - { name: STILL_ONLY, value: "${STILL_ONLY}" }
             - { name: BLENDER_VERSION, value: "4.5.9" }
             - name: MPFB_URL
               value: "https://extensions.blender.org/download/sha256:c075b3e9b94b8e5556a5f03f4653602d02ea306de08126e8f55ed6dee28a2dad/add-on-mpfb-v2.0.18.zip"

@@ -14,6 +14,7 @@ text --Dia--> speech.wav --LAM Audio2Expression--> curves.json (52 ARKit weights
 ```bash
 ./run.sh a2e     demo "[S1] Hello there. This is a test." 11 700   # text -> speech -> curves
 ./run.sh blender demo                                               # curves -> video + model
+STILL_ONLY=1 ./run.sh blender demo                                  # one preview frame, for look-dev
 ```
 
 Outputs land on a2 under `/opt/talking-head/runs/<run>/`. Pick a seed and check
@@ -29,7 +30,9 @@ runs long if `max_new_tokens` (the last argument, ~86 per second) is too high.
 - No custom images. `job-a2e` starts from `pytorch/pytorch:2.1.2-cuda12.1` and
   `job-blender` from `ubuntu:24.04`; each downloads what it needs once into
   `/opt/talking-head/cache` on the node (hostPath).
-- Blender renders headless with Cycles on the 4090 through OptiX (~1 s/frame at 720 px).
+- Blender renders headless with Cycles on the 4090 through OptiX (~1.3 s/frame at 720x1280).
+- The set is built in `scripts/head.py`: a small study (bookshelf, lamp), warm key light,
+  shallow focus and a slow camera push-in, framed 9:16.
 
 ## Pieces and licences
 
