@@ -1,0 +1,43 @@
+# Stage 1+2 Job: text -> Dia speech -> ARKit blendshape curves.
+# Submitted by run.sh, which fills in ${RUN}, ${TEXT}, ${SEED}, ${MAX_NEW_TOKENS}.
+# GPU: shared/unmanaged pattern (no nvidia.com/gpu claim) on a2 — the model needs
+# well under 2 GiB, so it rides alongside trellis2.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: a2e-${RUN}
+  namespace: talking-head
+  labels: { app: talking-head, stage: a2e }
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app: talking-head, stage: a2e }
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        inference-club.com/box: a2
+      runtimeClassName: nvidia
+      containers:
+        - name: a2e
+          image: pytorch/pytorch:2.1.2-cuda12.1-cudnn8-runtime
+          command: ["bash", "/scripts/a2e.sh"]
+          env:
+            - { name: RUN, value: "${RUN}" }
+            - { name: TEXT, value: "${TEXT}" }
+            - { name: SEED, value: "${SEED}" }
+            - { name: MAX_NEW_TOKENS, value: "${MAX_NEW_TOKENS}" }
+            - { name: A2E_COMMIT, value: "02a703c3ea7d8e360eb43098eca85ee98a083529" }
+            - { name: NVIDIA_VISIBLE_DEVICES, value: "all" }
+          resources:
+            requests: { cpu: "1", memory: 2Gi }
+            limits: { memory: 8Gi }
+          volumeMounts:
+            - { name: work, mountPath: /work }
+            - { name: scripts, mountPath: /scripts }
+      volumes:
+        - name: work
+          hostPath: { path: /opt/talking-head, type: DirectoryOrCreate }
+        - name: scripts
+          configMap: { name: talking-head-scripts }

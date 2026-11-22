@@ -1,0 +1,42 @@
+# Stage 3 Job: curves.json + speech.wav -> head.mp4 / head.glb / head.blend.
+# Submitted by run.sh, which fills in ${RUN}. Same shared-GPU pattern as job-a2e
+# (Cycles renders on the 4090 through OptiX; falls back to CPU if it can't).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: blender-${RUN}
+  namespace: talking-head
+  labels: { app: talking-head, stage: blender }
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app: talking-head, stage: blender }
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        inference-club.com/box: a2
+      runtimeClassName: nvidia
+      containers:
+        - name: blender
+          image: ubuntu:24.04
+          command: ["bash", "/scripts/blender.sh"]
+          env:
+            - { name: RUN, value: "${RUN}" }
+            - { name: BLENDER_VERSION, value: "4.5.9" }
+            - name: MPFB_URL
+              value: "https://extensions.blender.org/download/sha256:c075b3e9b94b8e5556a5f03f4653602d02ea306de08126e8f55ed6dee28a2dad/add-on-mpfb-v2.0.18.zip"
+            - { name: NVIDIA_VISIBLE_DEVICES, value: "all" }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "all" }
+          resources:
+            requests: { cpu: "4", memory: 4Gi }
+            limits: { memory: 16Gi }
+          volumeMounts:
+            - { name: work, mountPath: /work }
+            - { name: scripts, mountPath: /scripts }
+      volumes:
+        - name: work
+          hostPath: { path: /opt/talking-head, type: DirectoryOrCreate }
+        - name: scripts
+          configMap: { name: talking-head-scripts }

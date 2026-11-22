@@ -1,5 +1,5 @@
-# maxine-studio-voice (NVIDIA Maxine NIM) on blade (RTX 5090 Laptop, joined
-# 2026-11-08; ran on a1 before that) — speech ENHANCEMENT / audio
+# maxine-studio-voice (NVIDIA Maxine NIM) on a2 (RTX 4090; moved 2026-11-22 from
+# blade, which is offline whenever the laptop boots Windows) — speech ENHANCEMENT / audio
 # super-resolution: noisy/artifacted speech in → clean 48 kHz studio-quality
 # speech out (audio→audio). Migrated from the docker container that ran on a1
 # (`docker run ... nvcr.io/nim/nvidia/maxine-studio-voice`). Primary use: scrub
@@ -12,7 +12,7 @@
 # PROTOCOLS: inference is gRPC-ONLY on :8001 (NIM_INFERENCE_TYPE=grpc). The HTTP
 # server on :8000 serves management only (/v1/health, /v1/metadata, /v1/metrics) —
 # there is no HTTP inference route. hostPort 8000/8001 put them on blade's LAN IP
-# (192.168.6.3:8000/:8001).
+# (192.168.5.96:8000/:8001).
 #
 # Shares blade's 5090 Laptop GPU (24 GB) with whatever else lands there; Studio
 # Voice 48k-hq needs a few GiB. Recreate strategy: 1 GPU + hostPort
@@ -39,7 +39,7 @@ spec:
         app: studio-voice
     spec:
       nodeSelector:
-        inference-club.com/box: blade
+        inference-club.com/box: a2
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ngc-registry
