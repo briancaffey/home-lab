@@ -1,0 +1,17 @@
+# Shared pieces for the talking-head pipeline: namespace + the scripts ConfigMap.
+# The Jobs themselves are submitted per run by run.sh (they are one-shot, so they
+# are not part of this kustomization).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: talking-head
+resources:
+  - namespace.yaml
+configMapGenerator:
+  - name: talking-head-scripts
+    files:
+      - scripts/a2e.sh
+      - scripts/tts.py
+      - scripts/blender.sh
+      - scripts/head.py
+generatorOptions:
+  disableNameSuffixHash: true
