@@ -21,11 +21,14 @@ tetragon:
     requests: { cpu: 50m, memory: 200Mi }
     limits: { memory: 1Gi }
 
-  # Put capabilities + Linux namespaces on exec events. Costs bytes per event,
-  # buys the two questions the security audit kept asking: "what is running
-  # with CAP_SYS_ADMIN?" and "what is running in the host PID/net namespace?"
-  enableProcessCred: true
-  enableProcessNs: true
+  # Capabilities + Linux namespaces on exec events. OFF after the first hour
+  # live (2026-11-24): with both on, an exec event was ~9.5 KB (two 1.4 KB
+  # capability sets and two namespace blocks, once for the process and once
+  # for its parent) and the cluster projected ~17 GB/day into a 10Gi Loki.
+  # Turn one on for a day when you want to answer "what runs with
+  # CAP_SYS_ADMIN / in the host PID namespace" (audit L1), then off again.
+  enableProcessCred: false
+  enableProcessNs: false
 
   # ---- What gets written to stdout -> promtail -> Loki --------------------
   # An event is exported if it matches ANY allow line and NO deny line.
@@ -42,6 +45,23 @@ tetragon:
     {"health_check":true}
     {"namespace":[""], "event_set":["PROCESS_EXEC"]}
     {"namespace":["tetragon"]}
+    {"binary_regex":["^/proc/self/fd/[0-9]+$"]}
+    {"namespace":["netdata"], "binary_regex":["/usr/sbin/tc$", "/usr/sbin/netdatacli$"]}
+    {"namespace":["monitoring"], "binary_regex":["/usr/bin/nvidia-smi$"]}
+    {"namespace":["longhorn-system"], "pod_regex":["^engine-image-"]}
+  # Lines 4-7 are measured noise from the first hour (events/min, cluster):
+  #   /proc/self/fd/N  runc's re-exec on every exec probe; the real binary
+  #                    that follows is still exported
+  #   netdata tc       226  per-interface qdisc polling
+  #   nvidia-smi        86  vram-reporter's sampling loop
+  #   longhorn engine  160  engine-image readiness probes (sh + longhorn)
+  # Re-measure after adding services:
+  #   topk(20, sum by (namespace, workload, binary) (rate(tetragon_events_total{event_type="PROCESS_EXEC"}[5m])) * 60)
+
+  # The parent block repeats the pod identity already on the process; drop
+  # it from the export. Parent binary, arguments and exec_id are kept.
+  fieldFilters: |-
+    {"fields":"parent.pod,parent.docker", "action":"EXCLUDE"}
 
   # Secrets end up in argv all the time. Mask the obvious shapes before the
   # event leaves the node. Extend as you spot leaks in Loki.

@@ -29,9 +29,10 @@ groups:
           description: "Find the noisy source: topk(5, sum by (namespace, workload, binary) (rate(tetragon_events_total{node=\"{{ $labels.node }}\"}[10m])))"
 
       - alert: TetragonExportVolumeHigh
-        # Loki's PVC is 10Gi. 500 MB/day cluster-wide is the tripwire, not a
-        # limit — find the noisy namespace and add it to exportDenyList.
-        expr: sum(increase(tetragon_events_exported_bytes_total[24h])) > 500e6
+        # Loki's PVC is 10Gi and Loki compresses JSON several-fold, so 2 GB/day
+        # raw is the tripwire, not a limit (first install ran at ~17 GB/day
+        # before tuning). Find the noisy workload and add it to exportDenyList.
+        expr: sum(increase(tetragon_events_exported_bytes_total[24h])) > 2e9
         for: 1h
         labels: { severity: warning }
         annotations:
