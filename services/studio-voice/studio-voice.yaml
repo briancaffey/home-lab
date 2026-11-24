@@ -42,7 +42,10 @@ spec:
       labels:
         app: studio-voice
     spec:
-      # Not pinned to a box: any amd64 node with an NVIDIA GPU will do.
+      # a2 preferred (its 4090 is free; a2 is always on), blade as fallback.
+      # The box fence is required: a1's 4090 is used by flux3-klein-4090 and
+      # a3's by dia-a3 WITHOUT either requesting nvidia.com/gpu, so the
+      # scheduler still counts those cards as free and would OOM them.
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -50,6 +53,12 @@ spec:
               - matchExpressions:
                   - { key: kubernetes.io/arch, operator: In, values: [amd64] }
                   - { key: nvidia.com/gpu.product, operator: Exists }
+                  - { key: inference-club.com/box, operator: In, values: [a2, blade] }
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - { key: inference-club.com/box, operator: In, values: [a2] }
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ngc-registry
