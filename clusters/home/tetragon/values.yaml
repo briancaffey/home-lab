@@ -24,7 +24,7 @@ tetragon:
   # Capabilities + Linux namespaces on exec events. OFF after the first hour
   # live (2026-11-24): with both on, an exec event was ~9.5 KB (two 1.4 KB
   # capability sets and two namespace blocks, once for the process and once
-  # for its parent) and the cluster projected ~17 GB/day into a 10Gi Loki.
+  # for its parent) and the cluster projected ~17 GB/day raw into Loki.
   # Turn one on for a day when you want to answer "what runs with
   # CAP_SYS_ADMIN / in the host PID namespace" (audit L1), then off again.
   enableProcessCred: false
@@ -34,8 +34,8 @@ tetragon:
   # An event is exported if it matches ANY allow line and NO deny line.
   # Fields inside one line are ANDed.
   #
-  # PROCESS_EXIT is left out on purpose: it doubles volume, and Loki has a
-  # 10Gi PVC. Add it back if you want exit codes / process lifetimes.
+  # PROCESS_EXIT is left out on purpose: it doubles volume and Loki has no
+  # retention configured. Add it back if you want exit codes / lifetimes.
   exportAllowList: |-
     {"event_set":["PROCESS_EXEC", "PROCESS_KPROBE", "PROCESS_UPROBE", "PROCESS_TRACEPOINT", "PROCESS_LSM"]}
   # namespace "" = processes that are not in a pod (the host). Host exec
@@ -57,6 +57,13 @@ tetragon:
   #   longhorn engine  160  engine-image readiness probes (sh + longhorn)
   # Re-measure after adding services:
   #   topk(20, sum by (namespace, workload, binary) (rate(tetragon_events_total{event_type="PROCESS_EXEC"}[5m])) * 60)
+
+  # KNOWN BLOAT, not fixable here: every exported event carries a top-level
+  # node_labels map — ~6.3 KB on these nodes because of the NFD /
+  # gpu-feature-discovery labels. That is ~80% of each event (~7.9 KB total,
+  # ~4.6 GB/day raw at ~415 events/min after the tuning above). The agent has
+  # no flag for it and fieldFilters only reach inside the event. The fix is a
+  # promtail `replace` stage for {namespace="tetragon"} in clusters/home/loki.
 
   # The parent block repeats the pod identity already on the process; drop
   # it from the export. Parent binary, arguments and exec_id are kept.

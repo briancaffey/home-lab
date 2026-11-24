@@ -13,9 +13,15 @@ in the kernel. Report and rationale: [`docs/23-tetragon-runtime-security.html`](
 | Prometheus scrape job `tetragon` + alert rules | `../monitoring/config/prometheus.yml`, `tetragon-alerts.yml` |
 | Events in Loki | `{namespace="tetragon", container="export-stdout"}` (promtail picks them up, nothing to configure) |
 
-**Status of this directory:** rendered with `kustomize build --enable-helm`
-and every policy validated against the 1.8.0 CRD schema. **Nothing here has
-run on the cluster yet** — the items marked "verify" below are real unknowns.
+**Status (2026-11-24):** phase 1 is live. Agents run 2/2 on all seven nodes
+(kernels 6.8, 7.0 and spark's 7.0-nvidia), all seven scrape targets are up,
+events reach Loki, zero ring-buffer loss, ~170–200 Mi per agent. The policies
+in `policies/` and `enforce/` are schema-valid but have **never been loaded**
+— the "verify" items under phases 2 and 3 are still real unknowns.
+
+Open item from day one: each event carries ~6.3 KB of `node_labels` (see the
+note in `values.yaml`); strip it in promtail before leaving this running for
+months, since Loki has no retention.
 
 `t` below is shorthand for a shell on one agent:
 
@@ -70,9 +76,10 @@ Things to look for in Grafana → Explore → Loki:
 Verify before moving on:
 
 - [ ] agents healthy on all nodes incl. spark; `up{job="tetragon"} == 1`
-- [ ] export volume: `sum(increase(tetragon_events_exported_bytes_total[24h]))`
-      — Loki's PVC is 10Gi. Noisy namespace? add it to `exportDenyList`.
-- [ ] agent memory vs the 1Gi limit in `values.yaml` (a guess, not a measurement)
+- [x] export volume measured: ~4.6 GB/day raw after tuning (was ~17). Loki's
+      data dir sits on a3's 1.8 T disk (the 10Gi PVC size is not enforced by
+      local-path) with no retention — strip `node_labels`, then recheck.
+- [ ] agent memory after a week vs the 1Gi limit (first hour: 170–200 Mi)
 - [ ] the redaction filters actually mask a `--password=...` test command
 
 ## Phase 2 — detect (weeks 2–3)
