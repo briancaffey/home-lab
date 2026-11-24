@@ -93,6 +93,28 @@ scrape_configs:
     static_configs:
       - targets: ["argocd-metrics.argocd.svc.cluster.local:8082"]
 
+  # Tetragon agents (clusters/home/tetragon) — eBPF runtime security. The
+  # DaemonSet is hostNetwork, so each agent serves /metrics on its node IP
+  # :2112. One target per node (the `node` job's list plus blade).
+  # 30s: these are counters for alert rules, not a live graph.
+  - job_name: tetragon
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["192.168.4.25:2112"]    # a1
+        labels: { node: a1 }
+      - targets: ["192.168.5.96:2112"]    # a2
+        labels: { node: a2 }
+      - targets: ["192.168.5.173:2112"]   # a3
+        labels: { node: a3 }
+      - targets: ["192.168.6.19:2112"]    # spark
+        labels: { node: spark }
+      - targets: ["192.168.5.174:2112"]   # x1
+        labels: { node: x1 }
+      - targets: ["192.168.4.35:2112"]    # t430
+        labels: { node: t430 }
+      - targets: ["192.168.6.3:2112"]     # blade
+        labels: { node: blade }
+
   # Prometheus scraping itself.
   - job_name: prometheus
     static_configs:

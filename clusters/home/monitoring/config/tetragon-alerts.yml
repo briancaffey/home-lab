@@ -1,0 +1,89 @@
+# Tetragon runtime-security alerts (clusters/home/tetragon, docs/23).
+# Two groups: is the sensor healthy, and did a policy fire. Everything here
+# keys off Prometheus counters, so no Loki ruler is needed; the alert gives
+# you the workload + binary, Loki gives you the full event.
+# Routed like everything else: Alertmanager -> Telegram + Mailpit.
+groups:
+  - name: tetragon-health
+    rules:
+      - alert: TetragonPolicyLoadError
+        # A hook that doesn't exist on a node's kernel (kprobes are not a
+        # stable ABI) fails the WHOLE policy on that node. Without this
+        # alert a detection can be silently absent after a kernel bump.
+        expr: sum by (node, state) (tetragon_tracingpolicy_loaded{state=~"error|load_error|partially_enabled"}) > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Tetragon on {{ $labels.node }}: {{ $value }} policy(ies) in state {{ $labels.state }}"
+          description: "kubectl -n tetragon exec ds/tetragon -c tetragon -- tetra tracingpolicy list  (pick the pod on {{ $labels.node }})"
+
+      - alert: TetragonEventsLost
+        # Kernel produced events faster than the agent drained them. A
+        # security sensor that drops events needs a tighter policy or
+        # selector, not a bigger buffer.
+        expr: sum by (node) (rate(tetragon_observer_ringbuf_events_lost_total[10m])) > 0
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Tetragon on {{ $labels.node }} is dropping events"
+          description: "Find the noisy source: topk(5, sum by (namespace, workload, binary) (rate(tetragon_events_total{node=\"{{ $labels.node }}\"}[10m])))"
+
+      - alert: TetragonExportVolumeHigh
+        # Loki's PVC is 10Gi. 500 MB/day cluster-wide is the tripwire, not a
+        # limit — find the noisy namespace and add it to exportDenyList.
+        expr: sum(increase(tetragon_events_exported_bytes_total[24h])) > 500e6
+        for: 1h
+        labels: { severity: warning }
+        annotations:
+          summary: "Tetragon exported {{ $value | humanize1024 }}B of events in 24h"
+          description: "topk(5, sum by (namespace, workload) (increase(tetragon_events_total[24h])))"
+
+  - name: tetragon-detections
+    rules:
+      - alert: ServiceAccountTokenReadByShell
+        expr: sum by (namespace, workload, binary) (increase(tetragon_policy_events_total{policy="sa-token-read"}[10m])) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.binary }} read the API token in {{ $labels.namespace }}/{{ $labels.workload }}"
+          description: "Someone or something ran a shell tool against the pod's service-account token. Loki: {namespace=\"tetragon\", container=\"export-stdout\"} |= \"sa-token-read\""
+
+      - alert: K3sControlPlaneSecretRead
+        expr: sum by (node, binary) (increase(tetragon_policy_events_total{policy="k3s-crown-jewels"}[10m])) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.binary }} read k3s datastore/token/CA material on {{ $labels.node }}"
+          description: "If that wasn't you on a3, treat every Secret in the cluster as exposed. Loki: {namespace=\"tetragon\", container=\"export-stdout\"} |= \"k3s-crown-jewels\""
+
+      - alert: HostPersistenceWrite
+        expr: sum by (node, binary) (increase(tetragon_policy_events_total{policy="host-persistence"}[10m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.binary }} wrote to an SSH/cron/systemd/sudoers/k3s-manifest path on {{ $labels.node }}"
+          description: "Expected during apt upgrades and when you edit a node by hand. Anything else: look. Loki: {namespace=\"tetragon\", container=\"export-stdout\"} |= \"host-persistence\""
+
+      - alert: KernelModuleLoaded
+        expr: sum by (node, binary) (increase(tetragon_policy_events_total{policy="monitor-kernel-modules"}[10m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "Kernel module load on {{ $labels.node }} by {{ $labels.binary }}"
+          description: "Loki: {namespace=\"tetragon\", container=\"export-stdout\"} |= \"monitor-kernel-modules\""
+
+      - alert: PodPrivilegeEscalation
+        expr: sum by (namespace, workload, binary) (increase(tetragon_policy_events_total{policy="pod-privilege-escalation"}[10m])) > 0
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.binary }} raised privileges in {{ $labels.namespace }}/{{ $labels.workload }}"
+          description: "setuid-to-root or an unprivileged user namespace inside a pod. Loki: {namespace=\"tetragon\", container=\"export-stdout\"} |= \"pod-privilege-escalation\""
+
+      # pod-internet-egress deliberately has NO alert: it is an inventory, not
+      # a detection. Read it in Grafana/Loki, then turn what you learn into
+      # NetworkPolicies (audit M1).
+
+      - alert: TetragonEnforcementAction
+        # Fires for real kills/overrides AND for monitor-mode would-have
+        # actions, so phase 3 can be judged before it is switched on.
+        expr: sum by (node, policy, action) (increase(tetragon_tracingpolicy_selector_actions_total{action=~"signal|override|monitor_signal|monitor_override"}[10m])) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Tetragon {{ $labels.action }} from policy {{ $labels.policy }} on {{ $labels.node }}"
+          description: "action=monitor_* means it WOULD have acted (policy is in monitor mode). signal/override means it did."
