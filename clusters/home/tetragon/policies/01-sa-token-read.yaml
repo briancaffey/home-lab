@@ -1,0 +1,52 @@
+# Hands-on-keyboard read of a pod's Kubernetes API token.
+#
+# Why here: Headlamp's ServiceAccount was cluster-admin (audit C1), and most
+# workloads run as root (M8). The first thing an intruder does in a pod is
+# `cat /var/run/secrets/kubernetes.io/serviceaccount/token`. Real clients
+# (client-go, Python SDKs) read the token from inside the app binary, so
+# matching only on shell tools keeps this nearly silent in normal operation.
+#
+# Not caught: an attacker who reads the file from python/node/a custom binary.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: sa-token-read
+  annotations:
+    description: "Service-account token read by a shell tool inside a pod"
+spec:
+  podSelector: {}          # pods only, never host processes
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    message: "Service-account token read by a shell tool"
+    tags: [ "homelab.credentials" ]
+    args:
+    - index: 0
+      type: "file"         # struct file * -> resolved path
+    - index: 1
+      type: "int"          # 0x04 MAY_READ, 0x02 MAY_WRITE
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - "/run/secrets/kubernetes.io/serviceaccount"
+        - "/var/run/secrets/kubernetes.io/serviceaccount"
+      - index: 1
+        operator: "Equal"
+        values:
+        - "4"              # MAY_READ
+      matchBinaries:
+      - operator: "In"
+        values:
+        - "/bin/busybox"   # every applet on alpine images (cat, sh, base64...)
+        - "/bin/cat"
+        - "/usr/bin/cat"
+        - "/usr/bin/base64"
+        - "/usr/bin/head"
+        - "/usr/bin/tail"
+        - "/usr/bin/less"
+        - "/usr/bin/cp"
+      matchActions:
+      - action: Post
+        rateLimit: "1m"

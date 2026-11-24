@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tetragon
+  labels:
+    # The agent needs host PID/network, hostPath mounts and CAP_SYS_ADMIN/BPF.
+    # Declared explicitly so a future cluster-wide PSA default (audit M6)
+    # doesn't break it.
+    pod-security.kubernetes.io/enforce: privileged

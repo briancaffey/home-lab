@@ -1,0 +1,66 @@
+# Tetragon — eBPF runtime security observability + enforcement.
+# Report: docs/23-tetragon-runtime-security.html · runbook: ./README.md
+#
+# One agent pod per node (DaemonSet) + one small operator Deployment.
+# Works with k3s's default flannel CNI — Cilium is NOT required.
+
+# CRDs ship as plain chart templates so Argo applies CRD + TracingPolicy in
+# one sync (chart default "operator" registers them at runtime, which races
+# the policies/ resources on first sync).
+crds:
+  installMethod: helm
+
+tetragon:
+  # Sets cluster_name on every event — handy once events leave the cluster.
+  clusterName: home
+
+  # Starting point, not a measured number: watch
+  # container_memory_working_set_bytes for a week and adjust. The BPF maps
+  # themselves are kernel memory and are NOT counted against this limit.
+  resources:
+    requests: { cpu: 50m, memory: 200Mi }
+    limits: { memory: 1Gi }
+
+  # Put capabilities + Linux namespaces on exec events. Costs bytes per event,
+  # buys the two questions the security audit kept asking: "what is running
+  # with CAP_SYS_ADMIN?" and "what is running in the host PID/net namespace?"
+  enableProcessCred: true
+  enableProcessNs: true
+
+  # ---- What gets written to stdout -> promtail -> Loki --------------------
+  # An event is exported if it matches ANY allow line and NO deny line.
+  # Fields inside one line are ANDed.
+  #
+  # PROCESS_EXIT is left out on purpose: it doubles volume, and Loki has a
+  # 10Gi PVC. Add it back if you want exit codes / process lifetimes.
+  exportAllowList: |-
+    {"event_set":["PROCESS_EXEC", "PROCESS_KPROBE", "PROCESS_UPROBE", "PROCESS_TRACEPOINT", "PROCESS_LSM"]}
+  # namespace "" = processes that are not in a pod (the host). Host exec
+  # noise (systemd, cron, k3s, containerd shims) is dropped, but host events
+  # from TracingPolicies (file / module / k3s-secret hooks) still export.
+  exportDenyList: |-
+    {"health_check":true}
+    {"namespace":[""], "event_set":["PROCESS_EXEC"]}
+    {"namespace":["tetragon"]}
+
+  # Secrets end up in argv all the time. Mask the obvious shapes before the
+  # event leaves the node. Extend as you spot leaks in Loki.
+  redactionFilters: |-
+    {"redact": ["(?:--password|--token|--secret|--api-key)(?:\\s+|=)(\\S*)"]}
+    {"redact": ["(?i)authorization:\\s*bearer\\s+(\\S*)"]}
+
+  prometheus:
+    enabled: true
+    port: 2112
+    # Default is namespace,workload,pod,binary. Dropping `pod` keeps series
+    # count sane on a hand-rolled Prometheus with 5s scrapes elsewhere.
+    metricsLabelFilter: "namespace,workload,binary"
+    serviceMonitor:
+      enabled: false   # no Prometheus Operator here — static scrape instead
+
+tetragonOperator:
+  # amd64 + always-on. Not spark (arm64, often offline) or the laptops.
+  nodeSelector:
+    inference-club.com/box: a2
+  prometheus:
+    enabled: false

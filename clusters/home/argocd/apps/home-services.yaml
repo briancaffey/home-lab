@@ -1240,6 +1240,33 @@ spec:
       # same-wave apply needs the dry-run skip for not-yet-known kinds
       - SkipDryRunOnMissingResource=true
 ---
+# Tetragon — eBPF runtime security (docs/23, clusters/home/tetragon/README.md).
+# Helm-inflating dir. prune stays off: pruning a TracingPolicy silently
+# removes a detection, so deletions stay a manual act. ServerSideApply for the
+# large CRDs; SkipDryRun because TracingPolicy CRs sync alongside their CRDs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: home-tetragon
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://forgejo.lan/brian/home-lab.git
+    targetRevision: main
+    path: clusters/home/tetragon
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tetragon
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+---
 # Docs site (home-lab#67) — image tag managed by .forgejo/workflows/docs.yml.
 apiVersion: argoproj.io/v1alpha1
 kind: Application

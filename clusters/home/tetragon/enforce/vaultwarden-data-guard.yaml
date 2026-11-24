@@ -1,0 +1,61 @@
+# Phase 3 — enforce. NOT referenced by any kustomization: applying this is a
+# deliberate, eyes-open step (see ../README.md "Phase 3").
+#
+# Rule: inside the vaultwarden pod, only the /vaultwarden binary may touch
+# /data (the SQLite vault, the RSA signing keys, attachments). Anything else
+# — a shell from `kubectl exec`, a dropped binary, an exploited helper — gets
+# EPERM on the read/write and is killed.
+#
+# Why this one first:
+#   - highest-value data in the cluster ("THE most precious 760 KB")
+#   - one binary, one data dir: the allowlist is a single line
+#   - the nightly backup is unaffected: backup-vaultwarden is a different
+#     pod (no app=vaultwarden label) and mounts the PVC at /pvc, not /data
+#
+# It ships in MONITOR mode: Tetragon reports what it WOULD have blocked
+# (tetragon_tracingpolicy_selector_actions_total{action=~"monitor_.*"}) and
+# touches nothing. Flip to enforce only after two quiet weeks:
+#   tetra tracingpolicy set-mode --namespace vaultwarden vaultwarden-data-guard enforce
+# and then make it permanent by changing policy-mode below to "enforce".
+#
+# UNVERIFIED until you watch it in monitor mode: that the server binary is
+# reported as exactly "/vaultwarden" on the :alpine image, and that nothing
+# at container start (/start.sh) reads /data. Monitor mode is how you check.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicyNamespaced
+metadata:
+  name: vaultwarden-data-guard
+  namespace: vaultwarden
+  annotations:
+    description: "Only /vaultwarden may read or write /data in the vaultwarden pod"
+spec:
+  options:
+  - name: "policy-mode"
+    value: "monitor"
+  podSelector:
+    matchLabels:
+      app: vaultwarden
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    message: "Non-vaultwarden binary touched the vault data directory"
+    tags: [ "homelab.enforce", "homelab.credentials" ]
+    args:
+    - index: 0
+      type: "file"
+    - index: 1
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - "/data/"
+      matchBinaries:
+      - operator: "NotIn"
+        values:
+        - "/vaultwarden"
+      matchActions:
+      - action: Override
+        argError: -1         # EPERM: the read/write itself fails...
+      - action: Sigkill      # ...and the offending process dies

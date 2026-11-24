@@ -1,0 +1,74 @@
+# Processes inside pods trying to become root or mint new capabilities.
+#
+# Why here: only ~10 of ~44 workloads set a securityContext (audit M8), so a
+# lot of containers already ARE root and will never trip this. That is the
+# lesson: the policy is quiet where hardening is missing and useful exactly
+# where you did set runAsNonRoot (vaultwarden, for one). Watch it light up as
+# M8 gets fixed.
+#
+# Trimmed from upstream (cilium/tetragon v1.8.0,
+# examples/policylibrary/privileges/privileges-raise.yaml): the uid-changing
+# hooks and the user-namespace hook, scoped to pods. The upstream file also
+# covers setgid/setfsuid/capset — add them back if you want the full set.
+#
+# Heads-up: these are internal kernel symbols, not a stable ABI. If a hook
+# is missing on a node's kernel the policy shows state `load_error` on that
+# node (alert TetragonPolicyLoadError) instead of silently doing nothing.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: pod-privilege-escalation
+  annotations:
+    description: "setuid-to-root family and unprivileged user-namespace creation inside pods"
+spec:
+  podSelector: {}
+  kprobes:
+  - call: "__sys_setuid"
+    syscall: false
+    message: "setuid(0) inside a pod"
+    tags: [ "homelab.privesc" ]
+    args:
+    - index: 0
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Equal"
+        values:
+        - "0"
+      matchActions:
+      - action: Post
+        rateLimit: "1m"
+  - call: "__sys_setresuid"
+    syscall: false
+    message: "setresuid to root inside a pod"
+    tags: [ "homelab.privesc" ]
+    args:
+    - index: 0
+      type: "int"
+    - index: 1
+      type: "int"
+    - index: 2
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 1             # effective uid
+        operator: "Equal"
+        values:
+        - "0"
+      matchActions:
+      - action: Post
+        rateLimit: "1m"
+  - call: "create_user_ns"
+    syscall: false
+    message: "Unprivileged process created a user namespace"
+    tags: [ "homelab.privesc" ]
+    args:
+    - index: 0
+      type: "nop"
+    selectors:
+    - matchCapabilities:
+      - type: Effective
+        operator: NotIn
+        values:
+        - "CAP_SYS_ADMIN"

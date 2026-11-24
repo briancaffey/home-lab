@@ -1,0 +1,59 @@
+# Reads of the files that ARE the cluster, by anything that isn't k3s.
+#
+# Why here: a3 is the sole control plane on SQLite with secrets unencrypted
+# at rest (audit M2), and install-k3s-server.sh writes the admin kubeconfig
+# world-readable (--write-kubeconfig-mode 644). Whoever reads one of these
+# owns every Secret in the cluster:
+#   server/db       the SQLite datastore (every Secret, base64 only)
+#   server/token    join token (server/node-token is a symlink to it)
+#   server/tls      cluster CA + client-CA private keys
+#   server/cred     component kubeconfigs + passwd
+#   k3s.yaml        cluster-admin kubeconfig
+#
+# Expect a few legitimate hits to learn from: your own `sudo cat` on a3, and
+# any backup tooling. kubectl on a node is the k3s multicall binary, so it is
+# excluded along with the server itself.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: k3s-crown-jewels
+  annotations:
+    description: "k3s datastore, tokens, CA keys or admin kubeconfig read by a non-k3s binary"
+spec:
+  # No selectors => host processes AND pods (a pod only sees these paths via
+  # a hostPath mount of the same location, which is itself worth knowing).
+  nodeSelector:
+    matchLabels:
+      node-role.kubernetes.io/control-plane: "true"
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    message: "k3s control-plane secret read by a non-k3s binary"
+    tags: [ "homelab.credentials", "homelab.controlplane" ]
+    args:
+    - index: 0
+      type: "file"
+    - index: 1
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - "/var/lib/rancher/k3s/server/db"
+        - "/var/lib/rancher/k3s/server/token"
+        - "/var/lib/rancher/k3s/server/tls"
+        - "/var/lib/rancher/k3s/server/cred"
+        - "/etc/rancher/k3s/k3s.yaml"
+      - index: 1
+        operator: "Equal"
+        values:
+        - "4"              # MAY_READ
+      matchBinaries:
+      - operator: "NotPrefix"
+        values:
+        - "/var/lib/rancher/k3s/data/"   # the real k3s binary lives here
+        - "/usr/local/bin/k3s"           # the wrapper / kubectl symlink target
+      matchActions:
+      - action: Post
+        rateLimit: "1m"

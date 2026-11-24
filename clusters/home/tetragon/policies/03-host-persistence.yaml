@@ -1,0 +1,63 @@
+# Writes to the places an intruder (or a container that escaped) uses to stay
+# on a node: SSH keys, cron, systemd units, sudoers, the dynamic-loader
+# preload file — and the two k3s directories where dropping a YAML file
+# deploys it with cluster-admin, no API call and no audit trail:
+#   server/manifests     auto-applied by the k3s deploy controller
+#   agent/pod-manifests  static pods
+#
+# Why here: gpu-feature-discovery, node-exporter, vram-reporter, scrutiny and
+# the Forgejo runner all run privileged or with host namespaces (audit L1) —
+# those are the pods an escape would start from.
+#
+# Expect noise during apt / unattended-upgrades (systemd units, cron.d). That
+# is the tuning exercise: decide whether to exclude dpkg or keep the trail.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: host-persistence
+  annotations:
+    description: "Writes to SSH keys, cron, systemd, sudoers, ld.so.preload or k3s auto-deploy dirs on a node"
+spec:
+  hostSelector: {}         # host processes only
+  kprobes:
+  - call: "security_file_permission"
+    syscall: false
+    message: "Write to a host persistence location"
+    tags: [ "homelab.persistence" ]
+    args:
+    - index: 0
+      type: "file"
+    - index: 1
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Prefix"
+        values:
+        - "/root/.ssh"
+        - "/etc/cron"
+        - "/etc/systemd/system"
+        - "/etc/sudoers"
+        - "/etc/ld.so.preload"
+        - "/etc/rancher/k3s"
+        - "/var/lib/rancher/k3s/server/manifests"
+        - "/var/lib/rancher/k3s/agent/pod-manifests"
+      - index: 1
+        operator: "Equal"
+        values:
+        - "2"              # MAY_WRITE
+      matchActions:
+      - action: Post
+        rateLimit: "1m"
+    - matchArgs:
+      - index: 0
+        operator: "Postfix"
+        values:
+        - "/.ssh/authorized_keys"   # any user's, not just root's
+      - index: 1
+        operator: "Equal"
+        values:
+        - "2"
+      matchActions:
+      - action: Post
+        rateLimit: "1m"

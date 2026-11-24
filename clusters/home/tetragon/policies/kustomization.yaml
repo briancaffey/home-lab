@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Phase 2 — detect. Every policy here only POSTS events (no Sigkill, no
+# Override): the worst a mistake can do is make noise. TracingPolicy is
+# cluster-scoped, so no namespace is set.
+#
+# Add them one at a time and watch `tetra tracingpolicy list` + the event
+# rate between each — see ../README.md.
+resources:
+  - 01-sa-token-read.yaml
+  - 02-k3s-crown-jewels.yaml
+  - 03-host-persistence.yaml
+  - 04-kernel-modules.yaml
+  - 05-privilege-escalation.yaml
+  - 06-internet-egress.yaml

@@ -1,0 +1,49 @@
+# Outbound TCP from pods to anything that is not a private address.
+#
+# Why here: the pod network is flat with zero NetworkPolicies (audit M1) and
+# 16 images float on :latest (M4). This doesn't block anything — it builds
+# the inventory you need before you can write egress NetworkPolicies:
+# which workload, which binary, which destination. A reverse shell or a
+# miner phoning home shows up as a new (workload, binary) pair.
+#
+# qbittorrent and the Tailscale proxies are excluded: their whole job is
+# talking to the internet and they would drown everything else.
+#
+# Based on upstream (cilium/tetragon v1.8.0,
+# examples/tracingpolicy/tcp-connect-only-private-addrs.yaml), with the
+# Sigkill action removed and pod scoping added.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: pod-internet-egress
+  annotations:
+    description: "Pod opened a TCP connection to a non-private address"
+spec:
+  podSelector:
+    matchExpressions:
+    - key: "k8s:io.kubernetes.pod.namespace"
+      operator: NotIn
+      values:
+      - "qbittorrent"
+      - "tailscale"
+  kprobes:
+  - call: "tcp_connect"
+    syscall: false
+    message: "Pod connected to a public address"
+    tags: [ "homelab.network" ]
+    args:
+    - index: 0
+      type: "sock"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "NotDAddr"
+        values:
+        - "127.0.0.0/8"
+        - "10.0.0.0/8"       # k3s pod (10.42/16) + service (10.43/16) CIDRs
+        - "172.16.0.0/12"
+        - "192.168.0.0/16"   # the LAN
+      matchActions:
+      - action: Post
+        rateLimit: "1m"
+        rateLimitScope: "process"
