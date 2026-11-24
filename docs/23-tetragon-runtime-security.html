@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>23 — Tetragon: runtime security for the home cluster</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Open+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* palette read from the Tetragon logo SVG + tetragon.io stylesheet */
+    --ink:#0d1414; --teal:#253737; --teal2:#415559; --teal3:#5c6d70;
+    --paper:#f7fdfd; --card:#ffffff; --line:#e0e6f0;
+    --yellow:#f3c018; --green:#92c53f; --lime:#c6d872; --orange:#eb7525;
+    --red:#e3262b; --purple:#8061a5; --blue:#6284c1;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-family:'Open Sans',system-ui,sans-serif;color:var(--teal);background:var(--paper);
+       font-size:16px;line-height:1.6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{max-width:1040px;margin:0 auto;padding:36px 28px 80px}
+  h1,h2,h3,.kick,.num,.tag{font-family:'Manrope',system-ui,sans-serif}
+  h1{font-size:clamp(34px,5.4vw,58px);font-weight:800;line-height:1.04;letter-spacing:-.025em;color:var(--ink);text-wrap:balance}
+  h2{font-size:28px;font-weight:800;letter-spacing:-.015em;color:var(--ink);margin:64px 0 6px;display:flex;align-items:center;gap:12px}
+  h2 i{flex:none;width:18px;height:18px;border:3px solid var(--ink);border-radius:4px}
+  h3{font-size:17px;font-weight:800;color:var(--ink);margin-bottom:4px}
+  p{margin:0 0 12px;max-width:72ch}
+  .sub{color:var(--teal3);margin-bottom:20px;max-width:72ch}
+  a{color:var(--teal);text-decoration-color:var(--yellow);text-decoration-thickness:2px;text-underline-offset:3px}
+  code,pre,.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.86em}
+  code{background:#eef4f4;border-radius:4px;padding:1px 5px;color:var(--ink)}
+  .y{background:var(--yellow)}.g{background:var(--green)}.l{background:var(--lime)}.o{background:var(--orange)}
+  .r{background:var(--red)}.p{background:var(--purple)}.b{background:var(--blue)}
+
+  /* hero */
+  .hero{display:grid;grid-template-columns:1fr 250px;gap:36px;align-items:center;padding:20px 0 8px}
+  .kick{font-weight:800;font-size:12.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--teal2);margin-bottom:14px}
+  .lead{font-size:19px;color:var(--teal2);margin-top:18px;max-width:60ch}
+  .mark{display:grid;grid-template-columns:1fr 1.25fr 1fr;grid-template-rows:.8fr 1fr 1fr 1fr;gap:7px;background:var(--ink);
+        border:7px solid var(--ink);border-radius:18px 18px 90px 90px;overflow:hidden;aspect-ratio:1/1.08}
+  .mark div{border-radius:3px}
+  .mark .top{grid-column:1/4}.mark .stem{grid-column:2;grid-row:2/5}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .chip{border:2.5px solid var(--ink);border-radius:999px;padding:4px 13px;font-size:13px;font-weight:600;background:var(--card);color:var(--ink)}
+  .chip b{font-family:'Manrope';font-weight:800}
+
+  /* verdict */
+  .verdict{border:4px solid var(--ink);border-radius:16px;background:var(--yellow);color:var(--ink);padding:22px 26px;margin-top:34px;
+           box-shadow:7px 7px 0 var(--ink)}
+  .verdict h3{font-size:22px;margin-bottom:6px}
+  .verdict p{max-width:none;margin:0}
+
+  /* grids & cards */
+  .grid{display:grid;gap:14px}
+  .g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--card);border:3px solid var(--ink);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+  .card p{font-size:14.5px;margin:0;color:var(--teal2)}
+  .card .bar{position:absolute;left:0;top:0;right:0;height:9px;border-bottom:3px solid var(--ink)}
+  .card.top{padding-top:28px}
+  .tag{display:inline-block;font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;border:2px solid var(--ink);
+       border-radius:6px;padding:1px 7px;color:var(--ink);margin-bottom:8px}
+  .gap{border-style:dashed;background:transparent}
+  .num{font-weight:800;font-size:40px;line-height:1;color:var(--ink)}
+
+  /* tables */
+  table{width:100%;border-collapse:separate;border-spacing:0;border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--card);font-size:14.5px}
+  th{font-family:'Manrope';font-weight:800;text-align:left;background:var(--ink);color:#fff;padding:10px 14px;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase}
+  td{padding:11px 14px;border-top:1.5px solid var(--line);vertical-align:top}
+  td:first-child{white-space:nowrap}
+  .sw{display:inline-block;width:13px;height:13px;border:2.5px solid var(--ink);border-radius:3px;margin-right:8px;vertical-align:-1px}
+  .sev{font-family:'Manrope';font-weight:800;font-size:12px;border:2px solid var(--ink);border-radius:5px;padding:0 6px;margin-right:4px;color:var(--ink)}
+
+  /* phases */
+  .phase{display:grid;grid-template-columns:86px 1fr;border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--card)}
+  .phase+.phase{margin-top:12px}
+  .phase .n{display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:3px solid var(--ink);color:var(--ink);padding:10px}
+  .phase .n span{font-family:'Manrope';font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .phase .body{padding:15px 20px}
+  .phase .body p{font-size:14.5px;margin:0 0 6px;max-width:none}
+  .risk{font-size:13px;font-weight:600;color:var(--teal3)}
+
+  pre{background:var(--ink);color:#e6f1f1;border-radius:12px;padding:16px 18px;overflow-x:auto;line-height:1.55;font-size:13px}
+  pre .c{color:#8fa3a3} pre .k{color:var(--yellow)} pre .s{color:var(--lime)} pre .w{color:#ff9aa0}
+  .note{border-left:6px solid var(--orange);background:#fff;border-radius:0 10px 10px 0;padding:12px 16px;font-size:14.5px;margin:14px 0;max-width:none}
+  .fig{border:3px solid var(--ink);border-radius:14px;background:var(--card);padding:10px;margin:8px 0 6px}
+  .fig svg{display:block;width:100%;height:auto}
+  .cap{font-size:13px;color:var(--teal3)}
+  ul{margin:0 0 12px 20px} li{margin-bottom:5px;max-width:72ch}
+  .src li{font-size:13.5px;word-break:break-word}
+  footer{margin-top:60px;padding-top:16px;border-top:3px solid var(--ink);font-size:13px;color:var(--teal3)}
+  @media(max-width:820px){.hero{grid-template-columns:1fr}.mark{max-width:170px}.g3,.g4,.g2{grid-template-columns:1fr}
+    table{display:block;overflow-x:auto}td:first-child{white-space:normal}}
+  @media print{body{padding:0 8mm}h2{break-after:avoid}.card,.phase,table,.fig,pre{break-inside:avoid}.verdict{box-shadow:none}}
+</style></head>
+<body>
+
+<header class="hero">
+  <div>
+    <div class="kick">home-lab · doc 23 · runtime security</div>
+    <h1>Tetragon sees what your containers do after they start.</h1>
+    <p class="lead">An eBPF sensor on every node that records process, file and network activity with pod identity attached, filters it in the kernel, and can kill a process mid-syscall. Here is what it is, what it would catch on this cluster, and a three-phase plan that is already written as manifests.</p>
+    <div class="chips">
+      <span class="chip"><b>v1.8.0</b> · 30 Oct 2026</span>
+      <span class="chip">Cilium sub-project · CNCF</span>
+      <span class="chip">Apache-2.0</span>
+      <span class="chip">kernel 4.19+ with BTF</span>
+      <span class="chip">works on flannel — no Cilium CNI</span>
+    </div>
+  </div>
+  <div class="mark" aria-hidden="true">
+    <div class="top y"></div>
+    <div class="g"></div><div class="stem y"></div><div class="o"></div>
+    <div class="l"></div><div class="r"></div>
+    <div class="p"></div><div class="b"></div>
+  </div>
+</header>
+
+<section class="verdict">
+  <h3>Verdict: run it, observe-first.</h3>
+  <p>Nothing on the cluster watches runtime behaviour today. Trivy knows what is <em>in</em> an image, Prometheus knows whether a pod is <em>up</em>, Loki knows what it <em>printed</em>. None of them would notice a shell opened inside Vaultwarden. Tetragon closes that gap with one DaemonSet, and its output lands in the Loki, Prometheus and Alertmanager you already run. Detection carries almost no risk; enforcement is powerful enough to hurt, so it comes last and on one namespace.</p>
+</section>
+
+<h2><i class="g"></i>The gap it fills</h2>
+<p class="sub">What each layer of the current stack can and cannot tell you about a compromised pod.</p>
+<div class="grid g4">
+  <div class="card top"><div class="bar b"></div><span class="tag">before deploy</span><h3>Harbor + Trivy</h3><p>Known CVEs in images you store and run. Says nothing about what a process does.</p></div>
+  <div class="card top"><div class="bar p"></div><span class="tag">health</span><h3>Prometheus</h3><p>Up, down, slow, full. A cryptominer shows as "CPU high" at best.</p></div>
+  <div class="card top"><div class="bar l"></div><span class="tag">stdout</span><h3>Loki + Dozzle</h3><p>Only what the app chose to print. An intruder's shell prints nothing.</p></div>
+  <div class="card top"><div class="bar y"></div><span class="tag">runtime</span><h3>Tetragon</h3><p>Every exec, plus chosen file, network and privilege events, per pod, from the kernel.</p></div>
+</div>
+<div class="grid g2" style="margin-top:14px">
+  <div class="card gap"><span class="tag">still open · audit M1</span><h3>Network policy</h3><p>Tetragon reports and can kill connections, but it is not a firewall. NetworkPolicies remain a separate job. Policy 06 gives you the traffic inventory to write them.</p></div>
+  <div class="card gap"><span class="tag">still open · audit M6</span><h3>Admission control</h3><p>Pod Security Admission stops a bad pod spec from being created. Tetragon acts after the pod is running. You want both.</p></div>
+</div>
+
+<h2><i class="y"></i>How it works</h2>
+<p class="sub">Policy is compiled into eBPF programs. Filtering and enforcement happen inside the kernel; only matching events cross into user space.</p>
+<div class="fig">
+<svg viewBox="0 0 980 372" role="img" aria-label="Tetragon data path on this cluster" font-family="Manrope, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0d1414"/></marker></defs>
+  <!-- node box -->
+  <rect x="12" y="12" width="566" height="348" rx="14" fill="#f7fdfd" stroke="#0d1414" stroke-width="3"/>
+  <text x="30" y="40" font-weight="800" font-size="14" fill="#0d1414">EVERY NODE  (a1 · a2 · a3 · spark · x1 · t430 · blade)</text>
+  <!-- workloads -->
+  <rect x="30" y="58" width="250" height="74" rx="10" fill="#fff" stroke="#0d1414" stroke-width="3"/>
+  <text x="46" y="84" font-weight="800" font-size="15" fill="#0d1414">Pods + host processes</text>
+  <text x="46" y="106" font-size="12.5" fill="#415559" font-family="Open Sans">execve · open · connect · setuid</text>
+  <text x="46" y="122" font-size="12.5" fill="#415559" font-family="Open Sans">init_module · …</text>
+  <!-- kernel -->
+  <rect x="30" y="170" width="530" height="172" rx="10" fill="#0d1414"/>
+  <text x="222" y="196" font-weight="800" font-size="13" fill="#fff" letter-spacing="1.5">LINUX KERNEL</text>
+  <rect x="46" y="210" width="150" height="112" rx="8" fill="#6284c1" stroke="#fff" stroke-width="2"/>
+  <text x="121" y="240" text-anchor="middle" font-weight="800" font-size="14" fill="#0d1414">1 · Hooks</text>
+  <text x="121" y="262" text-anchor="middle" font-size="12" fill="#0d1414" font-family="Open Sans">kprobes, tracepoints</text>
+  <text x="121" y="278" text-anchor="middle" font-size="12" fill="#0d1414" font-family="Open Sans">uprobes, LSM</text>
+  <text x="121" y="302" text-anchor="middle" font-size="11.5" fill="#0d1414" font-family="Open Sans">from TracingPolicy</text>
+  <rect x="222" y="210" width="150" height="112" rx="8" fill="#92c53f" stroke="#fff" stroke-width="2"/>
+  <text x="297" y="240" text-anchor="middle" font-weight="800" font-size="14" fill="#0d1414">2 · Filter</text>
+  <text x="297" y="262" text-anchor="middle" font-size="12" fill="#0d1414" font-family="Open Sans">pod, namespace,</text>
+  <text x="297" y="278" text-anchor="middle" font-size="12" fill="#0d1414" font-family="Open Sans">binary, path, address</text>
+  <text x="297" y="302" text-anchor="middle" font-size="11.5" fill="#0d1414" font-family="Open Sans">non-matches stop here</text>
+  <rect x="398" y="210" width="146" height="112" rx="8" fill="#e3262b" stroke="#fff" stroke-width="2"/>
+  <text x="471" y="240" text-anchor="middle" font-weight="800" font-size="14" fill="#fff">3 · Act</text>
+  <text x="471" y="262" text-anchor="middle" font-size="12" fill="#fff" font-family="Open Sans">Post an event</text>
+  <text x="471" y="278" text-anchor="middle" font-size="12" fill="#fff" font-family="Open Sans">Override → EPERM</text>
+  <text x="471" y="294" text-anchor="middle" font-size="12" fill="#fff" font-family="Open Sans">Sigkill the process</text>
+  <path d="M155 132V206" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <path d="M196 266H218" stroke="#fff" stroke-width="3"/><path d="M372 266H394" stroke="#fff" stroke-width="3"/>
+  <!-- agent -->
+  <rect x="330" y="58" width="230" height="74" rx="10" fill="#f3c018" stroke="#0d1414" stroke-width="3"/>
+  <text x="346" y="84" font-weight="800" font-size="15" fill="#0d1414">Tetragon agent</text>
+  <text x="346" y="106" font-size="12.5" fill="#0d1414" font-family="Open Sans">adds pod + workload identity</text>
+  <text x="346" y="122" font-size="12.5" fill="#0d1414" font-family="Open Sans">JSON to stdout · metrics :2112</text>
+  <path d="M471 206V136" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <text x="482" y="158" font-size="11.5" fill="#415559" font-family="Open Sans">ring buffer</text>
+  <!-- right side: existing stack -->
+  <text x="640" y="40" font-weight="800" font-size="14" fill="#0d1414">ALREADY RUNNING</text>
+  <rect x="640" y="58" width="150" height="54" rx="10" fill="#fff" stroke="#0d1414" stroke-width="3"/>
+  <text x="715" y="90" text-anchor="middle" font-weight="800" font-size="14" fill="#0d1414">promtail</text>
+  <rect x="818" y="58" width="150" height="54" rx="10" fill="#c6d872" stroke="#0d1414" stroke-width="3"/>
+  <text x="893" y="82" text-anchor="middle" font-weight="800" font-size="14" fill="#0d1414">Loki</text>
+  <text x="893" y="100" text-anchor="middle" font-size="11.5" fill="#0d1414" font-family="Open Sans">the full event</text>
+  <rect x="640" y="150" width="150" height="54" rx="10" fill="#8061a5" stroke="#0d1414" stroke-width="3"/>
+  <text x="715" y="174" text-anchor="middle" font-weight="800" font-size="14" fill="#fff">Prometheus</text>
+  <text x="715" y="192" text-anchor="middle" font-size="11.5" fill="#fff" font-family="Open Sans">counts per policy</text>
+  <rect x="818" y="150" width="150" height="54" rx="10" fill="#fff" stroke="#0d1414" stroke-width="3"/>
+  <text x="893" y="182" text-anchor="middle" font-weight="800" font-size="14" fill="#0d1414">Alertmanager</text>
+  <rect x="818" y="242" width="150" height="54" rx="10" fill="#eb7525" stroke="#0d1414" stroke-width="3"/>
+  <text x="893" y="266" text-anchor="middle" font-weight="800" font-size="14" fill="#0d1414">Telegram</text>
+  <text x="893" y="284" text-anchor="middle" font-size="11.5" fill="#0d1414" font-family="Open Sans">+ Mailpit</text>
+  <rect x="640" y="242" width="150" height="54" rx="10" fill="#fff" stroke="#0d1414" stroke-width="3"/>
+  <text x="715" y="266" text-anchor="middle" font-weight="800" font-size="14" fill="#0d1414">Grafana</text>
+  <text x="715" y="284" text-anchor="middle" font-size="11.5" fill="#415559" font-family="Open Sans">metrics + Loki logs</text>
+  <path d="M560 82H636" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <path d="M790 85H814" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <path d="M560 112H604V177H636" fill="none" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <path d="M790 177H814" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <path d="M893 204V238" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <path d="M715 204V238" stroke="#0d1414" stroke-width="3" marker-end="url(#a)"/>
+  <text x="640" y="334" font-size="12.5" fill="#415559" font-family="Open Sans">New pieces: one DaemonSet, one scrape job, one rules file.</text>
+</svg>
+</div>
+<p class="cap">Step 3 is the differentiator. Because the decision is made in the kernel, at the hook, a blocked call returns an error before it completes. A user-space tool can only react after the fact.</p>
+
+<div class="grid g3" style="margin-top:18px">
+  <div class="card"><h3>Base sensor, no policy</h3><p>Every process start and exit with binary, arguments, parent, uid, pod, namespace and image. Optionally capabilities and Linux namespaces.</p></div>
+  <div class="card"><h3>TracingPolicy</h3><p>A CRD (<code>cilium.io/v1alpha1</code>) naming kernel functions to hook, which arguments to read, and selectors for binary, path, address, capability, pod labels or node.</p></div>
+  <div class="card"><h3>Policy mode</h3><p>Any enforcing policy can run in <code>monitor</code> mode: it reports what it would have blocked and blocks nothing. This is what makes enforcement safe to learn.</p></div>
+</div>
+
+<h2><i class="o"></i>What it would catch here</h2>
+<p class="sub">Six detection policies, each tied to a finding from the June security audit (<a href="09-security-audit.md">doc 09</a>). All six only post events. None can break a workload.</p>
+<table>
+  <tr><th>Policy</th><th>Fires when</th><th>Audit finding it watches</th></tr>
+  <tr><td><span class="sw y"></span><b>sa-token-read</b></td><td>A shell tool (<code>cat</code>, busybox, <code>base64</code>…) reads a pod's Kubernetes API token.</td><td><span class="sev r" style="color:#fff">C1</span> over-privileged ServiceAccounts · <span class="sev y">M8</span> root containers</td></tr>
+  <tr><td><span class="sw r"></span><b>k3s-crown-jewels</b></td><td>Anything other than k3s reads the SQLite datastore, join token, CA keys or admin kubeconfig on a3.</td><td><span class="sev y">M2</span> every Secret unencrypted in one file</td></tr>
+  <tr><td><span class="sw o"></span><b>host-persistence</b></td><td>A host process writes SSH keys, cron, systemd units, sudoers, <code>ld.so.preload</code>, or k3s's auto-deploy manifest directories.</td><td><span class="sev b" style="color:#fff">L1</span> privileged DaemonSets are the escape path</td></tr>
+  <tr><td><span class="sw p"></span><b>monitor-kernel-modules</b></td><td>A kernel module is loaded on any node. Upstream policy, unmodified.</td><td><span class="sev b" style="color:#fff">L1</span> · kernel incidents in doc 22</td></tr>
+  <tr><td><span class="sw g"></span><b>pod-privilege-escalation</b></td><td>A process in a pod calls setuid-to-root or creates an unprivileged user namespace.</td><td><span class="sev y">M8</span> shows where <code>runAsNonRoot</code> is working</td></tr>
+  <tr><td><span class="sw b"></span><b>pod-internet-egress</b></td><td>A pod opens TCP to a non-private address. An inventory, not an alarm.</td><td><span class="sev y">M1</span> flat network · <span class="sev y">M4</span> <code>:latest</code> images</td></tr>
+</table>
+<p class="cap" style="margin-top:8px">With no policy at all, phase 1 already answers: which pods spawn shells, what runs from <code>/tmp</code>, and which processes hold <code>CAP_SYS_ADMIN</code> or sit in the host PID namespace.</p>
+
+<h3 style="margin-top:26px">What a policy looks like</h3>
+<pre><span class="k">kind</span>: TracingPolicy
+<span class="k">metadata</span>: { <span class="k">name</span>: sa-token-read }
+<span class="k">spec</span>:
+  <span class="k">podSelector</span>: {}                         <span class="c"># pods only, never the host</span>
+  <span class="k">kprobes</span>:
+  - <span class="k">call</span>: <span class="s">"security_file_permission"</span>      <span class="c"># 1 · hook: every file read/write check</span>
+    <span class="k">args</span>: [{<span class="k">index</span>: 0, <span class="k">type</span>: file}, {<span class="k">index</span>: 1, <span class="k">type</span>: int}]
+    <span class="k">selectors</span>:
+    - <span class="k">matchArgs</span>:                          <span class="c"># 2 · filter, in the kernel</span>
+      - { <span class="k">index</span>: 0, <span class="k">operator</span>: Prefix, <span class="k">values</span>: [<span class="s">"/run/secrets/kubernetes.io/serviceaccount"</span>] }
+      - { <span class="k">index</span>: 1, <span class="k">operator</span>: Equal,  <span class="k">values</span>: [<span class="s">"4"</span>] }      <span class="c"># MAY_READ</span>
+      <span class="k">matchBinaries</span>:
+      - { <span class="k">operator</span>: In, <span class="k">values</span>: [<span class="s">"/bin/busybox"</span>, <span class="s">"/usr/bin/cat"</span>] }
+      <span class="k">matchActions</span>:
+      - { <span class="k">action</span>: Post, <span class="k">rateLimit</span>: <span class="s">"1m"</span> }    <span class="c"># 3 · act — swap for <span class="w">Sigkill</span> to enforce</span></pre>
+
+<h2><i class="r"></i>The rollout</h2>
+<p class="sub">Three phases. Each one is useful on its own, and you can stop after any of them.</p>
+<div class="phase"><div class="n l"><span>week 1</span><div class="num">1</div></div><div class="body">
+  <h3>Observe</h3>
+  <p>Merge the branch. Argo CD installs the agent on every node; process events flow to Loki through the existing promtail. Learn what normal looks like, measure event volume against Loki's 10 Gi volume, confirm the agent is healthy on spark's NVIDIA kernel.</p>
+  <div class="risk">Risk: a privileged-ish DaemonSet and some log volume. Nothing is blocked.</div></div></div>
+<div class="phase"><div class="n y"><span>weeks 2–3</span><div class="num">2</div></div><div class="body">
+  <h3>Detect</h3>
+  <p>Uncomment one line to enable the six policies. Trip each on purpose (the runbook has the commands) and watch the alert arrive in Telegram. Tune the noisy ones: apt upgrades will touch systemd units, your own <code>sudo cat</code> will trip the k3s policy.</p>
+  <div class="risk">Risk: alert noise, and a policy that fails to load on a kernel missing a hook. There is an alert for that.</div></div></div>
+<div class="phase"><div class="n r"><span style="color:#fff">week 4+</span><div class="num" style="color:#fff">3</div></div><div class="body">
+  <h3>Enforce — Vaultwarden only</h3>
+  <p>One rule: inside the Vaultwarden pod, only the <code>/vaultwarden</code> binary may touch <code>/data</code>. Anything else gets <code>EPERM</code> and is killed. It ships in monitor mode; flip it to enforce after two weeks in which the only would-have-blocked events are your own tests.</p>
+  <div class="risk">Risk: real. A wrong allowlist kills legitimate processes. Scoped to one pod, with a one-line break-glass.</div></div></div>
+
+<div class="note"><b>Sigkill is not a block.</b> A kill signal ends the process but does not guarantee the syscall that triggered it was stopped: the write may already have landed. <code>Override</code> makes the call itself return an error. The Vaultwarden policy uses both, as the Tetragon docs recommend.</div>
+
+<h2><i class="p"></i>Costs and caveats</h2>
+<div class="grid g2">
+  <div class="card"><h3>Kernel hooks are not a stable API</h3><p>kprobes attach to internal functions that get renamed between kernels; one missing hook fails the whole policy on that node. Your nodes span 6.17, 7.0 and NVIDIA's DGX kernel. Re-check after every kernel bump.</p></div>
+  <div class="card"><h3>It is a root-equivalent agent</h3><p>The DaemonSet runs on the host network with <code>SYS_ADMIN</code>, <code>BPF</code>-class capabilities and host mounts. Since 1.8 it is no longer <code>privileged: true</code>, but it joins the list of high-value pods from audit L1.</p></div>
+  <div class="card"><h3>Overhead is small but not published independently</h3><p>The docs give no figures. The only numbers are the vendor's from 2023: 1.68% on a kernel build, 2.46% with JSON export. <code>security_file_permission</code>, used by four of these policies, is a hot path; measure on a GPU node before trusting that.</p></div>
+  <div class="card"><h3>Pod filtering is best-effort without runtime hooks</h3><p>Tetragon learns about new pods from the API server, so the first instants of a container can escape a pod-scoped policy. Runtime hooks (NRI) close that, and are left off here to keep phase 1 simple.</p></div>
+  <div class="card"><h3>It does not stop root on the node</h3><p>Tetragon's own threat model excludes an attacker who is already root on the host. Events can also be dropped under flood. It is a detection layer, not a guarantee.</p></div>
+  <div class="card"><h3>Event volume is yours to manage</h3><p>Exec events for every pod add up. The values file drops exit events and host exec noise, and an alert fires past 500 MB per day. Expect to tune the deny list in week 1.</p></div>
+</div>
+
+<h2><i class="b"></i>What is already prepared</h2>
+<p class="sub">On branch <code>tetragon-runtime-security</code>, uncommitted. Nothing has been applied to the cluster.</p>
+<pre>clusters/home/tetragon/
+├── README.md                    <span class="c"># runbook: pre-flight, the 3 phases, how to trip each policy, break-glass</span>
+├── kustomization.yaml           <span class="c"># chart cilium/tetragon 1.8.0 — the "policies" line is commented (phase 2)</span>
+├── namespace.yaml
+├── values.yaml                  <span class="c"># export filters, redaction, metrics labels, resources</span>
+├── policies/                    <span class="c"># 01…06 — detection only</span>
+└── enforce/
+    └── vaultwarden-data-guard.yaml   <span class="c"># monitor mode; not wired into any kustomization</span>
+clusters/home/argocd/apps/home-services.yaml     <span class="c"># + Application home-tetragon</span>
+clusters/home/monitoring/config/prometheus.yml   <span class="c"># + scrape job "tetragon" (node IPs :2112)</span>
+clusters/home/monitoring/config/tetragon-alerts.yml   <span class="c"># 3 health + 6 detection alerts</span></pre>
+<table style="margin-top:14px">
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Chart renders</td><td><code>kustomize build --enable-helm</code> succeeds, with and without the policies.</td></tr>
+  <tr><td>Policies valid</td><td>All seven pass the TracingPolicy CRD schema shipped in chart 1.8.0.</td></tr>
+  <tr><td>Monitoring builds</td><td>Monitoring and Argo app kustomizations build; alert rules parse as YAML. <code>promtool</code> was not available, so the PromQL is unchecked.</td></tr>
+  <tr><td><b>Not verified</b></td><td>Anything that needs a kernel: that each hook exists on your kernels, the exact binary paths k3s and Vaultwarden report, real event volume, agent memory. The cluster was unreachable from this session. The runbook lists each as a checkbox.</td></tr>
+</table>
+
+<h2><i class="l"></i>Sources</h2>
+<ul class="src">
+  <li>Tetragon v1.8.0 source tree, read locally: docs (<code>concepts/tracing-policy</code>, <code>concepts/enforcement</code>, <code>installation/faq</code>, <code>reference/metrics</code>), <code>examples/policylibrary</code>, <code>examples/tracingpolicy</code> — <a href="https://github.com/cilium/tetragon/tree/v1.8.0">github.com/cilium/tetragon @ v1.8.0</a></li>
+  <li>Helm chart <code>cilium/tetragon</code> 1.8.0 default values and CRDs — <a href="https://helm.cilium.io">helm.cilium.io</a></li>
+  <li>Releases and dates — <a href="https://github.com/cilium/tetragon/releases">github.com/cilium/tetragon/releases</a></li>
+  <li>Enforcement, policy mode, Kubernetes filtering, threat model — <a href="https://tetragon.io/docs/concepts/enforcement/">tetragon.io/docs/concepts/enforcement</a>, <a href="https://tetragon.io/docs/concepts/tracing-policy/mode/">…/mode</a>, <a href="https://tetragon.io/docs/concepts/tracing-policy/k8s-filtering/">…/k8s-filtering</a>, <a href="https://tetragon.io/docs/threat-model/">…/threat-model</a></li>
+  <li>Use without Cilium CNI (vendor blog, 2023; the official docs do not state it) — <a href="https://isovalent.com/blog/post/can-i-use-tetragon-without-cilium-yes/">isovalent.com</a></li>
+  <li>Overhead figures (vendor blog, 2023) — <a href="https://isovalent.com/blog/post/tetragon-release-10">isovalent.com/blog/post/tetragon-release-10</a></li>
+  <li>Colours taken from the project logo SVG and tetragon.io stylesheet. The block mark above was drawn for this page in the style of the logo; it is not the official Tetragon logo.</li>
+</ul>
+
+<footer>home-lab doc 23 · written 24 Nov 2026 · companion runbook: <code>clusters/home/tetragon/README.md</code> · Tetragon is a trademark of its owners; this is an independent write-up.</footer>
+</body></html>
