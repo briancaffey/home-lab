@@ -1,4 +1,7 @@
-# magpie-tts-multilingual (NVIDIA Riva NIM) on a2 (RTX 4090) since 2026-11-22.
+# magpie-tts-multilingual (NVIDIA Riva NIM). NOT pinned to a node since
+# 2026-11-23 (a2 was needed back): it schedules onto any amd64 GPU node with a
+# free nvidia.com/gpu. Parked at 0 that day; scale to 1 to bring it back. The
+# notes below about a2 describe where it ran before.
 # History: a1 (Phase 4, the first workload migrated from docker) until
 # flux3-klein-4090 filled a1's 4090; blade (RTX 5090 Laptop) from 2026-11-09
 # until blade was booted into Windows and went NotReady, which left hn.fm's
@@ -42,8 +45,14 @@ spec:
       labels:
         app: magpie-tts
     spec:
-      nodeSelector:
-        inference-club.com/box: a2
+      # Not pinned to a box: any amd64 node with an NVIDIA GPU will do.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: kubernetes.io/arch, operator: In, values: [amd64] }
+                  - { key: nvidia.com/gpu.product, operator: Exists }
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ngc-registry

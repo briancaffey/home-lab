@@ -1,4 +1,8 @@
-# maxine-studio-voice (NVIDIA Maxine NIM) on a2 (RTX 4090; moved 2026-11-22 from
+# NOT pinned to a node since 2026-11-23 (a2 was needed back): any amd64 GPU node.
+# It makes no nvidia.com/gpu claim, so the scheduler does not see VRAM: check the
+# card it lands on has room. Parked at 0 that day; scale to 1 to bring it back.
+#
+# maxine-studio-voice (NVIDIA Maxine NIM), previously on a2 (RTX 4090; moved 2026-11-22 from
 # blade, which is offline whenever the laptop boots Windows) — speech ENHANCEMENT / audio
 # super-resolution: noisy/artifacted speech in → clean 48 kHz studio-quality
 # speech out (audio→audio). Migrated from the docker container that ran on a1
@@ -38,8 +42,14 @@ spec:
       labels:
         app: studio-voice
     spec:
-      nodeSelector:
-        inference-club.com/box: a2
+      # Not pinned to a box: any amd64 node with an NVIDIA GPU will do.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: kubernetes.io/arch, operator: In, values: [amd64] }
+                  - { key: nvidia.com/gpu.product, operator: Exists }
       runtimeClassName: nvidia
       imagePullSecrets:
         - name: ngc-registry

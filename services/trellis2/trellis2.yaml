@@ -17,8 +17,8 @@
 #   ssh a2 sudo systemctl stop ltx25-server
 #   kubectl -n inference-club scale deploy trellis2 --replicas=1
 # (Argo ignores /spec/replicas, so hand-scaling sticks.)
-# Since 2026-11-22 magpie-tts claims this card too (it moved here from blade),
-# so trellis2 is parked at 0 while Magpie runs: scale Magpie to 0 first.
+# magpie-tts ran on this card 2026-11-22..23 and is no longer pinned here; if it
+# is scheduled on a2 again it holds the GPU claim, so scale it to 0 first.
 #
 # Weights: a2's HF cache (~/.cache/huggingface) — TRELLIS.2-4B, the ss decoder
 # from TRELLIS-image-large, and the two GATED aux models
