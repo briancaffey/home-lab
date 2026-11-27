@@ -39,8 +39,11 @@ spec:
         kubernetes.io/hostname: a3
       containers:
         - name: agent
-          # Harbor sha-fab8b78: PRD 21 branch + tsnet v1.104.4 (security fix).
-          image: harbor.lan/apps/inference-club-agent:sha-fab8b78
+          # Same image as agent-club-lan / prod. sha-98ab7f3 routes the Riva tts
+          # paths by ?model=; on sha-fab8b78 /v1/audio/speech 404'd for
+          # magpie-tts and nano-edge-tts because the request fell to the default
+          # backend.
+          image: harbor.lan/apps/inference-club-agent:sha-98ab7f3
           env:
             # Discovery: identical to prod — build the manifest from labeled
             # Services in this namespace and poll.
